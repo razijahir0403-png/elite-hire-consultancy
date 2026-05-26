@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+client/.env
+server/.env
+
+# Build outputs
+client/dist/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Uploads (keep folder via .gitkeep)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test / cache
+coverage/
+.vite/
+.eslintcache

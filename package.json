@@ -1,0 +1,23 @@
+{
+  "name": "elite-hire-consultancy-maintenance-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Elite Hire Consultancy Maintenance System - MERN Application",
+  "scripts": {
+    "install-all": "npm install && npm install --prefix server && npm install --prefix client",
+    "postinstall": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n client,server -c cyan,magenta \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
+    "build": "npm run build --prefix client",
+    "start": "npm run start --prefix server",
+    "preview": "npm run preview --prefix client",
+    "seed": "npm run seed --prefix server",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
