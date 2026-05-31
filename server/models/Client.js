@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('./plugins/softDeletePlugin');
-const { RECRUITMENT_STATUS_MAX } = require('../utils/statusMaster');
+const { CLIENT_STATUS_MAX } = require('../utils/clientStatusMaster');
 
 const statusHistorySchema = new mongoose.Schema(
   {
@@ -8,7 +8,7 @@ const statusHistorySchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      max: RECRUITMENT_STATUS_MAX,
+      max: CLIENT_STATUS_MAX,
     },
     description: {
       type: String,
@@ -26,28 +26,30 @@ const statusHistorySchema = new mongoose.Schema(
   { _id: true }
 );
 
-const requestInfoSchema = new mongoose.Schema(
+const clientSchema = new mongoose.Schema(
   {
-    idnumber: {
+    clientId: {
       type: String,
-      required: [true, 'Please provide an ID number'],
+      required: [true, 'Please provide a client ID'],
       unique: true,
       trim: true,
     },
-    companyName: {
+    clientName: {
       type: String,
-      required: [true, 'Please provide a company name'],
+      required: [true, 'Please provide a client name'],
       trim: true,
     },
-    domain: {
+    mobile: {
       type: String,
-      required: [true, 'Please provide a domain'],
       trim: true,
-    },
-    location: {
-      type: String,
-      required: [true, 'Please provide a location'],
-      trim: true,
+      default: '',
+      validate: {
+        validator(v) {
+          if (!v) return true;
+          return /^\d{10}$/.test(v);
+        },
+        message: 'Mobile number must be exactly 10 digits',
+      },
     },
     email: {
       type: String,
@@ -62,37 +64,36 @@ const requestInfoSchema = new mongoose.Schema(
         message: 'Please provide a valid email address',
       },
     },
-    contactNumber: {
+    category: {
       type: String,
+      required: [true, 'Please provide a category'],
       trim: true,
-      default: '',
-      validate: {
-        validator(v) {
-          if (!v) return true;
-          return /^\d{10}$/.test(v);
-        },
-        message: 'Mobile number must be exactly 10 digits',
-      },
+      maxlength: [200, 'Category must not exceed 200 characters'],
     },
-    resourcePerson: {
+    profileDocumentPath: {
       type: String,
       trim: true,
       default: '',
     },
-    portalLink: {
+    profileDocumentName: {
       type: String,
       trim: true,
+      default: '',
     },
     status: {
       type: Number,
       required: [true, 'Please choose a status'],
       default: 0,
       min: 0,
-      max: RECRUITMENT_STATUS_MAX,
+      max: CLIENT_STATUS_MAX,
     },
     description: {
       type: String,
       trim: true,
+    },
+    createdBy: {
+      type: String,
+      required: true,
     },
     updatedBy: {
       type: String,
@@ -106,10 +107,10 @@ const requestInfoSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'requestinfos',
+    collection: 'clients',
   }
 );
 
-requestInfoSchema.plugin(softDeletePlugin);
+clientSchema.plugin(softDeletePlugin);
 
-module.exports = mongoose.model('RequestInfo', requestInfoSchema);
+module.exports = mongoose.model('Client', clientSchema);

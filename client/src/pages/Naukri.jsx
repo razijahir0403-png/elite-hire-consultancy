@@ -76,7 +76,13 @@ const Naukri = () => {
                 <div className="grid grid-cols-2 gap-4 text-xs pt-3 border-t border-slate-100">
                   <div>
                     <span className="text-slate-450 block font-medium">Resource Person</span>
-                    <span className="text-slate-700 font-semibold">{c.resourcePerson}</span>
+                    <span className="text-slate-700 font-semibold">{c.resourcePerson || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-450 block font-medium">Email</span>
+                    <span className="text-slate-700 font-semibold truncate block" title={c.email}>
+                      {c.email || '—'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-slate-450 block font-medium">Company</span>

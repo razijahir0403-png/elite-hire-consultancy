@@ -4,6 +4,11 @@ const {
   RECRUITMENT_STATUS,
   toRecruitmentStatusCode,
 } = require('../utils/statusMaster');
+const {
+  generateNextIdNumber,
+  isDuplicateKeyError,
+  MAX_GENERATION_ATTEMPTS,
+} = require('../utils/idNumberGenerator');
 
 const normalizeRequestRecord = (doc) => {
   if (!doc) return doc;
@@ -28,6 +33,7 @@ const buildListQuery = ({ search = '', status = '', domain = '', location = '' }
       { domain: { $regex: search, $options: 'i' } },
       { location: { $regex: search, $options: 'i' } },
       { resourcePerson: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } },
       { contactNumber: { $regex: search, $options: 'i' } },
       { description: { $regex: search, $options: 'i' } },
     ];
@@ -84,29 +90,13 @@ const getRequestInfoById = async (id) => {
   return normalizeRequestRecord(record);
 };
 
-const generateIdNumber = async () => {
-  const year = new Date().getFullYear();
-  const prefix = `EH-${year}-`;
-  const regex = new RegExp(`^${prefix}\\d{3}$`);
-  const latestRecord = await RequestInfo.findOne({ idnumber: regex }).sort({ idnumber: -1 });
-
-  let nextNumber = 1;
-  if (latestRecord) {
-    const parts = latestRecord.idnumber.split('-');
-    const lastSuffix = parseInt(parts[2], 10);
-    if (!Number.isNaN(lastSuffix)) {
-      nextNumber = lastSuffix + 1;
-    }
-  }
-
-  return `${prefix}${String(nextNumber).padStart(3, '0')}`;
-};
-
 const createRequestInfo = async (body, editorName) => {
   const {
+    idnumber: _clientId,
     companyName,
     domain,
     location,
+    email,
     contactNumber,
     resourcePerson,
     portalLink,
@@ -115,7 +105,6 @@ const createRequestInfo = async (body, editorName) => {
   } = body;
 
   const statusCode = toRecruitmentStatusCode(status, RECRUITMENT_STATUS.VERIFIED);
-  const idnumber = await generateIdNumber();
   const historyItem = {
     status: statusCode,
     description,
@@ -123,22 +112,44 @@ const createRequestInfo = async (body, editorName) => {
     updatedOn: new Date(),
   };
 
-  const record = await RequestInfo.create({
-    idnumber,
+  const recordPayload = {
     companyName,
     domain,
     location,
-    contactNumber,
-    resourcePerson,
+    email: email ? String(email).trim().toLowerCase() : '',
+    contactNumber: contactNumber || '',
+    resourcePerson: resourcePerson ? String(resourcePerson).trim() : '',
     portalLink,
     status: statusCode,
     description,
     updatedBy: editorName,
     updatedOn: new Date(),
     statusHistory: [historyItem],
-  });
+  };
 
-  return normalizeRequestRecord(record);
+  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+    const idnumber = await generateNextIdNumber();
+    try {
+      const record = await RequestInfo.create({ idnumber, ...recordPayload });
+      return normalizeRequestRecord(record);
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        console.warn(
+          `[RequestInfo] Duplicate idnumber "${idnumber}" on create (attempt ${attempt}/${MAX_GENERATION_ATTEMPTS}). Retrying with next sequence.`
+        );
+        if (attempt === MAX_GENERATION_ATTEMPTS) {
+          throw new AppError(
+            'Unable to assign a unique record ID after multiple attempts. Please try again.',
+            409
+          );
+        }
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new AppError('Unable to assign a unique record ID. Please try again.', 409);
 };
 
 const updateRequestInfo = async (id, body, editorName) => {
@@ -147,7 +158,16 @@ const updateRequestInfo = async (id, body, editorName) => {
     throw new AppError('Record not found', 404);
   }
 
-  const { idnumber, companyName, domain, location, contactNumber, resourcePerson, portalLink } = body;
+  const {
+    idnumber,
+    companyName,
+    domain,
+    location,
+    email,
+    contactNumber,
+    resourcePerson,
+    portalLink,
+  } = body;
 
   if (idnumber && idnumber !== record.idnumber) {
     const exists = await RequestInfo.findOne({ idnumber });
@@ -160,8 +180,9 @@ const updateRequestInfo = async (id, body, editorName) => {
   if (companyName !== undefined) record.companyName = companyName;
   if (domain) record.domain = domain;
   if (location) record.location = location;
-  if (contactNumber !== undefined) record.contactNumber = contactNumber;
-  if (resourcePerson) record.resourcePerson = resourcePerson;
+  if (email !== undefined) record.email = email ? String(email).trim().toLowerCase() : '';
+  if (contactNumber !== undefined) record.contactNumber = contactNumber || '';
+  if (resourcePerson !== undefined) record.resourcePerson = resourcePerson ? String(resourcePerson).trim() : '';
   if (portalLink !== undefined) record.portalLink = portalLink;
 
   record.updatedBy = editorName;

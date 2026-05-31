@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Spinner from '../components/Spinner';
 import Elitehirelogo from '../assets/Elitehirelogo.jpeg';
 
@@ -9,6 +9,7 @@ const Login = () => {
   const { login, isAuthenticated, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
 
   // If already authenticated, redirect to dashboard
@@ -79,10 +80,9 @@ const Login = () => {
                   id="email"
                   type="email"
                   required
-                  placeholder="admin@elitehire.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 placeholder-slate-450 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 transition-all text-sm shadow-sm"
                 />
               </div>
             </div>
@@ -100,13 +100,19 @@ const Login = () => {
                 </div>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 placeholder-slate-450 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
+                  className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
@@ -141,10 +147,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Demo Info */}
-        <div className="mt-6 text-center text-xs text-slate-400">
-          <p>Demo Admin Account: <span className="text-slate-500 font-semibold">admin@elitehire.com</span> | Password: <span className="text-slate-500 font-semibold">password123</span></p>
-        </div>
+        
       </div>
     </div>
   );

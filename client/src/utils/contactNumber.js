@@ -6,4 +6,9 @@ export const sanitizeContactNumberInput = (value) =>
 export const normalizeContactNumber = (value) =>
   sanitizeContactNumberInput(value);
 
-export const isValidContactNumber = (value) => /^\d{10}$/.test(String(value ?? ''));
+/** Empty is valid; otherwise must be exactly 10 digits. */
+export const isValidContactNumber = (value) => {
+  const digits = String(value ?? '');
+  if (!digits) return true;
+  return /^\d{10}$/.test(digits);
+};

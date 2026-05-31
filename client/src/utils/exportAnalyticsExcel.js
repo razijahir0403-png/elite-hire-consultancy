@@ -1,11 +1,7 @@
 import * as XLSX from 'xlsx';
 import { RecruitmentStatus } from './statusMaster';
 
-const formatDate = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
-};
+import { formatDateDDMMYYYY } from './dateFormatter';
 
 const statusLabel = (code) => RecruitmentStatus[Number(code)] ?? '';
 
@@ -15,14 +11,15 @@ export const exportAnalyticsToExcel = (records, filenamePrefix = 'analytics-expo
     'Company Name': r.companyName || '',
     'Domain Vertical': r.domain || '',
     Location: r.location || '',
+    Email: r.email || '',
     'Resource Person': r.resourcePerson || '',
     'Mobile Number': r.contactNumber || '',
     Status: statusLabel(r.status),
     Description: r.description || '',
     'Portal Link': r.portalLink || '',
-    'Updated On': formatDate(r.updatedOn),
+    'Updated On': formatDateDDMMYYYY(r.updatedOn),
     'Updated By': r.updatedBy || '',
-    'Created At': formatDate(r.createdAt),
+    'Created At': formatDateDDMMYYYY(r.createdAt),
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);

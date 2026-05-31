@@ -5,8 +5,6 @@ import {
   Plus, 
   Edit2, 
   Trash2, 
-  History, 
-  CheckSquare, 
   ChevronLeft, 
   ChevronRight, 
   ChevronUp, 
@@ -19,19 +17,17 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../api';
 import Modal from '../components/Modal';
 import Spinner from '../components/Spinner';
-import { exportAnalyticsToExcel } from '../utils/exportAnalyticsExcel';
+import { exportReceivedInfoToExcel } from '../utils/exportReceivedInfoExcel';
 import {
   isValidContactNumber,
   normalizeContactNumber,
   sanitizeContactNumberInput,
 } from '../utils/contactNumber';
 import { isValidEmail, normalizeEmail } from '../utils/email';
-import { recruitmentFilterOptions, RECRUITMENT_STATUS } from '../utils/statusMaster';
-import StatusBadge from '../components/StatusBadge';
-import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
+import { formatDateDDMMYYYY } from '../utils/dateFormatter';
 
-const Analytics = () => {
-  // State for candidates list & meta
+const ReceivedInfo = () => {
+  // State for received records & meta
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -40,7 +36,7 @@ const Analytics = () => {
   
   // Search & Filter state
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -49,51 +45,41 @@ const Analytics = () => {
   const isAdmin = user?.email === 'admin@elitehire.com';
   
   // Sorting state
-  const [sortBy, setSortBy] = useState('updatedOn');
+  const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
-  const [historyList, setHistoryList] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Candidate input form state
+  // Received input form state
   const [formData, setFormData] = useState({
-    idnumber: '',
+    requestId: '',
     companyName: '',
     domain: '',
     location: '',
     email: '',
-    contactNumber: '',
-    resourcePerson: '',
-    portalLink: '',
-    status: '',
-    description: '',
+    mobileNumber: '',
+    resourceName: '',
+    vendor: '',
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Status updating form state
-  const [statusForm, setStatusForm] = useState({
-    status: '',
-    description: ''
-  });
+  const vendorOptions = ['HR Circle', 'Talvixa', 'Job Updates', 'RedBus', 'Other Vendor'];
 
   // Fetch list of records from backend API
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/analytics', {
+      const { data } = await api.get('/received-info', {
         params: {
           page,
           limit,
           search,
-          status: statusFilter,
+          vendor: vendorFilter,
           domain: domainFilter,
           location: locationFilter,
           sortBy,
@@ -104,8 +90,8 @@ const Analytics = () => {
       setTotalPages(data.pagination.totalPages);
       setTotalRecords(data.pagination.totalRecords);
     } catch (error) {
-      console.error('Error loading analytics:', error);
-      toast.error('Failed to load candidate metrics.');
+      console.error('Error loading received info:', error);
+      toast.error('Failed to load received info records.');
     } finally {
       setLoading(false);
     }
@@ -113,7 +99,7 @@ const Analytics = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, [page, limit, statusFilter, domainFilter, locationFilter, sortBy, sortOrder]);
+  }, [page, limit, vendorFilter, domainFilter, locationFilter, sortBy, sortOrder]);
 
   // Handle Search submit
   const handleSearchSubmit = (e) => {
@@ -133,13 +119,13 @@ const Analytics = () => {
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || statusFilter || domainFilter || locationFilter);
+  const hasActiveFilters = Boolean(search || vendorFilter || domainFilter || locationFilter);
 
   const fetchAllRecordsForExport = async () => {
     const pageSize = 100;
     const filterParams = {
       search,
-      status: statusFilter,
+      vendor: vendorFilter,
       domain: domainFilter,
       location: locationFilter,
       sortBy,
@@ -150,7 +136,7 @@ const Analytics = () => {
     let pagesToFetch = 1;
 
     do {
-      const { data } = await api.get('/analytics', {
+      const { data } = await api.get('/received-info', {
         params: {
           page: currentPage,
           limit: pageSize,
@@ -179,8 +165,8 @@ const Analytics = () => {
         return;
       }
 
-      const filenamePrefix = hasActiveFilters ? 'analytics-filtered' : 'analytics-all';
-      exportAnalyticsToExcel(exportRecords, filenamePrefix);
+      const filenamePrefix = hasActiveFilters ? 'received-info-filtered' : 'received-info-all';
+      exportReceivedInfoToExcel(exportRecords, filenamePrefix);
       toast.success(
         hasActiveFilters
           ? `Exported ${exportRecords.length} filtered record(s) to Excel.`
@@ -196,7 +182,7 @@ const Analytics = () => {
   // Reset all filters
   const resetFilters = () => {
     setSearch('');
-    setStatusFilter('');
+    setVendorFilter('');
     setDomainFilter('');
     setLocationFilter('');
     setPage(1);
@@ -206,16 +192,14 @@ const Analytics = () => {
   const handleAddClick = () => {
     setActiveRecord(null);
     setFormData({
-      idnumber: '',
+      requestId: '',
       companyName: '',
       domain: '',
       location: '',
       email: '',
-      contactNumber: '',
-      resourcePerson: '',
-      portalLink: '',
-      status: '',
-      description: '',
+      mobileNumber: '',
+      resourceName: '',
+      vendor: '',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -225,14 +209,14 @@ const Analytics = () => {
   const handleEditClick = (record) => {
     setActiveRecord(record);
     setFormData({
-      idnumber: record.idnumber || '',
+      requestId: record.requestId || '',
       companyName: record.companyName || '',
       domain: record.domain || '',
       location: record.location || '',
       email: record.email || '',
-      contactNumber: normalizeContactNumber(record.contactNumber),
-      resourcePerson: record.resourcePerson || '',
-      portalLink: record.portalLink || '',
+      mobileNumber: normalizeContactNumber(record.mobileNumber),
+      resourceName: record.resourceName || '',
+      vendor: record.vendor || '',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -249,20 +233,23 @@ const Analytics = () => {
     if (!formData.location.trim()) {
       errors.location = 'Location is required';
     }
+    if (!formData.resourceName.trim()) {
+      errors.resourceName = 'Resource name is required';
+    }
     if (!isValidEmail(formData.email)) {
       errors.email = 'Please enter a valid email address';
     }
-    if (!isValidContactNumber(formData.contactNumber)) {
-      errors.contactNumber = 'Mobile number must be exactly 10 digits';
+    if (!isValidContactNumber(formData.mobileNumber)) {
+      errors.mobileNumber = 'Mobile number must be exactly 10 digits';
     }
-    if (formData.status === '') {
-      errors.status = 'Status is required';
+    if (!formData.vendor) {
+      errors.vendor = 'Vendor selection is required';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Create or Update candidate record handler
+  // Create or Update record handler
   const handleAddEditSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -276,20 +263,20 @@ const Analytics = () => {
       domain: formData.domain.trim(),
       location: formData.location.trim(),
       email: normalizeEmail(formData.email),
-      contactNumber: formData.contactNumber,
-      resourcePerson: formData.resourcePerson.trim(),
-      portalLink: formData.portalLink.trim(),
+      mobileNumber: formData.mobileNumber,
+      resourceName: formData.resourceName.trim(),
+      vendor: formData.vendor,
     };
 
     try {
       if (activeRecord) {
         // Edit record
-        await api.put(`/analytics/${activeRecord._id}`, payload);
+        await api.put(`/received-info/${activeRecord._id}`, payload);
         toast.success('Record modified successfully!');
       } else {
-        // Create record: exclude empty idnumber so backend computes the sequential value
-        const { idnumber, ...submitData } = payload;
-        await api.post('/analytics', submitData);
+        // Create record: exclude empty requestId so backend computes sequential value
+        const { requestId, ...submitData } = payload;
+        await api.post('/received-info', submitData);
         toast.success('Record created successfully!');
       }
       setIsAddEditOpen(false);
@@ -306,10 +293,10 @@ const Analytics = () => {
     setIsDeleteOpen(true);
   };
 
-  // Delete Candidate record
+  // Delete record
   const confirmDelete = async () => {
     try {
-      await api.delete(`/analytics/${activeRecord._id}`);
+      await api.delete(`/received-info/${activeRecord._id}`);
       toast.success('Record deleted.');
       setIsDeleteOpen(false);
       fetchRecords();
@@ -318,62 +305,20 @@ const Analytics = () => {
     }
   };
 
-  // Open Update Status Modal
-  const handleUpdateStatusClick = (record) => {
-    setActiveRecord(record);
-    setStatusForm({
-      status: record.status ?? '',
-      description: ''
-    });
-    setIsStatusOpen(true);
-  };
-
-  // Submit new candidate status
-  const handleStatusSubmit = async (e) => {
-    e.preventDefault();
-    if (!statusForm.description.trim()) {
-      toast.error('Please specify a description or reasoning for status update');
-      return;
-    }
-    try {
-      await api.put(`/analytics/update-status/${activeRecord._id}`, statusForm);
-      toast.success('Status updated!');
-      setIsStatusOpen(false);
-      fetchRecords();
-    } catch (error) {
-      toast.error('Failed to update status.');
-    }
-  };
-
-  // Open Status History audit trail modal
-  const handleHistoryClick = async (record) => {
-    setActiveRecord(record);
-    setHistoryLoading(true);
-    setIsHistoryOpen(true);
-    try {
-      const { data } = await api.get(`/analytics/history/${record._id}`);
-      setHistoryList(data);
-    } catch (error) {
-      toast.error('Could not fetch status history.');
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Top action section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Consultancy Sourcing Log</h1>
-          <p className="text-xs text-slate-500">Configure parameters, verify candidates, and track action audit trails</p>
+          <h1 className="text-xl font-bold text-slate-900">Received Sourcing Log</h1>
+          <p className="text-xs text-slate-500">Configure parameters, verify incoming request leads, and manage records</p>
         </div>
         <button
           onClick={handleAddClick}
           className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
         >
           <Plus size={16} />
-          <span>Add Candidate</span>
+          <span>Add Record</span>
         </button>
       </div>
 
@@ -394,17 +339,17 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* Status filter */}
+          {/* Vendor filter */}
           <div className="space-y-1.5">
-            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Filter Status</label>
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Filter Vendor</label>
             <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              value={vendorFilter}
+              onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
             >
               <option value="">Select</option>
-              {recruitmentFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {vendorOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
           </div>
@@ -428,7 +373,7 @@ const Analytics = () => {
             >
               Search
             </button>
-            {(search || statusFilter || domainFilter || locationFilter) && (
+            {hasActiveFilters && (
               <button
                 type="button"
                 onClick={resetFilters}
@@ -445,24 +390,22 @@ const Analytics = () => {
       {/* Entries Control & Total Count Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-xs">
         <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-500 font-medium">Show</span>
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(parseInt(e.target.value));
-                setPage(1);
-              }}
-              className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-brand-800 font-bold"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span className="text-slate-500 font-medium">entries</span>
-          </div>
+          <span className="text-slate-500 font-medium">Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(parseInt(e.target.value));
+              setPage(1);
+            }}
+            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-brand-800 font-bold"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span className="text-slate-500 font-medium">entries</span>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <button
@@ -490,7 +433,7 @@ const Analytics = () => {
         ) : records.length === 0 ? (
           <div className="py-20 text-center space-y-2">
             <FileText size={48} className="text-slate-300 mx-auto" />
-            <p className="text-slate-500 text-sm font-semibold">No candidates logged in this database</p>
+            <p className="text-slate-500 text-sm font-semibold">No received logs in this database</p>
             <p className="text-xs text-slate-400">Try modifying your query or adding new records.</p>
           </div>
         ) : (
@@ -498,15 +441,15 @@ const Analytics = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-extrabold tracking-wider text-slate-500">
-                  <th onClick={() => handleSort('idnumber')} className="px-6 py-4 cursor-pointer hover:text-slate-800 whitespace-nowrap min-w-[120px]">
+                  <th onClick={() => handleSort('requestId')} className="px-6 py-4 cursor-pointer hover:text-slate-800 whitespace-nowrap min-w-[120px]">
                     <div className="flex items-center space-x-1">
-                      <span>ID Number</span>
-                      {sortBy === 'idnumber' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      <span>Request ID</span>
+                      {sortBy === 'requestId' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                     </div>
                   </th>
                   <th onClick={() => handleSort('domain')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
-                      <span>Domain Vertical</span>
+                      <span>Domain</span>
                       {sortBy === 'domain' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                     </div>
                   </th>
@@ -518,11 +461,11 @@ const Analytics = () => {
                   </th>
                   <th className="px-6 py-4">Location</th>
                   <th className="px-6 py-4">Resource Info</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th className="px-6 py-4">Vendor</th>
+                  <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
-                      <span>Updated On</span>
-                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      <span>Created Date</span>
+                      {sortBy === 'createdAt' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                     </div>
                   </th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -531,24 +474,26 @@ const Analytics = () => {
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
                   <tr key={r._id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.idnumber}</td>
+                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.requestId}</td>
                     <td className="px-6 py-4 font-bold text-slate-900">{r.domain}</td>
                     <td className="px-6 py-4 text-slate-700 font-medium">{r.companyName || '—'}</td>
                     <td className="px-6 py-4 text-slate-600">{r.location}</td>
                     <td className="px-6 py-4 text-slate-600">
-                      <div className="font-semibold text-slate-800">{r.resourcePerson || '—'}</div>
+                      <div className="font-semibold text-slate-800">{r.resourceName || '—'}</div>
                       {r.email && (
                         <div className="text-[10px] text-slate-500 truncate max-w-[140px]" title={r.email}>
                           {r.email}
                         </div>
                       )}
-                      <div className="text-[10px] text-slate-450">{normalizeContactNumber(r.contactNumber) || '—'}</div>
+                      <div className="text-[10px] text-slate-450">{normalizeContactNumber(r.mobileNumber) || '—'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={r.status} type="recruitment" />
+                      <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
+                        {r.vendor}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-slate-500">
-                      <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.updatedOn)}</div>
+                      <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.createdAt)}</div>
                       <div className="text-[9px] text-slate-400">By {r.updatedBy}</div>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
@@ -557,7 +502,7 @@ const Analytics = () => {
                         <button
                           onClick={() => handleEditClick(r)}
                           className="p-1.5 bg-slate-50 border border-slate-200 hover:border-brand-300 hover:text-brand-800 hover:bg-brand-50 rounded-lg transition-all text-slate-500"
-                          title="Edit Main Fields"
+                          title="Edit Lead Fields"
                         >
                           <Edit2 size={13} />
                         </button>
@@ -566,27 +511,11 @@ const Analytics = () => {
                           <button
                             onClick={() => handleDeleteClick(r)}
                             className="p-1.5 bg-slate-50 border border-slate-200 hover:border-red-300 hover:text-red-650 hover:bg-red-50 rounded-lg transition-all text-slate-500"
-                            title="Delete Candidate"
+                            title="Delete Lead"
                           >
                             <Trash2 size={13} />
                           </button>
                         )}
-                        {/* Update Status Trigger */}
-                        <button
-                          onClick={() => handleUpdateStatusClick(r)}
-                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all text-slate-500"
-                          title="Update Workflow Status"
-                        >
-                          <CheckSquare size={13} />
-                        </button>
-                        {/* Audit Trail Trail */}
-                        <button
-                          onClick={() => handleHistoryClick(r)}
-                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all text-slate-500"
-                          title="Show Sourcing Audit Trails"
-                        >
-                          <History size={13} />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -604,9 +533,9 @@ const Analytics = () => {
               <span className="font-semibold text-slate-800">
                 {Math.min(page * limit, totalRecords)}
               </span>{' '}
-              of <span className="font-semibold text-slate-800">{totalRecords}</span> candidates
+              of <span className="font-semibold text-slate-800">{totalRecords}</span> entries
             </span>
-            <div className="flex items-center justify-center space-x-1.5 w-full sm:w-auto">
+            <div className="flex items-center space-x-1.5">
               <button
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
                 disabled={page === 1}
@@ -629,11 +558,11 @@ const Analytics = () => {
         )}
       </div>
 
-      {/* 1. CREATE / EDIT CANDIDATE MODAL */}
+      {/* 1. CREATE / EDIT LEAD MODAL */}
       <Modal
         isOpen={isAddEditOpen}
         onClose={() => setIsAddEditOpen(false)}
-        title={activeRecord ? `Modify Candidate: ${formData.idnumber}` : 'Add Candidate to Log'}
+        title={activeRecord ? `Modify Lead Request: ${formData.requestId}` : 'Add Sourcing Lead'}
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleAddEditSubmit} className="space-y-4 text-slate-800">
@@ -680,6 +609,20 @@ const Analytics = () => {
           </div>
 
           <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Resource Name *</label>
+            <input
+              type="text"
+              required
+              value={formData.resourceName}
+              onChange={(e) => setFormData({ ...formData, resourceName: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+            />
+            {formErrors.resourceName && (
+              <p className="text-[10px] text-red-600 mt-1">{formErrors.resourceName}</p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Email</label>
             <input
               type="email"
@@ -699,71 +642,36 @@ const Analytics = () => {
                 type="text"
                 inputMode="numeric"
                 maxLength={10}
-                value={formData.contactNumber}
+                value={formData.mobileNumber}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    contactNumber: sanitizeContactNumberInput(e.target.value),
+                    mobileNumber: sanitizeContactNumberInput(e.target.value),
                   })
                 }
                 className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
               />
-              {formErrors.contactNumber && (
-                <p className="text-[10px] text-red-600 mt-1">{formErrors.contactNumber}</p>
+              {formErrors.mobileNumber && (
+                <p className="text-[10px] text-red-600 mt-1">{formErrors.mobileNumber}</p>
               )}
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Resource Person</label>
-              <input
-                type="text"
-                value={formData.resourcePerson}
-                onChange={(e) => setFormData({ ...formData, resourcePerson: e.target.value })}
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Vendor *</label>
+              <select
+                value={formData.vendor}
+                onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-              />
+              >
+                <option value="">Select</option>
+                {vendorOptions.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              {formErrors.vendor && (
+                <p className="text-[10px] text-red-600 mt-1">{formErrors.vendor}</p>
+              )}
             </div>
           </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Portal Sourcing Link</label>
-            <input
-              type="url"
-              value={formData.portalLink}
-              onChange={(e) => setFormData({ ...formData, portalLink: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            />
-          </div>
-
-          {!activeRecord && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-                  >
-                    <option value="">Select</option>
-                    {recruitmentFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-                  </select>
-                </div>
-              </div>
-              {formErrors.status && (
-                <p className="text-[10px] text-red-600 mt-1">{formErrors.status}</p>
-              )}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Log Description</label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
-                />
-              </div>
-            </>
-          )}
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
             <button
@@ -777,131 +685,34 @@ const Analytics = () => {
               type="submit"
               className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all"
             >
-              {activeRecord ? 'Save Changes' : 'Add Candidate'}
+              {activeRecord ? 'Save Changes' : 'Add Lead'}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* 2. UPDATE STATUS MODAL */}
-      <Modal
-        isOpen={isStatusOpen}
-        onClose={() => setIsStatusOpen(false)}
-        title={`Update Status: ${activeRecord?.idnumber}`}
-      >
-        <form onSubmit={handleStatusSubmit} className="space-y-4 text-slate-800">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Select Sourcing Status</label>
-            <select
-              value={statusForm.status}
-              onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            >
-              <option value="">Select</option>
-              {recruitmentFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Workflow Notes / Reason *</label>
-            <textarea
-              rows={3}
-              value={statusForm.description}
-              onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
-            />
-          </div>
-
-          <div className="flex items-center space-x-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsStatusOpen(false)}
-              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              className="flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand"
-            >
-              Submit Update
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* 3. SHOW HISTORY AUDIT TRAIL MODAL */}
-      <Modal
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        title={`Audit Trail: ${activeRecord?.idnumber}`}
-        maxWidth="max-w-md"
-      >
-        {historyLoading ? (
-          <div className="py-12 flex items-center justify-center">
-            <Spinner />
-          </div>
-        ) : historyList.length === 0 ? (
-          <p className="text-center text-slate-400 text-xs py-8">No status transition log records found.</p>
-        ) : (
-          <div className="relative border-l-2 border-slate-200 pl-4 py-1.5 ml-3 space-y-6 text-slate-800">
-            {historyList.map((hist, idx) => (
-              <div key={hist._id || idx} className="relative">
-                {/* Node icon circle */}
-                <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full bg-brand-800 border border-white shadow-sm" />
-                
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <StatusBadge status={hist.status} type="recruitment" />
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {formatDateTimeDDMMYYYY(hist.updatedOn)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
-                    {hist.description}
-                  </p>
-                  <div className="text-[10px] text-slate-500 font-medium">
-                    Updated by: <span className="text-slate-700 font-bold">{hist.updatedBy}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="mt-6 pt-3 border-t border-slate-100 flex justify-end">
-          <button
-            onClick={() => setIsHistoryOpen(false)}
-            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all shadow-sm"
-          >
-            Dismiss
-          </button>
-        </div>
-      </Modal>
-
-      {/* 4. CONFIRM DELETE MODAL */}
+      {/* 2. CONFIRM DELETE MODAL */}
       <Modal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
-        title="Confirm Record Deletion"
+        title="Confirm Lead Deletion"
       >
         <div className="space-y-4 text-slate-800">
           <p className="text-xs text-slate-600 leading-relaxed">
-            Are you sure you want to delete candidate <span className="font-extrabold text-brand-850">{activeRecord?.idnumber}</span>? This action is permanent and will clear all associated status history metrics.
+            Are you sure you want to delete lead <span className="font-extrabold text-brand-850">{activeRecord?.requestId}</span>? This action is permanent and will clear the sourcing details.
           </p>
-          <div className="flex items-center space-x-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               onClick={() => setIsDeleteOpen(false)}
-              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
+              className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
             >
               Cancel
             </button>
             <button
               onClick={confirmDelete}
-              className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-glow-brand"
+              className="w-full sm:flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-glow-brand"
             >
-              Delete Record
+              Delete Lead
             </button>
           </div>
         </div>
@@ -910,4 +721,4 @@ const Analytics = () => {
   );
 };
 
-export default Analytics;
+export default ReceivedInfo;

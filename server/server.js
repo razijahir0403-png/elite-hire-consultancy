@@ -19,6 +19,8 @@ const roleRoutes = require('./routes/roleRoutes');
 const requestInfoRoutes = require('./routes/requestInfoRoutes');
 const activityLogRoutes = require('./routes/activityLogRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const clientRoutes = require('./routes/clientRoutes');
+const receivedInfoRoutes = require('./routes/receivedInfoRoutes');
 
 validateEnv();
 
@@ -26,7 +28,11 @@ const app = express();
 
 /* ----------------------------- SECURITY ----------------------------- */
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 app.use(compression());
 
 /* ------------------------------- CORS ------------------------------- */
@@ -40,7 +46,20 @@ app.use(express.urlencoded({ extended: true }));
 
 /* ------------------------------ STATICS ------------------------------ */
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.join(__dirname, 'uploads'), {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.pdf')) {
+        res.setHeader('Content-Type', 'application/pdf');
+      }
+    },
+  })
+);
 
 /* ----------------------------- MIDDLEWARE ---------------------------- */
 
@@ -70,6 +89,8 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/requestinfos', requestInfoRoutes);
 app.use('/api/activitylogs', activityLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/received-info', receivedInfoRoutes);
 
 /* -------------------------- SERVE FRONTEND --------------------------- */
 

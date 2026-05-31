@@ -79,10 +79,9 @@ const Register = () => {
                   id="name"
                   type="text"
                   required
-                  placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 placeholder-slate-450 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 transition-all text-sm"
                 />
               </div>
             </div>
@@ -100,10 +99,9 @@ const Register = () => {
                   id="email"
                   type="email"
                   required
-                  placeholder="consultant@elitehire.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 placeholder-slate-450 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
                 />
               </div>
             </div>
@@ -121,10 +119,9 @@ const Register = () => {
                   id="password"
                   type="password"
                   required
-                  placeholder="•••••••• (Min 6 chars)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 placeholder-slate-450 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 transition-all text-sm"
                 />
               </div>
             </div>

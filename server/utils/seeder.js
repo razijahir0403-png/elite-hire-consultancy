@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const User = require('../models/User');
 const Role = require('../models/Role');
 const RequestInfo = require('../models/RequestInfo');
+const Client = require('../models/Client');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -11,12 +12,12 @@ const defaultRoles = [
   {
     name: 'admin',
     description: 'Full system administrator',
-    permissions: ['users:read', 'users:write', 'roles:read', 'roles:write', 'requestinfos:read', 'requestinfos:write'],
+    permissions: ['users:read', 'users:write', 'roles:read', 'roles:write', 'requestinfos:read', 'requestinfos:write', 'clients:read', 'clients:write'],
   },
   {
     name: 'recruiter',
     description: 'Recruitment operations user',
-    permissions: ['requestinfos:read', 'requestinfos:write'],
+    permissions: ['requestinfos:read', 'requestinfos:write', 'clients:read', 'clients:write'],
   },
 ];
 
@@ -26,6 +27,7 @@ const mockRequestInfos = [
     companyName: 'TechNova Solutions',
     domain: 'React Native Developer',
     location: 'Bangalore',
+    email: 'ananya.sharma@technova.example',
     contactNumber: '9876543210',
     resourcePerson: 'Ananya Sharma',
     portalLink: 'https://www.naukri.com/job-listings-react-native',
@@ -53,6 +55,7 @@ const mockRequestInfos = [
     companyName: 'CloudStack India',
     domain: 'Node.js Backend Engineer',
     location: 'Hyderabad',
+    email: 'vikram.malhotra@cloudstack.example',
     contactNumber: '9988776655',
     resourcePerson: 'Vikram Malhotra',
     portalLink: 'https://www.indeed.com/viewjob?jk=backend123',
@@ -95,7 +98,7 @@ const seedDB = async () => {
       admin = await User.create({
         name: 'Admin Manager',
         email: adminEmail,
-        password: 'password123',
+        password: 'EliteHire@2026',
         isApproved: true,
         role: roleMap.admin,
       });
@@ -108,6 +111,32 @@ const seedDB = async () => {
     const count = await RequestInfo.countDocuments();
     if (count === 0) {
       await RequestInfo.insertMany(mockRequestInfos);
+    }
+
+    const clientCount = await Client.countDocuments();
+    if (clientCount === 0) {
+      await Client.insertMany([
+        {
+          clientId: 'CL-2026-001',
+          clientName: 'Apex Retail Group',
+          mobile: '9123456780',
+          email: 'contact@apexretail.example',
+          category: 'Retail & E-Commerce',
+          status: 0,
+          description: 'Client information verified.',
+          createdBy: 'Admin Seeder',
+          updatedBy: 'Admin Seeder',
+          updatedOn: new Date(),
+          statusHistory: [
+            {
+              status: 0,
+              description: 'Client information verified.',
+              updatedBy: 'Admin Seeder',
+              updatedOn: new Date(),
+            },
+          ],
+        },
+      ]);
     }
   } catch (error) {
     // Seeding errors are non-fatal; server continues without seed data

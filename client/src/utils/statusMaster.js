@@ -24,7 +24,12 @@ export const RECRUITMENT_STATUS = {
   REJECTED: 14,
   CANCELLED_SLA: 15,
   DUPLICATE: 16,
+  REOPEN: 17,
+  CANCELLED: 18,
+  INTERNAL_NOTE: 19,
 };
+
+export const RECRUITMENT_STATUS_MAX = 19;
 
 export const CommonStatus = { 0: 'Inactive', 1: 'Active' };
 
@@ -52,6 +57,9 @@ export const RecruitmentStatus = {
   14: 'Rejected',
   15: 'Cancelled as per SLA',
   16: 'Duplicate',
+  17: 'Reopen',
+  18: 'Cancelled',
+  19: 'Internal Note',
 };
 
 /** Tailwind badge classes per status type */
@@ -64,6 +72,9 @@ export const StatusColors = {
     2: 'bg-orange-50 text-orange-700 border-orange-200',
     3: 'bg-orange-50 text-orange-700 border-orange-200',
     12: 'bg-orange-50 text-orange-700 border-orange-200',
+    17: 'bg-violet-50 text-violet-700 border-violet-200',
+    18: 'bg-slate-100 text-slate-700 border-slate-300',
+    19: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
   common: {
     0: 'bg-slate-50 text-slate-600 border-slate-200',

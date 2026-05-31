@@ -9,7 +9,7 @@ const {
   updateStatus,
   getStatusHistory,
 } = require('../controllers/requestInfoController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { requestInfoValidators } = require('../utils/validators');
 const validate = require('../middleware/validate');
 
@@ -25,6 +25,6 @@ router.route('/')
 router.route('/:id')
   .get(requestInfoValidators.idParam, validate, getRequestInfo)
   .put(requestInfoValidators.update, validate, updateRequestInfo)
-  .delete(requestInfoValidators.idParam, validate, deleteRequestInfo);
+  .delete(requestInfoValidators.idParam, validate, adminOnly, deleteRequestInfo);
 
 module.exports = router;

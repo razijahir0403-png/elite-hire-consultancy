@@ -76,10 +76,7 @@ const Dashboard = () => {
             Monitor verification cycles, edit candidate logs, and trace recruitment audit histories across prime job boards.
           </p>
         </div>
-        <div className="mt-4 md:mt-0 flex items-center space-x-2 bg-brand-50 border border-brand-100 px-4 py-2 rounded-xl text-brand-800 text-sm font-bold tracking-wide shadow-sm z-10">
-          <TrendingUp size={16} />
-          <span>System Normal</span>
-        </div>
+       
       </div>
 
       {/* Mini Stats Grid */}

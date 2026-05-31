@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu, Bell, Search, Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { formatDateDDMMYYYY } from '../utils/dateFormatter';
 
 const Navbar = ({ onMenuClick }) => {
   const { user } = useAuth();
@@ -14,13 +15,14 @@ const Navbar = ({ onMenuClick }) => {
     if (path === '/dashboard/naukri') return 'Naukri Integration';
     if (path === '/dashboard/indeed') return 'Indeed Integration';
     if (path === '/dashboard/analytics') return 'Analytics Info';
+    if (path === '/dashboard/clients') return 'Clients Info';
+    if (path === '/dashboard/received-info') return 'Received Info';
     if (path === '/dashboard/users') return 'System Users';
     return 'Consultancy System';
   };
 
   const formatDate = () => {
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date().toLocaleDateString('en-US', options);
+    return formatDateDDMMYYYY(new Date());
   };
 
   return (
@@ -52,11 +54,7 @@ const Navbar = ({ onMenuClick }) => {
           <span>{formatDate()}</span>
         </div>
 
-        {/* Notifications mock icon */}
-        <button className="relative p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-350 transition-all">
-          <Bell size={16} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-800 rounded-full ring-2 ring-white" />
-        </button>
+      
 
         {/* User Profile Badge (Rightmost) */}
         <div className="flex items-center space-x-2 border-l border-slate-200 pl-4">

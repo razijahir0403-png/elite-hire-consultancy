@@ -7,7 +7,9 @@ import Dashboard from '../pages/Dashboard';
 import Naukri from '../pages/Naukri';
 import Indeed from '../pages/Indeed';
 import Analytics from '../pages/Analytics';
+import Clients from '../pages/Clients';
 import Users from '../pages/Users';
+import ReceivedInfo from '../pages/ReceivedInfo';
 
 const AppRoutes = () => (
   <Routes>
@@ -26,7 +28,9 @@ const AppRoutes = () => (
       <Route path="naukri" element={<Naukri />} />
       <Route path="indeed" element={<Indeed />} />
       <Route path="analytics" element={<Analytics />} />
+      <Route path="clients" element={<Clients />} />
       <Route path="users" element={<Users />} />
+      <Route path="received-info" element={<ReceivedInfo />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Route>
 

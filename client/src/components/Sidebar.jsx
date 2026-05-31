@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   LayoutDashboard, 
   BarChart3,
+  Building2,
+  CheckSquare,
   LogOut, 
   X,
   Users as UsersIcon
@@ -27,6 +29,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       name: 'Analytics Info',
       path: '/dashboard/analytics',
       icon: BarChart3
+    },
+    {
+      name: 'Clients Info',
+      path: '/dashboard/clients',
+      icon: Building2
+    },
+    {
+      name: 'Received Info',
+      path: '/dashboard/received-info',
+      icon: CheckSquare
     },
     ...(isAdmin ? [{
       name: 'System Users',

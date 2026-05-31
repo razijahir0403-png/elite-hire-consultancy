@@ -25,6 +25,9 @@ api.interceptors.request.use(
         console.error('Error parsing user credentials from localStorage:', err);
       }
     }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
     return config;
   },
   (error) => {

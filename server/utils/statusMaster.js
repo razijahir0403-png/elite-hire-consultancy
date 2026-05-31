@@ -46,7 +46,12 @@ const RECRUITMENT_STATUS = {
   REJECTED: 14,
   CANCELLED_SLA: 15,
   DUPLICATE: 16,
+  REOPEN: 17,
+  CANCELLED: 18,
+  INTERNAL_NOTE: 19,
 };
+
+const RECRUITMENT_STATUS_MAX = 19;
 
 const CommonStatusLabel = {
   0: 'Inactive',
@@ -92,6 +97,9 @@ const RecruitmentStatusLabel = {
   14: 'Rejected',
   15: 'Cancelled as per SLA',
   16: 'Duplicate',
+  17: 'Reopen',
+  18: 'Cancelled',
+  19: 'Internal Note',
 };
 
 const RECRUITMENT_TEXT_TO_CODE = Object.entries(RecruitmentStatusLabel).reduce((acc, [code, label]) => {
@@ -131,6 +139,7 @@ module.exports = {
   TICKET_STATUS,
   ASSET_STATUS,
   RECRUITMENT_STATUS,
+  RECRUITMENT_STATUS_MAX,
   CommonStatusLabel,
   ApprovalStatusLabel,
   TicketStatusLabel,

@@ -4,6 +4,7 @@ import { Users as UsersIcon, ShieldAlert, RefreshCw, Mail, Calendar, KeyRound, U
 import { toast } from 'react-toastify';
 import api from '../api';
 import Spinner from '../components/Spinner';
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
 
 const Users = () => {
   const { user } = useAuth();
@@ -122,7 +123,7 @@ const Users = () => {
               <div className="space-y-1.5">
                 <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Latest Activation</span>
                 <span className="text-sm font-semibold text-slate-700 block truncate">
-                  {usersList.length > 0 ? new Date(usersList[0].createdAt).toLocaleDateString() : 'N/A'}
+                  {usersList.length > 0 ? formatDateDDMMYYYY(usersList[0].createdAt) : 'N/A'}
                 </span>
               </div>
               <div className="p-4 bg-amber-50 border border-amber-100 text-amber-600 rounded-xl flex items-center justify-center shadow-inner">
@@ -143,7 +144,7 @@ const Users = () => {
                     <th className="py-4 px-6 text-center w-16">#</th>
                     <th className="py-4 px-6">Name</th>
                     <th className="py-4 px-6">Email Address</th>
-                    <th className="py-4 px-6">Account ID</th>
+                    <th className="py-4 px-6 whitespace-nowrap min-w-[120px]">Account ID</th>
                     <th className="py-4 px-6">Registered On</th>
                     <th className="py-4 px-6">Approval Status</th>
                     <th className="py-4 px-6 text-right">Actions</th>
@@ -178,15 +179,9 @@ const Users = () => {
                           <span>{usr.email}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 font-mono text-xs text-slate-400">{usr._id}</td>
+                      <td className="py-4 px-6 font-mono text-xs text-slate-400 whitespace-nowrap min-w-[120px]">{usr._id}</td>
                       <td className="py-4 px-6 font-medium text-slate-500">
-                        {new Date(usr.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {formatDateTimeDDMMYYYY(usr.createdAt)}
                       </td>
                       <td className="py-4 px-6">
                         {usr.email === 'admin@elitehire.com' ? (
