@@ -58,7 +58,7 @@ const receivedInfoSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please choose a vendor'],
       enum: {
-        values: ['HR Circle', 'Talvixa', 'Job Updates', 'RedBus', 'Other Vendor'],
+        values: ['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'],
         message: '{VALUE} is not a valid vendor',
       },
       trim: true,

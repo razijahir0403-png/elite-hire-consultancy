@@ -31,7 +31,7 @@ import {
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import { clientFilterOptions, CLIENT_STATUS } from '../utils/clientStatusMaster';
 import { validateProfilePdf } from '../utils/profileDocument';
-import { fetchClientPdfBlobUrl, revokeBlobUrl } from '../utils/clientDocument';
+import { fetchClientPdfBlobUrl, fetchClientProofPdfBlobUrl, revokeBlobUrl } from '../utils/clientDocument';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
 
 const TEXT_FIELD_MAX_LENGTH = 200;
@@ -40,6 +40,7 @@ const emptyPdfPreview = () => ({
   name: '',
   clientId: null,
   blobUrl: null,
+  docType: 'profile',
   loading: false,
   error: false,
 });
@@ -86,6 +87,8 @@ const Clients = () => {
   const [formErrors, setFormErrors] = useState({});
   const [profileFile, setProfileFile] = useState(null);
   const [existingDocumentName, setExistingDocumentName] = useState('');
+  const [proofFile, setProofFile] = useState(null);
+  const [existingProofName, setExistingProofName] = useState('');
 
   const [statusForm, setStatusForm] = useState({
     status: '',
@@ -180,6 +183,8 @@ const Clients = () => {
     setFormErrors({});
     setProfileFile(null);
     setExistingDocumentName('');
+    setProofFile(null);
+    setExistingProofName('');
     setIsAddEditOpen(true);
   };
 
@@ -196,6 +201,8 @@ const Clients = () => {
     setFormErrors({});
     setProfileFile(null);
     setExistingDocumentName(record.profileDocumentName || '');
+    setProofFile(null);
+    setExistingProofName(record.proofDocumentName || '');
     setIsAddEditOpen(true);
   };
 
@@ -220,12 +227,16 @@ const Clients = () => {
     if (!isValidContactNumber(formData.mobile)) {
       errors.mobile = 'Mobile number must be exactly 10 digits';
     }
-    if (formData.status === '') {
+    if (!activeRecord && formData.status === '') {
       errors.status = 'Status is required';
     }
     const pdfError = validateProfilePdf(profileFile);
     if (pdfError) {
       errors.profileDocument = pdfError;
+    }
+    const proofPdfError = validateProfilePdf(proofFile);
+    if (proofPdfError) {
+      errors.proofDocument = proofPdfError;
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -243,6 +254,9 @@ const Clients = () => {
     }
     if (profileFile) {
       fd.append('profileDocument', profileFile);
+    }
+    if (proofFile) {
+      fd.append('proofDocument', proofFile);
     }
     return fd;
   };
@@ -285,6 +299,23 @@ const Clients = () => {
       return next;
     });
     setProfileFile(file);
+  };
+
+  const handleProofFileChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    const pdfError = validateProfilePdf(file);
+    if (pdfError) {
+      setFormErrors((prev) => ({ ...prev, proofDocument: pdfError }));
+      setProofFile(null);
+      e.target.value = '';
+      return;
+    }
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      delete next.proofDocument;
+      return next;
+    });
+    setProofFile(file);
   };
 
   const handleDeleteClick = (record) => {
@@ -350,12 +381,14 @@ const Clients = () => {
     setIsPdfOpen(false);
   };
 
-  const openPdfModal = async (record) => {
-    if (!record.profileDocumentPath || !record._id) return;
+  const openPdfModal = async (record, type = 'profile') => {
+    const hasDoc = type === 'profile' ? record.profileDocumentPath : record.proofDocumentPath;
+    if (!hasDoc || !record._id) return;
 
     setPdfPreview({
-      name: record.profileDocumentName || 'profile-document.pdf',
+      name: type === 'profile' ? (record.profileDocumentName || 'profile-document.pdf') : (record.proofDocumentName || 'proof-document.pdf'),
       clientId: record._id,
+      docType: type,
       blobUrl: null,
       loading: true,
       error: false,
@@ -363,7 +396,7 @@ const Clients = () => {
     setIsPdfOpen(true);
 
     try {
-      const blobUrl = await fetchClientPdfBlobUrl(record._id);
+      const blobUrl = type === 'profile' ? await fetchClientPdfBlobUrl(record._id) : await fetchClientProofPdfBlobUrl(record._id);
       setPdfPreview((prev) => ({
         ...prev,
         blobUrl,
@@ -384,7 +417,7 @@ const Clients = () => {
     if (pdfPreview.blobUrl) {
       const link = document.createElement('a');
       link.href = pdfPreview.blobUrl;
-      link.download = pdfPreview.name || 'profile-document.pdf';
+      link.download = pdfPreview.name || (pdfPreview.docType === 'profile' ? 'profile-document.pdf' : 'proof-document.pdf');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -394,10 +427,10 @@ const Clients = () => {
     if (!pdfPreview.clientId) return;
 
     try {
-      const blobUrl = await fetchClientPdfBlobUrl(pdfPreview.clientId);
+      const blobUrl = pdfPreview.docType === 'profile' ? await fetchClientPdfBlobUrl(pdfPreview.clientId) : await fetchClientProofPdfBlobUrl(pdfPreview.clientId);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = pdfPreview.name || 'profile-document.pdf';
+      link.download = pdfPreview.name || (pdfPreview.docType === 'profile' ? 'profile-document.pdf' : 'proof-document.pdf');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -427,7 +460,7 @@ const Clients = () => {
           className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
         >
           <Plus size={16} />
-          <span>Add Client</span>
+          <span>Add Info</span>
         </button>
       </div>
 
@@ -553,7 +586,8 @@ const Clients = () => {
                   <th className="px-6 py-4">Mobile</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Category</th>
-                  <th className="px-6 py-4 text-center">Profile</th>
+                  <th className="px-6 py-4 text-center">Profile Docs</th>
+                  <th className="px-6 py-4 text-center">Proof Docs</th>
                   <th className="px-6 py-4">Status</th>
                   <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
@@ -576,9 +610,23 @@ const Clients = () => {
                       {r.profileDocumentPath ? (
                         <button
                           type="button"
-                          onClick={() => openPdfModal(r)}
+                          onClick={() => openPdfModal(r, 'profile')}
                           className="inline-flex p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition-all"
                           title="View profile document"
+                        >
+                          <File size={14} />
+                        </button>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {r.proofDocumentPath ? (
+                        <button
+                          type="button"
+                          onClick={() => openPdfModal(r, 'proof')}
+                          className="inline-flex p-2 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 hover:bg-orange-100 transition-all"
+                          title="View proof document"
                         >
                           <File size={14} />
                         </button>
@@ -642,7 +690,7 @@ const Clients = () => {
       <Modal
         isOpen={isAddEditOpen}
         onClose={() => setIsAddEditOpen(false)}
-        title={activeRecord ? `Edit Client: ${activeRecord.clientId}` : 'Add Client'}
+        title={activeRecord ? `Edit Client: ${activeRecord.clientId}` : 'Add Info'}
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleAddEditSubmit} className="space-y-4 text-slate-800">
@@ -723,6 +771,25 @@ const Clients = () => {
             )}
           </div>
 
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Proof Document (PDF, max 200 KB)</label>
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={handleProofFileChange}
+              className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-800 file:font-semibold"
+            />
+            {existingProofName && !proofFile && (
+              <p className="text-[10px] text-slate-500 mt-1">Current file: {existingProofName}</p>
+            )}
+            {proofFile && (
+              <p className="text-[10px] text-emerald-600 mt-1">New file selected: {proofFile.name}</p>
+            )}
+            {formErrors.proofDocument && (
+              <p className="text-[10px] text-red-600 mt-1">{formErrors.proofDocument}</p>
+            )}
+          </div>
+
           {!activeRecord && (
             <>
               <div>
@@ -758,7 +825,7 @@ const Clients = () => {
               Cancel
             </button>
             <button type="submit" className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 text-white font-bold text-xs rounded-xl">
-              {activeRecord ? 'Save Changes' : 'Add Client'}
+              {activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
           </div>
         </form>
@@ -781,10 +848,19 @@ const Clients = () => {
             {activeRecord.profileDocumentPath && (
               <button
                 type="button"
-                onClick={() => openPdfModal(activeRecord)}
+                onClick={() => openPdfModal(activeRecord, 'profile')}
                 className="flex items-center gap-2 text-brand-800 font-bold hover:underline"
               >
                 <File size={14} /> View Profile Document
+              </button>
+            )}
+            {activeRecord.proofDocumentPath && (
+              <button
+                type="button"
+                onClick={() => openPdfModal(activeRecord, 'proof')}
+                className="flex items-center gap-2 text-orange-600 font-bold hover:underline mt-1"
+              >
+                <File size={14} /> View Proof Document
               </button>
             )}
           </div>

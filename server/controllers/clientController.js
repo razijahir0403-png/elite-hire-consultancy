@@ -12,12 +12,12 @@ const getClient = asyncHandler(async (req, res) => {
 });
 
 const createClient = asyncHandler(async (req, res) => {
-  const record = await clientService.createClient(req.body, req.file, req.user.name);
+  const record = await clientService.createClient(req.body, req.files, req.user.name);
   res.status(201).json(record);
 });
 
 const updateClient = asyncHandler(async (req, res) => {
-  const record = await clientService.updateClient(req.params.id, req.body, req.file, req.user.name);
+  const record = await clientService.updateClient(req.params.id, req.body, req.files, req.user.name);
   res.json(record);
 });
 
@@ -46,6 +46,11 @@ const getClientDocument = asyncHandler(async (req, res) => {
   await clientService.streamClientDocument(req.params.id, res, { download });
 });
 
+const getClientProofDocument = asyncHandler(async (req, res) => {
+  const download = req.query.download === '1' || req.query.download === 'true';
+  await clientService.streamClientProofDocument(req.params.id, res, { download });
+});
+
 module.exports = {
   getClients,
   getClient,
@@ -56,4 +61,5 @@ module.exports = {
   getStatusHistory,
   exportClients,
   getClientDocument,
+  getClientProofDocument,
 };

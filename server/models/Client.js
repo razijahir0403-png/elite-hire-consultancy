@@ -80,6 +80,16 @@ const clientSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    proofDocumentPath: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    proofDocumentName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     status: {
       type: Number,
       required: [true, 'Please choose a status'],

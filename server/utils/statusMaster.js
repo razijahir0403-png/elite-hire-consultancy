@@ -49,9 +49,13 @@ const RECRUITMENT_STATUS = {
   REOPEN: 17,
   CANCELLED: 18,
   INTERNAL_NOTE: 19,
+  INFO_UPDATED: 20,
+  RESPONSE_RECEIVED: 21,
+  NEED_AN_HELP: 22,
+  SENT_FOLLOW_UP: 23,
 };
 
-const RECRUITMENT_STATUS_MAX = 19;
+const RECRUITMENT_STATUS_MAX = 23;
 
 const CommonStatusLabel = {
   0: 'Inactive',
@@ -100,6 +104,10 @@ const RecruitmentStatusLabel = {
   17: 'Reopen',
   18: 'Cancelled',
   19: 'Internal Note',
+  20: 'Info Updated',
+  21: 'Response Received',
+  22: 'Need an Help',
+  23: 'Sent Follow up Message',
 };
 
 const RECRUITMENT_TEXT_TO_CODE = Object.entries(RecruitmentStatusLabel).reduce((acc, [code, label]) => {

@@ -19,9 +19,13 @@ const CLIENT_STATUS = {
   CANCELLED: 13,
   REOPEN: 14,
   INTERNAL_NOTE: 15,
+  NEED_AN_HELP: 16,
+  PAYMENT_COMPLETED: 17,
+  PAYMENT_PENDING: 18,
+  RESPONSE_RECEIVED: 19,
 };
 
-const CLIENT_STATUS_MAX = 15;
+const CLIENT_STATUS_MAX = 19;
 
 const ClientStatusLabel = {
   0: 'Info Verified',
@@ -40,6 +44,10 @@ const ClientStatusLabel = {
   13: 'Cancelled',
   14: 'Re-Open',
   15: 'Internal Note',
+  16: 'Need an Help',
+  17: 'Payment Completed',
+  18: 'Payment Pending',
+  19: 'Response Received',
 };
 
 const CLIENT_TEXT_TO_CODE = Object.entries(ClientStatusLabel).reduce((acc, [code, label]) => {

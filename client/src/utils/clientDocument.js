@@ -38,3 +38,25 @@ export const revokeBlobUrl = (blobUrl) => {
     URL.revokeObjectURL(blobUrl);
   }
 };
+
+export const fetchClientProofPdfBlobUrl = async (clientId) => {
+  const response = await api.get(`/clients/${clientId}/proof-document`, {
+    responseType: 'blob',
+  });
+
+  const { data, headers } = response;
+
+  if (data.type === 'application/json' || (data.size > 0 && data.size < 500 && !data.type.includes('pdf'))) {
+    throw new Error(await parseBlobError(data));
+  }
+
+  const blob = new Blob([data], {
+    type: headers['content-type'] || 'application/pdf',
+  });
+
+  if (blob.size === 0) {
+    throw new Error('Document file is empty');
+  }
+
+  return URL.createObjectURL(blob);
+};

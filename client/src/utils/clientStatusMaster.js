@@ -15,6 +15,10 @@ export const CLIENT_STATUS = {
   CANCELLED: 13,
   REOPEN: 14,
   INTERNAL_NOTE: 15,
+  NEED_AN_HELP: 16,
+  PAYMENT_COMPLETED: 17,
+  PAYMENT_PENDING: 18,
+  RESPONSE_RECEIVED: 19,
 };
 
 export const ClientStatus = {
@@ -34,6 +38,10 @@ export const ClientStatus = {
   13: 'Cancelled',
   14: 'Re-Open',
   15: 'Internal Note',
+  16: 'Need an Help',
+  17: 'Payment Completed',
+  18: 'Payment Pending',
+  19: 'Response Received',
 };
 
 export const ClientStatusColors = {

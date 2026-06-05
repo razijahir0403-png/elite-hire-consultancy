@@ -27,9 +27,13 @@ export const RECRUITMENT_STATUS = {
   REOPEN: 17,
   CANCELLED: 18,
   INTERNAL_NOTE: 19,
+  INFO_UPDATED: 20,
+  RESPONSE_RECEIVED: 21,
+  NEED_AN_HELP: 22,
+  SENT_FOLLOW_UP: 23,
 };
 
-export const RECRUITMENT_STATUS_MAX = 19;
+export const RECRUITMENT_STATUS_MAX = 23;
 
 export const CommonStatus = { 0: 'Inactive', 1: 'Active' };
 
@@ -60,6 +64,10 @@ export const RecruitmentStatus = {
   17: 'Reopen',
   18: 'Cancelled',
   19: 'Internal Note',
+  20: 'Info Updated',
+  21: 'Response Received',
+  22: 'Need an Help',
+  23: 'Sent Follow up Message',
 };
 
 /** Tailwind badge classes per status type */

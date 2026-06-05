@@ -37,11 +37,14 @@ const fileFilter = (_req, file, cb) => {
 const uploadProfileDocument = multer({
   storage,
   fileFilter,
-  limits: { fileSize: MAX_FILE_SIZE, files: 1 },
+  limits: { fileSize: MAX_FILE_SIZE, files: 2 },
 });
 
 const handleClientUpload = (req, res, next) => {
-  uploadProfileDocument.single('profileDocument')(req, res, (err) => {
+  uploadProfileDocument.fields([
+    { name: 'profileDocument', maxCount: 1 },
+    { name: 'proofDocument', maxCount: 1 }
+  ])(req, res, (err) => {
     if (!err) return next();
 
     if (err instanceof AppError) {
@@ -50,6 +53,10 @@ const handleClientUpload = (req, res, next) => {
 
     if (err.code === 'LIMIT_FILE_SIZE') {
       return next(new AppError('File size must not exceed 200 KB.', 400));
+    }
+
+    if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return next(new AppError('Too many files uploaded or unexpected file field.', 400));
     }
 
     if (err.message === 'Only PDF files are allowed.') {

@@ -116,7 +116,7 @@ const receivedInfoValidators = {
       .trim()
       .notEmpty()
       .withMessage('Vendor is required')
-      .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'RedBus', 'Other Vendor'])
+      .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'])
       .withMessage('Invalid vendor selection'),
   ],
   update: [
@@ -131,7 +131,7 @@ const receivedInfoValidators = {
     body('vendor')
       .optional()
       .trim()
-      .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'RedBus', 'Other Vendor'])
+      .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'])
       .withMessage('Invalid vendor selection'),
   ],
   idParam: [param('id').isMongoId().withMessage('Valid record id is required')],
@@ -141,7 +141,7 @@ const receivedInfoValidators = {
     query('vendor')
       .optional({ values: 'falsy' })
       .trim()
-      .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'RedBus', 'Other Vendor', ''])
+      .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor', ''])
       .withMessage('Invalid vendor selection'),
   ],
 };

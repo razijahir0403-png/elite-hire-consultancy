@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronUp, 
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ChevronDown,
   X,
   FileText,
@@ -33,7 +33,7 @@ const ReceivedInfo = () => {
   const [exporting, setExporting] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
@@ -43,7 +43,7 @@ const ReceivedInfo = () => {
   const [limit, setLimit] = useState(10);
   const { user } = useAuth();
   const isAdmin = user?.email === 'admin@elitehire.com';
-  
+
   // Sorting state
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -68,7 +68,7 @@ const ReceivedInfo = () => {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  const vendorOptions = ['HR Circle', 'Talvixa', 'Job Updates', 'RedBus', 'Other Vendor'];
+  const vendorOptions = ['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'];
 
   // Fetch list of records from backend API
   const fetchRecords = async () => {

@@ -255,7 +255,7 @@ const Analytics = () => {
     if (!isValidContactNumber(formData.contactNumber)) {
       errors.contactNumber = 'Mobile number must be exactly 10 digits';
     }
-    if (formData.status === '') {
+    if (!activeRecord && formData.status === '') {
       errors.status = 'Status is required';
     }
     setFormErrors(errors);

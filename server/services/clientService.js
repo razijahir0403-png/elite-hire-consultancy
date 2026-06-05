@@ -28,6 +28,9 @@ const normalizeClientRecord = (doc) => {
   if (obj._id && obj.profileDocumentPath) {
     obj.profileDocumentUrl = `/api/clients/${obj._id}/document`;
   }
+  if (obj._id && obj.proofDocumentPath) {
+    obj.proofDocumentUrl = `/api/clients/${obj._id}/proof-document`;
+  }
   return obj;
 };
 
@@ -112,7 +115,7 @@ const getClientById = async (id) => {
   return normalizeClientRecord(record);
 };
 
-const createClient = async (body, file, editorName) => {
+const createClient = async (body, files, editorName) => {
   const {
     clientId: _clientId,
     clientName,
@@ -124,15 +127,20 @@ const createClient = async (body, file, editorName) => {
   } = body;
 
   const statusCode = toClientStatusCode(status, CLIENT_STATUS.INFO_VERIFIED);
-  const docInfo = applyUploadedDocument(file);
+  const profileFile = files?.profileDocument?.[0];
+  const proofFile = files?.proofDocument?.[0];
+  const profileDocInfo = applyUploadedDocument(profileFile);
+  const proofDocInfo = applyUploadedDocument(proofFile);
 
   const recordPayload = {
     clientName: String(clientName).trim(),
     mobile: mobile || '',
     email: email ? String(email).trim().toLowerCase() : '',
     category: String(category).trim(),
-    profileDocumentPath: docInfo.path,
-    profileDocumentName: docInfo.name,
+    profileDocumentPath: profileDocInfo.path,
+    profileDocumentName: profileDocInfo.name,
+    proofDocumentPath: proofDocInfo.path,
+    proofDocumentName: proofDocInfo.name,
     status: statusCode,
     description,
     createdBy: editorName,
@@ -166,7 +174,8 @@ const createClient = async (body, file, editorName) => {
         }
         continue;
       }
-      if (docInfo.path) await deleteProfileFile(docInfo.path);
+      if (profileDocInfo.path) await deleteProfileFile(profileDocInfo.path);
+      if (proofDocInfo.path) await deleteProfileFile(proofDocInfo.path);
       throw err;
     }
   }
@@ -174,35 +183,51 @@ const createClient = async (body, file, editorName) => {
   throw new AppError('Unable to assign a unique client ID. Please try again.', 409);
 };
 
-const updateClient = async (id, body, file, editorName) => {
+const updateClient = async (id, body, files, editorName) => {
   const record = await Client.findById(id);
   if (!record) {
     throw new AppError('Client not found', 404);
   }
 
-  const { clientName, mobile, email, category, removeProfileDocument } = body;
+  const { clientName, mobile, email, category, removeProfileDocument, removeProofDocument } = body;
 
   if (clientName !== undefined) record.clientName = String(clientName).trim();
   if (mobile !== undefined) record.mobile = mobile || '';
   if (email !== undefined) record.email = email ? String(email).trim().toLowerCase() : '';
   if (category !== undefined) record.category = String(category).trim();
 
-  const shouldRemoveDoc =
-    removeProfileDocument === true ||
-    removeProfileDocument === 'true';
+  const shouldRemoveProfileDoc = removeProfileDocument === true || removeProfileDocument === 'true';
+  const shouldRemoveProofDoc = removeProofDocument === true || removeProofDocument === 'true';
 
-  if (file) {
+  const profileFile = files?.profileDocument?.[0];
+  const proofFile = files?.proofDocument?.[0];
+
+  if (profileFile) {
     const previousPath = record.profileDocumentPath;
-    const docInfo = applyUploadedDocument(file);
+    const docInfo = applyUploadedDocument(profileFile);
     record.profileDocumentPath = docInfo.path;
     record.profileDocumentName = docInfo.name;
     if (previousPath && previousPath !== docInfo.path) {
       await deleteProfileFile(previousPath);
     }
-  } else if (shouldRemoveDoc && record.profileDocumentPath) {
+  } else if (shouldRemoveProfileDoc && record.profileDocumentPath) {
     await deleteProfileFile(record.profileDocumentPath);
     record.profileDocumentPath = '';
     record.profileDocumentName = '';
+  }
+
+  if (proofFile) {
+    const previousPath = record.proofDocumentPath;
+    const docInfo = applyUploadedDocument(proofFile);
+    record.proofDocumentPath = docInfo.path;
+    record.proofDocumentName = docInfo.name;
+    if (previousPath && previousPath !== docInfo.path) {
+      await deleteProfileFile(previousPath);
+    }
+  } else if (shouldRemoveProofDoc && record.proofDocumentPath) {
+    await deleteProfileFile(record.proofDocumentPath);
+    record.proofDocumentPath = '';
+    record.proofDocumentName = '';
   }
 
   record.updatedBy = editorName;
@@ -310,6 +335,48 @@ const streamClientDocument = async (id, res, { download = false } = {}) => {
   });
 };
 
+const streamClientProofDocument = async (id, res, { download = false } = {}) => {
+  const record = await Client.findById(id);
+  if (!record) {
+    throw new AppError('Client not found', 404);
+  }
+  if (!record.proofDocumentPath) {
+    throw new AppError('No proof document found for this client', 404);
+  }
+
+  const absolutePath = resolveProfileDocumentPath(record.proofDocumentPath);
+
+  try {
+    await fsp.access(absolutePath);
+  } catch {
+    throw new AppError('Proof document file not found on server', 404);
+  }
+
+  const filename = record.proofDocumentName || 'proof-document.pdf';
+  const safeFilename = filename.replace(/[^\w.\-() ]/g, '_');
+  const disposition = download ? 'attachment' : 'inline';
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `${disposition}; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
+  );
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  return new Promise((resolve, reject) => {
+    const fileStream = fs.createReadStream(absolutePath);
+    fileStream.on('error', () => {
+      if (!res.headersSent) {
+        reject(new AppError('Failed to read proof document', 500));
+      }
+    });
+    res.on('finish', resolve);
+    res.on('error', reject);
+    fileStream.pipe(res);
+  });
+};
+
 module.exports = {
   getClients,
   getClientById,
@@ -320,4 +387,5 @@ module.exports = {
   getStatusHistory,
   exportClients,
   streamClientDocument,
+  streamClientProofDocument,
 };
