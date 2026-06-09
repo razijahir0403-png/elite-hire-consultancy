@@ -594,10 +594,10 @@ const Clients = () => {
                   <th className="px-6 py-4 text-center">Profile Docs</th>
                   <th className="px-6 py-4 text-center">Proof Docs</th>
                   <th className="px-6 py-4">Status</th>
-                  <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
-                      <span>Created Date</span>
-                      {sortBy === 'createdAt' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      <span>Updated On</span>
+                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                     </div>
                   </th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -643,7 +643,8 @@ const Clients = () => {
                       <StatusBadge status={r.status} type="client" />
                     </td>
                     <td className="px-6 py-4 text-slate-500">
-                      {formatDateDDMMYYYY(r.createdDate || r.createdAt)}
+                      <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.updatedDate || r.updatedOn || r.createdDate || r.createdAt)}</div>
+                      <div className="text-[9px] text-slate-400">By {r.updatedBy || r.createdBy || 'System'}</div>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end space-x-1.5">
