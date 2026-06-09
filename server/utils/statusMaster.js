@@ -30,7 +30,7 @@ const ASSET_STATUS = {
 
 const RECRUITMENT_STATUS = {
   VERIFIED: 0,
-  NOT_TO_VERIFIED: 1,
+  NEED_TO_VERIFY: 1,
   INVALID_INFO: 2,
   WRONG_INFO: 3,
   MIS_MATCHED: 4,
@@ -85,7 +85,7 @@ const AssetStatusLabel = {
 
 const RecruitmentStatusLabel = {
   0: 'Verified',
-  1: 'Not to Verified',
+  1: 'Need to Verify',
   2: 'Invalid Info',
   3: 'Wrong Info',
   4: 'Mis-Matched',

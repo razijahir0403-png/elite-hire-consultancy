@@ -7,6 +7,7 @@ const {
   CLIENT_STATUS,
   toClientStatusCode,
 } = require('../utils/clientStatusMaster');
+const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
 const {
   generateNextClientId,
   isDuplicateClientIdError,
@@ -17,6 +18,9 @@ const normalizeClientRecord = (doc) => {
   if (!doc) return doc;
   const obj = doc.toObject ? doc.toObject() : { ...doc };
   obj.status = toClientStatusCode(obj.status);
+  obj.ageInDays = calculateAgeInDays(obj.createdAt);
+
+
   obj.createdDate = obj.createdAt;
   obj.updatedDate = obj.updatedOn;
   if (Array.isArray(obj.statusHistory)) {
@@ -52,7 +56,7 @@ const applyUploadedDocument = (file) => {
   };
 };
 
-const buildListQuery = ({ search = '', status = '', category = '' }) => {
+const buildListQuery = ({ search = '', status = '', age = '' }) => {
   const query = {};
 
   if (search) {
@@ -69,7 +73,13 @@ const buildListQuery = ({ search = '', status = '', category = '' }) => {
   if (status !== '' && status !== undefined && status !== null) {
     query.status = toClientStatusCode(status);
   }
-  if (category) query.category = { $regex: category, $options: 'i' };
+
+  if (age) {
+    const ageQuery = getAgeDateRange(age);
+    if (ageQuery) {
+      query.createdAt = ageQuery;
+    }
+  }
 
   return query;
 };
@@ -80,12 +90,12 @@ const getClients = async (queryParams) => {
     limit = 10,
     search = '',
     status = '',
-    category = '',
+    age = '',
     sortBy = 'updatedOn',
     sortOrder = 'desc',
   } = queryParams;
 
-  const query = buildListQuery({ search, status, category });
+  const query = buildListQuery({ search, status, age });
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);
   const skip = (pageNum - 1) * limitNum;

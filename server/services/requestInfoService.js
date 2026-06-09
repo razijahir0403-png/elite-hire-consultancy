@@ -9,11 +9,16 @@ const {
   isDuplicateKeyError,
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/idNumberGenerator');
+const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
 
 const normalizeRequestRecord = (doc) => {
   if (!doc) return doc;
-  const obj = doc.toObject ? doc.toObject() : { ...doc };
+  const data = doc.toObject ? doc.toObject() : { ...doc };
+  const obj = { ...data };
+  obj.id = obj._id;
   obj.status = toRecruitmentStatusCode(obj.status);
+  obj.ageInDays = calculateAgeInDays(obj.createdAt);
+
   if (Array.isArray(obj.statusHistory)) {
     obj.statusHistory = obj.statusHistory.map((item) => ({
       ...(item.toObject ? item.toObject() : item),
@@ -23,7 +28,7 @@ const normalizeRequestRecord = (doc) => {
   return obj;
 };
 
-const buildListQuery = ({ search = '', status = '', domain = '', location = '' }) => {
+const buildListQuery = ({ search = '', status = '', domain = '', location = '', age = '' }) => {
   const query = {};
 
   if (search) {
@@ -42,8 +47,14 @@ const buildListQuery = ({ search = '', status = '', domain = '', location = '' }
   if (status !== '' && status !== undefined && status !== null) {
     query.status = toRecruitmentStatusCode(status);
   }
-  if (domain) query.domain = domain;
   if (location) query.location = location;
+
+  if (age) {
+    const ageQuery = getAgeDateRange(age);
+    if (ageQuery) {
+      query.createdAt = ageQuery;
+    }
+  }
 
   return query;
 };
@@ -54,13 +65,13 @@ const getRequestInfos = async (queryParams) => {
     limit = 10,
     search = '',
     status = '',
-    domain = '',
     location = '',
+    age = '',
     sortBy = 'updatedOn',
     sortOrder = 'desc',
   } = queryParams;
 
-  const query = buildListQuery({ search, status, domain, location });
+  const query = buildListQuery({ search, status, location, age });
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);
   const skip = (pageNum - 1) * limitNum;
@@ -111,6 +122,14 @@ const createRequestInfo = async (body, editorName) => {
     updatedBy: editorName,
     updatedOn: new Date(),
   };
+
+  const duplicate = await RequestInfo.findOne({
+    companyName: new RegExp(`^${companyName.trim()}$`, 'i'),
+    domain: new RegExp(`^${domain.trim()}$`, 'i'),
+  });
+  if (duplicate) {
+    throw new AppError('A record with this Company Name and Domain already exists.', 409);
+  }
 
   const recordPayload = {
     companyName,
@@ -175,6 +194,21 @@ const updateRequestInfo = async (id, body, editorName) => {
       throw new AppError('Record with this ID number already exists', 400);
     }
     record.idnumber = idnumber;
+  }
+
+  if (companyName !== undefined || domain !== undefined) {
+    const newCompanyName = companyName !== undefined ? companyName : record.companyName;
+    const newDomain = domain !== undefined ? domain : record.domain;
+
+    const duplicate = await RequestInfo.findOne({
+      _id: { $ne: id },
+      companyName: new RegExp(`^${newCompanyName.trim()}$`, 'i'),
+      domain: new RegExp(`^${newDomain.trim()}$`, 'i'),
+    });
+
+    if (duplicate) {
+      throw new AppError('A record with this Company Name and Domain already exists.', 409);
+    }
   }
 
   if (companyName !== undefined) record.companyName = companyName;

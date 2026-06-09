@@ -10,6 +10,7 @@ import Analytics from '../pages/Analytics';
 import Clients from '../pages/Clients';
 import Users from '../pages/Users';
 import ReceivedInfo from '../pages/ReceivedInfo';
+import Payments from '../pages/Payments';
 
 const AppRoutes = () => (
   <Routes>
@@ -31,6 +32,7 @@ const AppRoutes = () => (
       <Route path="clients" element={<Clients />} />
       <Route path="users" element={<Users />} />
       <Route path="received-info" element={<ReceivedInfo />} />
+      <Route path="payments" element={<Payments />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Route>
 

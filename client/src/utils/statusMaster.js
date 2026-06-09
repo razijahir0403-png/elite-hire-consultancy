@@ -8,7 +8,7 @@ export const ASSET_STATUS = { AVAILABLE: 0, ASSIGNED: 1, MAINTENANCE: 2, SCRAP: 
 
 export const RECRUITMENT_STATUS = {
   VERIFIED: 0,
-  NOT_TO_VERIFIED: 1,
+  NEED_TO_VERIFY: 1,
   INVALID_INFO: 2,
   WRONG_INFO: 3,
   MIS_MATCHED: 4,
@@ -45,7 +45,7 @@ export const AssetStatus = { 0: 'Available', 1: 'Assigned', 2: 'Maintenance', 3:
 
 export const RecruitmentStatus = {
   0: 'Verified',
-  1: 'Not to Verified',
+  1: 'Need to Verify',
   2: 'Invalid Info',
   3: 'Wrong Info',
   4: 'Mis-Matched',

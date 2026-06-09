@@ -37,7 +37,7 @@ const ReceivedInfo = () => {
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
-  const [domainFilter, setDomainFilter] = useState('');
+  const [ageFilter, setAgeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -80,7 +80,7 @@ const ReceivedInfo = () => {
           limit,
           search,
           vendor: vendorFilter,
-          domain: domainFilter,
+          age: ageFilter === 'All' ? '' : ageFilter,
           location: locationFilter,
           sortBy,
           sortOrder
@@ -99,7 +99,7 @@ const ReceivedInfo = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, [page, limit, vendorFilter, domainFilter, locationFilter, sortBy, sortOrder]);
+  }, [page, limit, vendorFilter, ageFilter, locationFilter, sortBy, sortOrder]);
 
   // Handle Search submit
   const handleSearchSubmit = (e) => {
@@ -119,14 +119,14 @@ const ReceivedInfo = () => {
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || vendorFilter || domainFilter || locationFilter);
+  const hasActiveFilters = Boolean(search || vendorFilter || ageFilter !== 'All' || locationFilter);
 
   const fetchAllRecordsForExport = async () => {
     const pageSize = 100;
     const filterParams = {
       search,
       vendor: vendorFilter,
-      domain: domainFilter,
+      age: ageFilter === 'All' ? '' : ageFilter,
       location: locationFilter,
       sortBy,
       sortOrder,
@@ -183,7 +183,7 @@ const ReceivedInfo = () => {
   const resetFilters = () => {
     setSearch('');
     setVendorFilter('');
-    setDomainFilter('');
+    setAgeFilter('All');
     setLocationFilter('');
     setPage(1);
   };
@@ -318,7 +318,7 @@ const ReceivedInfo = () => {
           className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
         >
           <Plus size={16} />
-          <span>Add Record</span>
+          <span>Add Info</span>
         </button>
       </div>
 
@@ -354,15 +354,19 @@ const ReceivedInfo = () => {
             </select>
           </div>
 
-          {/* Domain Filter */}
           <div className="space-y-1.5">
-            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Domain Category</label>
-            <input
-              type="text"
-              value={domainFilter}
-              onChange={(e) => { setDomainFilter(e.target.value); setPage(1); }}
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Age</label>
+            <select
+              value={ageFilter}
+              onChange={(e) => { setAgeFilter(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            />
+            >
+              <option value="All">All</option>
+              <option value="Today">Today</option>
+              <option value="> 5 Days">&gt; 5 Days</option>
+              <option value="> 15 Days">&gt; 15 Days</option>
+              <option value="> 25 Days">&gt; 25 Days</option>
+            </select>
           </div>
 
           {/* Actions & Clear */}
@@ -473,7 +477,7 @@ const ReceivedInfo = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r._id} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 && r.ageInDays <= 30 ? 'table-warning bg-[#fff3cd] hover:bg-[#ffe69c]' : 'hover:bg-slate-50/60'}`}>
                     <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.requestId}</td>
                     <td className="px-6 py-4 font-bold text-slate-900">{r.domain}</td>
                     <td className="px-6 py-4 text-slate-700 font-medium">{r.companyName || '—'}</td>
@@ -685,7 +689,7 @@ const ReceivedInfo = () => {
               type="submit"
               className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all"
             >
-              {activeRecord ? 'Save Changes' : 'Add Lead'}
+              {activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
           </div>
         </form>

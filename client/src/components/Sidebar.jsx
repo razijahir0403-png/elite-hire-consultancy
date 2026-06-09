@@ -8,7 +8,8 @@ import {
   CheckSquare,
   LogOut, 
   X,
-  Users as UsersIcon
+  Users as UsersIcon,
+  DollarSign
 } from 'lucide-react';
 import Elitehirelogo from '../assets/Elitehirelogo.jpeg';
 
@@ -39,6 +40,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       name: 'Received Info',
       path: '/dashboard/received-info',
       icon: CheckSquare
+    },
+    {
+      name: 'Payments Info',
+      path: '/dashboard/payments',
+      icon: DollarSign
     },
     ...(isAdmin ? [{
       name: 'System Users',

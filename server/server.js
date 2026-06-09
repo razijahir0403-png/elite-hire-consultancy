@@ -21,6 +21,8 @@ const activityLogRoutes = require('./routes/activityLogRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const receivedInfoRoutes = require('./routes/receivedInfoRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 validateEnv();
 
@@ -91,6 +93,8 @@ app.use('/api/activitylogs', activityLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/received-info', receivedInfoRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/payments', paymentRoutes);
 
 /* -------------------------- SERVE FRONTEND --------------------------- */
 

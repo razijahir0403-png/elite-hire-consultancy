@@ -5,8 +5,9 @@ const {
   isDuplicateKeyError,
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/receivedIdGenerator');
+const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
 
-const buildListQuery = ({ search = '', vendor = '', domain = '', location = '' }) => {
+const buildListQuery = ({ search = '', vendor = '', domain = '', location = '', age = '' }) => {
   const query = {};
 
   if (search) {
@@ -23,8 +24,14 @@ const buildListQuery = ({ search = '', vendor = '', domain = '', location = '' }
   }
 
   if (vendor) query.vendor = vendor;
-  if (domain) query.domain = domain;
   if (location) query.location = location;
+
+  if (age) {
+    const ageQuery = getAgeDateRange(age);
+    if (ageQuery) {
+      query.createdAt = ageQuery;
+    }
+  }
 
   return query;
 };
@@ -35,13 +42,13 @@ const getReceivedInfos = async (queryParams) => {
     limit = 10,
     search = '',
     vendor = '',
-    domain = '',
     location = '',
+    age = '',
     sortBy = 'createdAt',
     sortOrder = 'desc',
   } = queryParams;
 
-  const query = buildListQuery({ search, vendor, domain, location });
+  const query = buildListQuery({ search, vendor, location, age });
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);
   const skip = (pageNum - 1) * limitNum;
@@ -53,7 +60,11 @@ const getReceivedInfos = async (queryParams) => {
   ]);
 
   return {
-    records,
+    records: records.map(record => {
+      const obj = record.toObject ? record.toObject() : { ...record };
+      obj.ageInDays = calculateAgeInDays(obj.createdAt);
+      return obj;
+    }),
     pagination: {
       page: pageNum,
       limit: limitNum,

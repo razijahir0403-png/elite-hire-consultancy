@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Globe, BarChart3, TrendingUp, Users, CheckCircle, Clock } from 'lucide-react';
+import { Briefcase, Globe, BarChart3, TrendingUp, Users, CheckCircle, Clock, AlertTriangle, Activity, UserCheck, Inbox } from 'lucide-react';
 import api from '../api';
 import Spinner from '../components/Spinner';
 import { RECRUITMENT_STATUS } from '../utils/statusMaster';
@@ -8,28 +8,20 @@ import { RECRUITMENT_STATUS } from '../utils/statusMaster';
 const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
-    total: 0,
-    selected: 0,
-    rejected: 0,
-    pending: 0,
+    analyticsCount: 0,
+    clientsCount: 0,
+    receivedInfoCount: 0,
+    analyticsAgingAlertCount: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch a batch of records (e.g., limit 100 to calculate statistics)
-        const { data } = await api.get('/analytics?limit=100');
-        const records = data.records || [];
-        
-        const total = records.length;
-        const selected = records.filter((r) => r.status === RECRUITMENT_STATUS.SELECTED).length;
-        const rejected = records.filter((r) => r.status === RECRUITMENT_STATUS.REJECTED).length;
-        const pending = total - (selected + rejected);
-
-        setStats({ total, selected, rejected, pending });
-
-        // No chart data compilation needed
+        const { data } = await api.get('/dashboard/stats');
+        if (data.success && data.data) {
+          setStats(data.data);
+        }
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       } finally {
@@ -82,10 +74,10 @@ const Dashboard = () => {
       {/* Mini Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Sourced', value: stats.total, icon: Users, color: 'text-brand-800 bg-brand-50 border-brand-100' },
-          { label: 'Selected Candidates', value: stats.selected, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-          { label: 'Active Pipeline', value: stats.pending, icon: Clock, color: 'text-amber-600 bg-amber-50 border-amber-100' },
-          { label: 'Sourcing Conversion', value: stats.total ? `${Math.round((stats.selected / stats.total) * 100)}%` : '0%', icon: TrendingUp, color: 'text-cyan-600 bg-cyan-50 border-cyan-100' },
+          { label: 'Analytics Info', value: stats.analyticsCount, icon: Activity, color: 'text-brand-800 bg-brand-50 border-brand-100' },
+          { label: 'Clients Info', value: stats.clientsCount, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+          { label: 'Received Info', value: stats.receivedInfoCount, icon: Inbox, color: 'text-amber-600 bg-amber-50 border-amber-100' },
+          { label: 'Analytics Aging Alert', value: stats.analyticsAgingAlertCount, icon: AlertTriangle, color: 'text-red-600 bg-red-50 border-red-100' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white p-5 rounded-2xl flex items-center justify-between border border-slate-200 shadow-sm">
             <div className="space-y-1">

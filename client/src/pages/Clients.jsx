@@ -63,7 +63,7 @@ const Clients = () => {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [ageFilter, setAgeFilter] = useState('All');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user } = useAuth();
@@ -104,7 +104,7 @@ const Clients = () => {
           limit,
           search,
           status: statusFilter,
-          category: categoryFilter,
+          age: ageFilter === 'All' ? '' : ageFilter,
           sortBy,
           sortOrder,
         },
@@ -121,7 +121,7 @@ const Clients = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, [page, limit, statusFilter, categoryFilter, sortBy, sortOrder]);
+  }, [page, limit, statusFilter, ageFilter, sortBy, sortOrder]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -139,11 +139,11 @@ const Clients = () => {
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || statusFilter || categoryFilter);
+  const hasActiveFilters = Boolean(search || statusFilter || ageFilter !== 'All');
 
   const fetchAllRecordsForExport = async () => {
     const { data } = await api.get('/clients/export', {
-      params: { search, status: statusFilter, category: categoryFilter, sortBy, sortOrder },
+      params: { search, status: statusFilter, age: ageFilter === 'All' ? '' : ageFilter, sortBy, sortOrder },
     });
     return data.records || [];
   };
@@ -173,7 +173,7 @@ const Clients = () => {
   const resetFilters = () => {
     setSearch('');
     setStatusFilter('');
-    setCategoryFilter('');
+    setAgeFilter('All');
     setPage(1);
   };
 
@@ -494,13 +494,18 @@ const Clients = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Category</label>
-            <input
-              type="text"
-              value={categoryFilter}
-              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Age</label>
+            <select
+              value={ageFilter}
+              onChange={(e) => { setAgeFilter(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            />
+            >
+              <option value="All">All</option>
+              <option value="Today">Today</option>
+              <option value="> 5 Days">&gt; 5 Days</option>
+              <option value="> 15 Days">&gt; 15 Days</option>
+              <option value="> 25 Days">&gt; 25 Days</option>
+            </select>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -600,7 +605,7 @@ const Clients = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r._id} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 && r.ageInDays <= 30 ? 'table-warning bg-[#fff3cd] hover:bg-[#ffe69c]' : 'hover:bg-slate-50/60'}`}>
                     <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.clientId}</td>
                     <td className="px-6 py-4 font-bold text-slate-900">{r.clientName}</td>
                     <td className="px-6 py-4 text-slate-600">{normalizeContactNumber(r.mobile) || '—'}</td>
