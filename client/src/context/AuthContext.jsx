@@ -2,6 +2,13 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../api';
+import {
+  clearAuthStorage,
+  getStoredUserInfo,
+  isTokenExpired,
+  setAuthMessage,
+  SESSION_EXPIRED_MESSAGE,
+} from '../utils/authToken';
 
 const AuthContext = createContext();
 
@@ -13,16 +20,17 @@ export const AuthProvider = ({ children }) => {
   // Load user data on startup
   useEffect(() => {
     const checkUserLoggedIn = () => {
-      const storedUserInfo = localStorage.getItem('userInfo');
-      if (storedUserInfo) {
-        try {
-          const parsedUser = JSON.parse(storedUserInfo);
+      const parsedUser = getStoredUserInfo();
+
+      if (parsedUser) {
+        if (isTokenExpired(parsedUser.token)) {
+          clearAuthStorage();
+          setAuthMessage(SESSION_EXPIRED_MESSAGE);
+        } else {
           setUser(parsedUser);
-        } catch (error) {
-          console.error('Failed to parse user credentials:', error);
-          localStorage.removeItem('userInfo');
         }
       }
+
       setLoading(false);
     };
 
@@ -84,7 +92,7 @@ export const AuthProvider = ({ children }) => {
 
   // Logout handler
   const logout = () => {
-    localStorage.removeItem('userInfo');
+    clearAuthStorage();
     setUser(null);
     toast.info('Logged out successfully.', {
       position: 'top-right',

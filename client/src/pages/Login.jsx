@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Spinner from '../components/Spinner';
 import Elitehirelogo from '../assets/Elitehirelogo.jpeg';
+import { consumeAuthMessage } from '../utils/authToken';
 
 const Login = () => {
   const { login, isAuthenticated, loading } = useAuth();
@@ -11,6 +12,14 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [sessionMessage, setSessionMessage] = useState('');
+
+  useEffect(() => {
+    const message = consumeAuthMessage();
+    if (message) {
+      setSessionMessage(message);
+    }
+  }, []);
 
   // If already authenticated, redirect to dashboard
   if (isAuthenticated) {
@@ -59,6 +68,12 @@ const Login = () => {
           <h3 className="text-lg font-semibold text-slate-800 mb-6 font-sans">
             Sign In to your Account
           </h3>
+
+          {sessionMessage && (
+            <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
+              {sessionMessage}
+            </div>
+          )}
 
           {validationError && (
             <div className="mb-5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">

@@ -26,6 +26,16 @@ const errorHandler = (err, req, res, next) => {
       .join(', ');
   }
 
+  if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Session expired. Please log in again.';
+  }
+
+  if (err.name === 'JsonWebTokenError' || err.name === 'NotBeforeError') {
+    statusCode = 401;
+    message = 'Invalid token. Please log in again.';
+  }
+
   res.status(statusCode).json({
     success: false,
     message,

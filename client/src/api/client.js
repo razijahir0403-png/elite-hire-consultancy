@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { handleAuthFailure, isAuthRequest } from '../utils/authToken';
 
 // Get backend API URL from environment, fallback to relative path in production, and localhost in dev
 const API_URL = import.meta.env.VITE_API_BASE_URL ||
@@ -39,15 +40,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear localStorage if auth fails
-      const userInfo = localStorage.getItem('userInfo');
-      if (userInfo) {
-        localStorage.removeItem('userInfo');
-        // Optional redirect to login page (can also be handled in app router state)
-        window.location.href = '/login';
-      }
+    const status = error.response?.status;
+    const requestConfig = error.config;
+
+    if (status === 401 && requestConfig && !isAuthRequest(requestConfig)) {
+      const message =
+        error.response?.data?.message || 'Your session has expired. Please sign in again.';
+      handleAuthFailure(message);
     }
+
     return Promise.reject(error);
   }
 );

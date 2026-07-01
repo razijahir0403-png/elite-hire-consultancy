@@ -16,5 +16,7 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1y
       - key: CLIENT_URL
         sync: false
