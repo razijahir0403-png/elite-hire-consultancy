@@ -1,5 +1,6 @@
 const path = require('path');
 const dotenv = require('dotenv');
+const { getUploadsRoot } = require('../utils/clientDocumentPaths');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -23,5 +24,6 @@ module.exports = {
   jwtSecret: process.env.JWT_SECRET,
   clientUrl: process.env.CLIENT_URL,
   serveClient: process.env.SERVE_CLIENT === 'true',
+  uploadsRoot: getUploadsRoot(),
   validateEnv,
 };

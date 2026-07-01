@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 
 const connectDB = require('./config/db');
 const { corsOptions } = require('./config/cors');
-const { port, nodeEnv, serveClient, validateEnv } = require('./config/env');
+const { port, nodeEnv, serveClient, validateEnv, uploadsRoot } = require('./config/env');
 const seedDB = require('./utils/seeder');
 
 const { notFound, errorHandler } = require('./middleware/errorHandler');
@@ -54,7 +54,7 @@ app.use(
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   },
-  express.static(path.join(__dirname, 'uploads'), {
+  express.static(uploadsRoot, {
     setHeaders(res, filePath) {
       if (filePath.endsWith('.pdf')) {
         res.setHeader('Content-Type', 'application/pdf');
@@ -127,7 +127,6 @@ const startServer = async () => {
     await seedDB();
 
     const server = app.listen(port, () => {
-      console.log(`✅ Server running on port ${port} (${nodeEnv})`);
     });
 
     server.on('error', (err) => {

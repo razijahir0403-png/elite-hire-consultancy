@@ -2,8 +2,9 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const AppError = require('../utils/AppError');
+const { getClientsUploadDir } = require('../utils/clientDocumentPaths');
 
-const UPLOAD_DIR = path.join(__dirname, '../uploads/clients');
+const UPLOAD_DIR = getClientsUploadDir();
 const MAX_FILE_SIZE = 200 * 1024;
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });

@@ -9,10 +9,10 @@ const records = [
 const filters = ['> 5 Days', '> 15 Days', '> 25 Days'];
 for (const filter of filters) {
   const query = getAgeDateRange(filter);
-  console.log('Filter:', filter, 'query:', query);
+  process.stdout.write(require('util').format('Filter:', filter, 'query:', query) + "\n");
   for (const r of records) {
     const age = calculateAgeInDays(r.createdAt);
     const match = r.createdAt > query.$gt && r.createdAt <= query.$lte;
-    console.log('  Record:', r.name, 'ageInDays:', age, 'match:', match);
+    process.stdout.write(require('util').format('  Record:', r.name, 'ageInDays:', age, 'match:', match) + "\n");
   }
 }

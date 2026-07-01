@@ -33,24 +33,24 @@ async function test() {
       { $set: { createdAt: createdDate } }
     );
     testIds.push(doc._id);
-    console.log(`Inserted ${t.name} with expected createdAt: ${createdDate.toISOString()}`);
+    process.stdout.write(require('util').format(`Inserted ${t.name} with expected createdAt: ${createdDate.toISOString()}`) + "\n");
   }
   
   // Verify what was actually saved
   const savedDocs = await RequestInfo.find({ _id: { $in: testIds } }).select('idnumber createdAt');
-  console.log("\nActual saved createdAt values:");
-  savedDocs.forEach(d => console.log(`${d.idnumber}: ${d.createdAt.toISOString()}`));
+  process.stdout.write(require('util').format("\nActual saved createdAt values:") + "\n");
+  savedDocs.forEach(d => process.stdout.write(require('util').format(`${d.idnumber}: ${d.createdAt.toISOString()}`) + "\n"));
   
   // Test filters
   const filters = ['Today', '> 5 Days', '> 15 Days', '> 25 Days'];
   
-  console.log("\n--- RUNNING QUERIES ---");
+  process.stdout.write(require('util').format("\n--- RUNNING QUERIES ---") + "\n");
   for (const filter of filters) {
     const query = getAgeDateRange(filter);
     const records = await RequestInfo.find({ _id: { $in: testIds }, createdAt: query }).select('idnumber createdAt');
-    console.log(`\nResults for '${filter}':`);
+    process.stdout.write(require('util').format(`\nResults for '${filter}':`) + "\n");
     records.forEach(r => {
-      console.log(`- ${r.idnumber}`);
+      process.stdout.write(require('util').format(`- ${r.idnumber}`) + "\n");
     });
   }
 

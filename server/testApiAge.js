@@ -6,9 +6,9 @@ async function test() {
       params: { age: '> 5 Days' }
     });
     const records = res.data.records || [];
-    console.log("Records returned for '> 5 Days':", records.length);
+    process.stdout.write("Records returned for '> 5 Days': " + records.length + "\n");
     if (records.length > 0) {
-      console.log("Sample createdAt:", records[0].createdAt);
+      process.stdout.write("Sample createdAt: " + records[0].createdAt + "\n");
     }
   } catch (err) {
     console.error(err.message);

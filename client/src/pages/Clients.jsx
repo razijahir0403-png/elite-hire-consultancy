@@ -396,7 +396,9 @@ const Clients = () => {
     setIsPdfOpen(true);
 
     try {
-      const blobUrl = type === 'profile' ? await fetchClientPdfBlobUrl(record._id) : await fetchClientProofPdfBlobUrl(record._id);
+      const blobUrl = type === 'profile'
+        ? await fetchClientPdfBlobUrl(record._id)
+        : await fetchClientProofPdfBlobUrl(record._id);
       setPdfPreview((prev) => ({
         ...prev,
         blobUrl,
@@ -427,7 +429,9 @@ const Clients = () => {
     if (!pdfPreview.clientId) return;
 
     try {
-      const blobUrl = pdfPreview.docType === 'profile' ? await fetchClientPdfBlobUrl(pdfPreview.clientId) : await fetchClientProofPdfBlobUrl(pdfPreview.clientId);
+      const fetchBlob =
+        pdfPreview.docType === 'profile' ? fetchClientPdfBlobUrl : fetchClientProofPdfBlobUrl;
+      const blobUrl = await fetchBlob(pdfPreview.clientId, { download: true });
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = pdfPreview.name || (pdfPreview.docType === 'profile' ? 'profile-document.pdf' : 'proof-document.pdf');

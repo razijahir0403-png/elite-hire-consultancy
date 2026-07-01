@@ -8,12 +8,12 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/elite-hire'
   useUnifiedTopology: true
 }).then(async () => {
   const ageQuery = getAgeDateRange('> 5 Days');
-  console.log("ageQuery:", ageQuery);
+  process.stdout.write(require('util').format("ageQuery:", ageQuery) + "\n");
   const query = { createdAt: ageQuery };
-  console.log("Full Mongo Query:", JSON.stringify(query, null, 2));
+  process.stdout.write(require('util').format("Full Mongo Query:", JSON.stringify(query, null, 2)) + "\n");
   
   const records = await RequestInfo.find(query).select('createdAt').limit(5);
-  console.log("> 5 Days records:", records);
+  process.stdout.write(require('util').format("> 5 Days records:", records) + "\n");
 
   mongoose.disconnect();
 });

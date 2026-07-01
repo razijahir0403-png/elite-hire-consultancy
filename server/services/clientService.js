@@ -1,6 +1,5 @@
 const fs = require('fs');
 const fsp = require('fs').promises;
-const path = require('path');
 const Client = require('../models/Client');
 const AppError = require('../utils/AppError');
 const {
@@ -9,10 +8,67 @@ const {
 } = require('../utils/clientStatusMaster');
 const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
 const {
+  resolveClientDocumentPath,
+  resolveClientDocumentPathSync,
+  toStoredDocumentPath,
+} = require('../utils/clientDocumentPaths');
+const {
   generateNextClientId,
   isDuplicateClientIdError,
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/clientIdGenerator');
+
+const buildContentDisposition = (filename, download) => {
+  const safeFilename = String(filename || 'document.pdf').replace(/[^\w.\-() ]/g, '_');
+  const disposition = download ? 'attachment' : 'inline';
+  return `${disposition}; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(filename || safeFilename)}`;
+};
+
+const streamDocumentFile = async (record, fieldPrefix, res, { download = false } = {}) => {
+  const pathField = `${fieldPrefix}DocumentPath`;
+  const nameField = `${fieldPrefix}DocumentName`;
+  const label = fieldPrefix === 'profile' ? 'Profile' : 'Proof';
+  const defaultName = `${fieldPrefix}-document.pdf`;
+
+  const storedPath = record[pathField];
+  if (!storedPath) {
+    throw new AppError(`No ${label.toLowerCase()} document found for this client`, 404);
+  }
+
+  const absolutePath = await resolveClientDocumentPath(storedPath, {
+    clientId: record.clientId || record._id?.toString(),
+    documentType: fieldPrefix,
+  });
+
+  if (!absolutePath) {
+    throw new AppError(`${label} document file not found on server`, 404);
+  }
+
+  const filename = record[nameField] || defaultName;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', buildContentDisposition(filename, download));
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  return new Promise((resolve, reject) => {
+    const fileStream = fs.createReadStream(absolutePath);
+    fileStream.on('error', (streamError) => {
+      console.error(`[ClientDocument] Failed to read ${label.toLowerCase()} document`, {
+        clientId: record.clientId || record._id?.toString(),
+        storedPath,
+        absolutePath,
+        error: streamError.message,
+      });
+      if (!res.headersSent) {
+        reject(new AppError(`Failed to read ${label.toLowerCase()} document`, 500));
+      }
+    });
+    res.on('finish', resolve);
+    res.on('error', reject);
+    fileStream.pipe(res);
+  });
+};
 
 const normalizeClientRecord = (doc) => {
   if (!doc) return doc;
@@ -40,7 +96,8 @@ const normalizeClientRecord = (doc) => {
 
 const deleteProfileFile = async (relativePath) => {
   if (!relativePath) return;
-  const absolutePath = path.join(__dirname, '..', relativePath.replace(/^\//, ''));
+  const absolutePath = resolveClientDocumentPathSync(relativePath);
+  if (!absolutePath) return;
   try {
     await fsp.unlink(absolutePath);
   } catch {
@@ -51,7 +108,7 @@ const deleteProfileFile = async (relativePath) => {
 const applyUploadedDocument = (file) => {
   if (!file) return { path: '', name: '' };
   return {
-    path: `/uploads/clients/${file.filename}`,
+    path: toStoredDocumentPath(file.filename),
     name: file.originalname,
   };
 };
@@ -300,49 +357,12 @@ const exportClients = async (queryParams) => {
   return records.map(normalizeClientRecord);
 };
 
-const resolveProfileDocumentPath = (relativePath) =>
-  path.join(__dirname, '..', String(relativePath).replace(/^\//, ''));
-
 const streamClientDocument = async (id, res, { download = false } = {}) => {
   const record = await Client.findById(id);
   if (!record) {
     throw new AppError('Client not found', 404);
   }
-  if (!record.profileDocumentPath) {
-    throw new AppError('No profile document found for this client', 404);
-  }
-
-  const absolutePath = resolveProfileDocumentPath(record.profileDocumentPath);
-
-  try {
-    await fsp.access(absolutePath);
-  } catch {
-    throw new AppError('Profile document file not found on server', 404);
-  }
-
-  const filename = record.profileDocumentName || 'profile-document.pdf';
-  const safeFilename = filename.replace(/[^\w.\-() ]/g, '_');
-  const disposition = download ? 'attachment' : 'inline';
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `${disposition}; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
-  );
-  res.setHeader('Cache-Control', 'private, max-age=3600');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-
-  return new Promise((resolve, reject) => {
-    const fileStream = fs.createReadStream(absolutePath);
-    fileStream.on('error', () => {
-      if (!res.headersSent) {
-        reject(new AppError('Failed to read profile document', 500));
-      }
-    });
-    res.on('finish', resolve);
-    res.on('error', reject);
-    fileStream.pipe(res);
-  });
+  return streamDocumentFile(record, 'profile', res, { download });
 };
 
 const streamClientProofDocument = async (id, res, { download = false } = {}) => {
@@ -350,41 +370,7 @@ const streamClientProofDocument = async (id, res, { download = false } = {}) => 
   if (!record) {
     throw new AppError('Client not found', 404);
   }
-  if (!record.proofDocumentPath) {
-    throw new AppError('No proof document found for this client', 404);
-  }
-
-  const absolutePath = resolveProfileDocumentPath(record.proofDocumentPath);
-
-  try {
-    await fsp.access(absolutePath);
-  } catch {
-    throw new AppError('Proof document file not found on server', 404);
-  }
-
-  const filename = record.proofDocumentName || 'proof-document.pdf';
-  const safeFilename = filename.replace(/[^\w.\-() ]/g, '_');
-  const disposition = download ? 'attachment' : 'inline';
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `${disposition}; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
-  );
-  res.setHeader('Cache-Control', 'private, max-age=3600');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-
-  return new Promise((resolve, reject) => {
-    const fileStream = fs.createReadStream(absolutePath);
-    fileStream.on('error', () => {
-      if (!res.headersSent) {
-        reject(new AppError('Failed to read proof document', 500));
-      }
-    });
-    res.on('finish', resolve);
-    res.on('error', reject);
-    fileStream.pipe(res);
-  });
+  return streamDocumentFile(record, 'proof', res, { download });
 };
 
 module.exports = {

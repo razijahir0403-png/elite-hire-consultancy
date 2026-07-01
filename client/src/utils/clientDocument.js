@@ -11,9 +11,10 @@ const parseBlobError = async (blob) => {
 };
 
 /** Fetch client PDF via authenticated API and return a blob URL for preview/download. */
-export const fetchClientPdfBlobUrl = async (clientId) => {
+export const fetchClientPdfBlobUrl = async (clientId, { download = false } = {}) => {
   const response = await api.get(`/clients/${clientId}/document`, {
     responseType: 'blob',
+    params: download ? { download: '1' } : undefined,
   });
 
   const { data, headers } = response;
@@ -39,9 +40,10 @@ export const revokeBlobUrl = (blobUrl) => {
   }
 };
 
-export const fetchClientProofPdfBlobUrl = async (clientId) => {
+export const fetchClientProofPdfBlobUrl = async (clientId, { download = false } = {}) => {
   const response = await api.get(`/clients/${clientId}/proof-document`, {
     responseType: 'blob',
+    params: download ? { download: '1' } : undefined,
   });
 
   const { data, headers } = response;
