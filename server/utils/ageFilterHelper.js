@@ -23,7 +23,7 @@ const getAgeDateRange = (ageFilter) => {
     maxAge = 24;
   } else if (normalizedAge === '> 25 days' || normalizedAge === '>25 days' || normalizedAge === '25-30') {
     minAge = 25;
-    maxAge = 30;
+    maxAge = null;
   } else {
     return null;
   }
@@ -57,8 +57,10 @@ const getAgeDateRange = (ageFilter) => {
 
 const calculateAgeInDays = (createdAt) => {
   if (!createdAt) return 0;
-  const currentDate = new Date();
   const createdDate = new Date(createdAt);
+  if (isNaN(createdDate.getTime())) return 0;
+
+  const currentDate = new Date();
   
   // Use UTC start-of-day to calculate calendar days accurately
   const utcCurrent = Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate());

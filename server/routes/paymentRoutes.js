@@ -13,7 +13,7 @@ const {
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, adminOnly);
 
 router.get('/dashboard', getDashboardMetrics);
 router.get('/export', exportPayments);

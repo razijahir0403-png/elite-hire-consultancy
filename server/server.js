@@ -23,6 +23,11 @@ const clientRoutes = require('./routes/clientRoutes');
 const receivedInfoRoutes = require('./routes/receivedInfoRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const employeeRoutes = require('./routes/employeeRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
+
+const cron = require('node-cron');
+const { autoLogoutCron } = require('./controllers/attendanceController');
 
 validateEnv();
 
@@ -95,6 +100,8 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/received-info', receivedInfoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/employees', employeeRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 /* -------------------------- SERVE FRONTEND --------------------------- */
 
@@ -127,6 +134,12 @@ const startServer = async () => {
     await seedDB();
 
     const server = app.listen(port, () => {
+    });
+
+    // Initialize Auto-Logout Cron Job to run every midnight (00:00:00)
+    cron.schedule('0 0 * * *', () => {
+      console.log('Running Midnight Auto-Logout Cron...');
+      autoLogoutCron();
     });
 
     server.on('error', (err) => {

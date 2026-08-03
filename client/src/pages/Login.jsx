@@ -10,6 +10,7 @@ const Login = () => {
   const { login, isAuthenticated, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [workMode, setWorkMode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [sessionMessage, setSessionMessage] = useState('');
@@ -35,12 +36,17 @@ const Login = () => {
       return;
     }
 
+    if (!workMode) {
+      setValidationError('Please select a Work Mode');
+      return;
+    }
+
     if (password.length < 6) {
       setValidationError('Password must be at least 6 characters');
       return;
     }
 
-    await login(email, password);
+    await login(email, password, workMode);
   };
 
   return (
@@ -129,6 +135,24 @@ const Login = () => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+
+            {/* Work Mode Field */}
+            <div>
+              <label htmlFor="workMode" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Work Mode *
+              </label>
+              <select
+                id="workMode"
+                required
+                value={workMode}
+                onChange={(e) => setWorkMode(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 transition-all text-sm shadow-sm"
+              >
+                <option value="" disabled>Select Work Mode</option>
+                <option value="WFH">WFH (Work from Home)</option>
+                <option value="WFO">WFO (Work from Office)</option>
+              </select>
             </div>
 
             {/* Submit Button */}

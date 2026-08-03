@@ -99,3 +99,15 @@
 .Toastify__close-button {
   color: #64748b !important;
 }
+
+.warning-row {
+  background-color: #fff3cd !important;
+}
+
+.address-cell {
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  vertical-align: top;
+  max-width: 250px;
+}

@@ -38,10 +38,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login handler
-  const login = async (email, password) => {
+  const login = async (email, password, workMode) => {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', { email, password });
+      
+      // We set the token in axios immediately if possible, or wait until reload.
+      // But we can just pass the auth header directly for this call:
+      await api.post('/attendance/login', { workMode }, {
+        headers: { Authorization: `Bearer ${data.token}` }
+      });
+
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
       toast.success(`Welcome back, ${data.name}!`, {
@@ -90,8 +97,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout handler
-  const logout = () => {
+  // End Session handler (leaves user logged in to frontend, or does it?)
+  // Actually, wait. The user requirement says:
+  // "If employee clicks End Session ... Logout employee. Clear JWT. Redirect Login. Employee can login again later."
+  // So End Session ALSO logs them out of the frontend, it just hits the /end-session API.
+  const endSession = async () => {
+    if (user && user.token) {
+      try {
+        await api.post('/attendance/end-session', {}, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+      } catch (err) {
+        console.error('Failed to end session history:', err);
+      }
+    }
+    clearAuthStorage();
+    setUser(null);
+    toast.info('Session ended successfully.', {
+      position: 'top-right',
+      autoClose: 2000,
+      theme: 'light'
+    });
+    navigate('/login');
+  };
+
+  // Complete Logout handler
+  const logout = async () => {
+    if (user && user.token) {
+      try {
+        await api.post('/attendance/logout', {}, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+      } catch (err) {
+        console.error('Failed to log out history:', err);
+      }
+    }
     clearAuthStorage();
     setUser(null);
     toast.info('Logged out successfully.', {
@@ -109,6 +149,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         register,
+        endSession,
         logout,
         isAuthenticated: !!user
       }}

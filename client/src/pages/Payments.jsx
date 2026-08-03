@@ -23,6 +23,7 @@ import Modal from '../components/Modal';
 import Spinner from '../components/Spinner';
 import { exportPaymentsToExcel } from '../utils/exportPaymentsExcel';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
+import { Navigate } from 'react-router-dom';
 
 // Local custom Status Badge to mimic the recruitment one but tailored for payments
 const StatusBadge = ({ status }) => {
@@ -165,6 +166,10 @@ const Payments = () => {
     fetchRecords();
     fetchDashboardMetrics();
   };
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   // Trigger sort modification
   const handleSort = (column) => {

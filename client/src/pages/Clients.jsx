@@ -609,7 +609,7 @@ const Clients = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 && r.ageInDays <= 30 ? 'table-warning bg-[#fff3cd] hover:bg-[#ffe69c]' : 'hover:bg-slate-50/60'}`}>
+                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-slate-50/60'}`}>
                     <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.clientId}</td>
                     <td className="px-6 py-4 font-bold text-slate-900">{r.clientName}</td>
                     <td className="px-6 py-4 text-slate-600">{normalizeContactNumber(r.mobile) || '—'}</td>

@@ -9,13 +9,16 @@ import {
   LogOut, 
   X,
   Users as UsersIcon,
-  DollarSign
+  DollarSign,
+  Briefcase
 } from 'lucide-react';
 import Elitehirelogo from '../assets/Elitehirelogo.jpeg';
+import Modal from './Modal';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const { logout, user } = useAuth();
+  const { logout, endSession, user } = useAuth();
   const location = useLocation();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
 
   const isAdmin = user && user.email === 'admin@elitehire.com';
 
@@ -41,15 +44,20 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       path: '/dashboard/received-info',
       icon: CheckSquare
     },
-    {
+    ...(isAdmin ? [{
       name: 'Payments Info',
       path: '/dashboard/payments',
       icon: DollarSign
     },
-    ...(isAdmin ? [{
+    {
       name: 'System Users',
       path: '/dashboard/users',
       icon: UsersIcon
+    },
+    {
+      name: 'Employees Info',
+      path: '/dashboard/employees',
+      icon: Briefcase
     }] : [])
   ];
 
@@ -140,7 +148,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* Footer actions */}
         <div className="p-4 border-t border-slate-200 bg-slate-50/40">
           <button
-            onClick={logout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="flex items-center justify-center space-x-2.5 w-full px-4 py-3 text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl border border-dashed border-red-200 transition-all duration-200"
           >
             <LogOut size={16} />
@@ -148,6 +156,48 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           </button>
         </div>
       </aside>
+
+      {/* Logout / End Session Modal */}
+      <Modal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        title="End Current Session"
+        maxWidth="max-w-md"
+      >
+        <div className="text-center py-4">
+          <LogOut size={48} className="mx-auto text-brand-600 mb-4 opacity-80" />
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Do you want to Logout completely or End this Session?</h3>
+          <p className="text-sm text-slate-500 mb-6 px-4">
+            If you <strong className="text-slate-700">End Session</strong>, you can login again today and continue working.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                setIsLogoutModalOpen(false);
+                endSession();
+              }}
+              className="w-full py-2.5 bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 rounded-xl text-sm font-bold transition-all shadow-sm"
+            >
+              End Session
+            </button>
+            <button
+              onClick={() => {
+                setIsLogoutModalOpen(false);
+                logout();
+              }}
+              className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-red-200"
+            >
+              Logout completely
+            </button>
+            <button
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="w-full py-2.5 bg-transparent text-slate-500 hover:text-slate-700 rounded-xl text-sm font-semibold transition-all mt-1"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

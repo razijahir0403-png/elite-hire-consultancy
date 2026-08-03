@@ -171,6 +171,40 @@ const userValidators = {
   idParam: [param('id').isMongoId().withMessage('Valid user id is required')],
 };
 
+const employeeValidators = {
+  create: [
+    body('employeeCode').optional({ values: 'falsy' }).custom((_value, { req }) => {
+      if (req.body.employeeCode) {
+        throw new Error('Employee Code is assigned automatically on create');
+      }
+      return true;
+    }),
+    body('employeeName').trim().notEmpty().withMessage('Employee Name is required'),
+    body('dob').trim().notEmpty().withMessage('Date of Birth is required').isISO8601().withMessage('Valid Date of Birth is required'),
+    body('bloodGroup').optional({ values: 'falsy' }).trim(),
+    optionalContactNumberValidator('contactNumber'),
+    optionalEmailValidator('email'),
+    body('homeAddress').optional({ values: 'falsy' }).trim(),
+    body('domain').trim().notEmpty().withMessage('Domain is required'),
+  ],
+  update: [
+    param('id').isMongoId().withMessage('Valid employee id is required'),
+    body('employeeCode').optional().trim().notEmpty(),
+    body('employeeName').optional({ values: 'falsy' }).trim().notEmpty().withMessage('Employee Name cannot be empty'),
+    body('dob').optional({ values: 'falsy' }).trim().notEmpty().withMessage('Date of Birth cannot be empty').isISO8601().withMessage('Valid Date of Birth is required'),
+    body('bloodGroup').optional({ values: 'falsy' }).trim(),
+    optionalContactNumberValidator('contactNumber'),
+    optionalEmailValidator('email'),
+    body('homeAddress').optional({ values: 'falsy' }).trim(),
+    body('domain').optional({ values: 'falsy' }).trim().notEmpty().withMessage('Domain cannot be empty'),
+  ],
+  idParam: [param('id').isMongoId().withMessage('Valid employee id is required')],
+  listQuery: [
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  ],
+};
+
 module.exports = {
   authValidators,
   roleValidators,
@@ -178,5 +212,5 @@ module.exports = {
   receivedInfoValidators,
   activityLogValidators,
   userValidators,
+  employeeValidators,
 };
-
