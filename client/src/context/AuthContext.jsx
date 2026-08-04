@@ -97,32 +97,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // End Session handler (leaves user logged in to frontend, or does it?)
-  // Actually, wait. The user requirement says:
-  // "If employee clicks End Session ... Logout employee. Clear JWT. Redirect Login. Employee can login again later."
-  // So End Session ALSO logs them out of the frontend, it just hits the /end-session API.
-  const endSession = async () => {
+  // End Session handler
+  const endSession = async (closeWindow = false) => {
     if (user && user.token) {
       try {
         await api.post('/attendance/end-session', {}, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
+        toast.info('Session ended successfully.', {
+          position: 'top-right',
+          autoClose: 2000,
+          theme: 'light'
+        });
+        // We DO NOT clear Auth Storage here. They remain authenticated!
+        if (closeWindow) {
+          window.close();
+        } else {
+          // You might want to refresh the page or state here to reflect ended session
+          window.location.reload(); 
+        }
+        return true;
       } catch (err) {
         console.error('Failed to end session history:', err);
+        return false;
       }
     }
-    clearAuthStorage();
-    setUser(null);
-    toast.info('Session ended successfully.', {
-      position: 'top-right',
-      autoClose: 2000,
-      theme: 'light'
-    });
-    navigate('/login');
+    return false;
   };
 
   // Complete Logout handler
-  const logout = async () => {
+  const logout = async (closeWindow = false) => {
     if (user && user.token) {
       try {
         await api.post('/attendance/logout', {}, {
@@ -139,7 +143,13 @@ export const AuthProvider = ({ children }) => {
       autoClose: 2000,
       theme: 'light'
     });
-    navigate('/login');
+    
+    if (closeWindow) {
+      window.close();
+    } else {
+      navigate('/login');
+    }
+    return true;
   };
 
   return (

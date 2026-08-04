@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import ExitConfirmationModal from '../components/ExitConfirmationModal';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -19,6 +20,9 @@ const DashboardLayout = () => {
           </div>
         </main>
       </div>
+      
+      {/* App Close Modal Interceptor */}
+      <ExitConfirmationModal />
     </div>
   );
 };
