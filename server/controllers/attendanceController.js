@@ -234,7 +234,7 @@ const getHistory = asyncHandler(async (req, res) => {
       let status = 'Absent';
       if (isWeekend) status = 'Week Off';
       // If it's a future date
-      if (current.isAfter(moment(), 'day')) {
+      if (current.isSame(moment(), 'day') || current.isAfter(moment(), 'day')) {
         status = '--';
       }
 

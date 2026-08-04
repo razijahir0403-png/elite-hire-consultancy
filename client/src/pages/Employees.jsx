@@ -322,7 +322,7 @@ const Employees = () => {
 
   // Open Session History Modal
   const handleSessionClick = (sessions) => {
-    if (!sessions || sessions.length === 0) return;
+    if (!sessions) return;
     setSelectedSessions(sessions);
     setIsSessionHistoryOpen(true);
   };
