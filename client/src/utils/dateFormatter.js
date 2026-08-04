@@ -2,24 +2,35 @@ export const formatDateDDMMYYYY = (dateInput) => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
   if (Number.isNaN(date.getTime())) return '';
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}-${month}-${year}`;
+  
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date).replace(/\//g, '-');
 };
 
 export const formatDateTimeDDMMYYYY = (dateInput) => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
   if (Number.isNaN(date.getTime())) return '';
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12; // the hour '0' should be '12'
-  const strHours = String(hours).padStart(2, '0');
-  return `${day}-${month}-${year} ${strHours}:${minutes} ${ampm}`;
+  
+  const formatted = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
+
+  // en-IN Intl output format is usually DD/MM/YYYY, h:mm am/pm
+  // Reformat to DD-MM-YYYY hh:mm A
+  const [datePart, timePart] = formatted.split(', ');
+  if (!datePart || !timePart) return formatted;
+  const dashedDate = datePart.replace(/\//g, '-');
+  const upperTime = timePart.toUpperCase();
+  return `${dashedDate} ${upperTime}`;
 };

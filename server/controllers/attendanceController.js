@@ -3,7 +3,7 @@ const Employee = require('../models/Employee');
 const SessionHistory = require('../models/SessionHistory');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
-const moment = require('moment');
+const moment = require('moment-timezone');
 
 // Utility to format total hours
 const formatTotalHours = (ms) => {
@@ -36,7 +36,7 @@ const recordLogin = asyncHandler(async (req, res) => {
     return res.status(200).json({ success: true, message: 'Not an employee, skipping tracking' });
   }
 
-  const todayStr = moment().utcOffset(330).format('YYYY-MM-DD');
+  const todayStr = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
   const now = new Date();
 
   let attendance = await Attendance.findOne({
@@ -88,7 +88,7 @@ const recordLogin = asyncHandler(async (req, res) => {
 // 2. End Session (Without Complete Logout)
 const endSession = asyncHandler(async (req, res) => {
   const email = req.user.email;
-  const todayStr = moment().format('YYYY-MM-DD');
+  const todayStr = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
 
   const attendance = await Attendance.findOne({
     employeeEmail: email,
@@ -124,7 +124,7 @@ const endSession = asyncHandler(async (req, res) => {
 // 3. Complete Logout
 const recordLogout = asyncHandler(async (req, res) => {
   const email = req.user.email;
-  const todayStr = moment().format('YYYY-MM-DD');
+  const todayStr = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
 
   const attendance = await Attendance.findOne({
     employeeEmail: email,
@@ -173,12 +173,12 @@ const getHistory = asyncHandler(async (req, res) => {
   const m = parseInt(month, 10);
   const y = parseInt(year, 10);
 
-  const startDate = moment(`${y}-${m}-01`, 'YYYY-M-DD');
+  const startDate = moment.tz(`${y}-${m}-01`, 'YYYY-M-DD', 'Asia/Kolkata');
   const daysInMonth = startDate.daysInMonth();
   
   const datesToSearch = [];
   for (let i = 1; i <= daysInMonth; i++) {
-    datesToSearch.push(moment(`${y}-${m}-${i}`, 'YYYY-M-D').format('YYYY-MM-DD'));
+    datesToSearch.push(moment.tz(`${y}-${m}-${i}`, 'YYYY-M-D', 'Asia/Kolkata').format('YYYY-MM-DD'));
   }
 
   const queryEmail = email.toLowerCase();
@@ -206,10 +206,10 @@ const getHistory = asyncHandler(async (req, res) => {
   });
 
   const generatedHistory = [];
-  const formatTime = (dateObj) => dateObj ? moment(dateObj).format('hh:mm A') : 'N/A';
+  const formatTime = (dateObj) => dateObj ? moment(dateObj).tz('Asia/Kolkata').format('hh:mm A') : 'N/A';
 
   for (let i = 1; i <= daysInMonth; i++) {
-    const current = moment(`${y}-${m}-${i}`, 'YYYY-M-D');
+    const current = moment.tz(`${y}-${m}-${i}`, 'YYYY-M-D', 'Asia/Kolkata');
     const dateStr = current.format('YYYY-MM-DD');
     const displayDate = current.format('DD-MM-YYYY');
     const dayName = current.format('dddd');
@@ -237,7 +237,8 @@ const getHistory = asyncHandler(async (req, res) => {
       let status = 'Absent';
       if (isWeekend) status = 'Week Off';
       // If it's a future date
-      if (current.isSame(moment(), 'day') || current.isAfter(moment(), 'day')) {
+      const todayKolkata = moment().tz('Asia/Kolkata');
+      if (current.isSame(todayKolkata, 'day') || current.isAfter(todayKolkata, 'day')) {
         status = '--';
       }
 
@@ -272,8 +273,8 @@ const autoLogoutCron = async () => {
       let forcedEndTime;
 
       if (lastSession && lastSession.type === 'Active') {
-        // Force end the active session at 11:59:59 PM of that loginDate
-        forcedEndTime = moment(dateStr, 'YYYY-MM-DD').endOf('day').toDate();
+        // Force end the active session at 11:59:59 PM of that loginDate in Asia/Kolkata
+        forcedEndTime = moment.tz(dateStr, 'YYYY-MM-DD', 'Asia/Kolkata').endOf('day').toDate();
         lastSession.endTime = forcedEndTime;
         lastSession.type = 'Auto Logout';
         lastSession.sessionDuration = forcedEndTime - lastSession.loginTime;

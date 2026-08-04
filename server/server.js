@@ -136,10 +136,12 @@ const startServer = async () => {
     const server = app.listen(port, () => {
     });
 
-    // Initialize Auto-Logout Cron Job to run every midnight (00:00:00)
+    // Initialize Auto-Logout Cron Job to run every midnight (00:00:00) IST
     cron.schedule('0 0 * * *', () => {
       console.log('Running Midnight Auto-Logout Cron...');
       autoLogoutCron();
+    }, {
+      timezone: "Asia/Kolkata"
     });
 
     server.on('error', (err) => {
