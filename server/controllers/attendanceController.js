@@ -1,24 +1,28 @@
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
-const SessionHistory = require('../models/SessionHistory');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const moment = require('moment-timezone');
 
-// Utility to format total hours
-const formatTotalHours = (ms) => {
-  if (ms < 0) return '00 Hrs 00 Mins';
-  const totalMins = Math.floor(ms / 60000);
-  const hours = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
-  return `${hours.toString().padStart(2, '0')} Hrs ${mins.toString().padStart(2, '0')} Mins`;
+// Format total seconds into HH:MM:SS
+const formatDigitalClock = (totalSeconds) => {
+  if (totalSeconds < 0) totalSeconds = 0;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 };
 
-// Calculate total hours for a day
-const calculateTotalHours = async (email, todayStr) => {
-  const sessions = await SessionHistory.find({ employeeEmail: email, loginDate: todayStr }).lean();
-  const totalMs = sessions.reduce((acc, sess) => acc + (sess.sessionDuration || 0), 0);
-  return formatTotalHours(totalMs);
+// Recalculate totals directly from embedded array
+const updateAttendanceTotals = (attendance) => {
+  let totalSeconds = 0;
+  attendance.sessions.forEach(sess => {
+    if (sess.durationSeconds) {
+      totalSeconds += sess.durationSeconds;
+    }
+  });
+  attendance.totalWorkingSeconds = totalSeconds;
+  attendance.totalWorkingHoursDisplay = formatDigitalClock(totalSeconds);
 };
 
 // 1. Record Login
@@ -30,7 +34,6 @@ const recordLogin = asyncHandler(async (req, res) => {
     throw new AppError('Work mode is required', 400);
   }
 
-  // Find corresponding employee record
   const employee = await Employee.findOne({ email, deletedAt: null });
   if (!employee) {
     return res.status(200).json({ success: true, message: 'Not an employee, skipping tracking' });
@@ -45,42 +48,33 @@ const recordLogin = asyncHandler(async (req, res) => {
   });
 
   if (!attendance) {
-    // Create new attendance record
+    // Create new attendance record for the day with the first session
     attendance = await Attendance.create({
       employeeName: employee.employeeName,
       employeeEmail: email,
       loginDate: todayStr,
-      firstLoginTime: now,
       workMode,
       status: 'Present',
-      sessionStatus: 'Active'
+      sessions: [{
+        loginTime: now
+      }],
+      lastLogin: now
     });
   } else {
-    if (attendance.sessionStatus === 'Logged Out' || attendance.sessionStatus === 'Auto Logged Out') {
-      return res.status(200).json({ success: true, message: 'Already logged out completely today' });
+    // Attendance exists, check for active session
+    const lastSession = attendance.sessions[attendance.sessions.length - 1];
+    
+    if (lastSession && !lastSession.logoutTime) {
+      return res.status(200).json({ success: true, message: 'Already have an active session' });
     }
+
+    // Append a new session
+    attendance.sessions.push({
+      loginTime: now
+    });
+    attendance.lastLogin = now;
+    await attendance.save();
   }
-
-  // Check if already active
-  const activeSession = await SessionHistory.findOne({
-    employeeEmail: email,
-    loginDate: todayStr,
-    type: 'Active'
-  });
-
-  if (activeSession) {
-    return res.status(200).json({ success: true, message: 'Already have an active session' });
-  }
-
-  await SessionHistory.create({
-    employeeEmail: email,
-    loginDate: todayStr,
-    loginTime: now,
-    type: 'Active'
-  });
-
-  attendance.sessionStatus = 'Active';
-  await attendance.save();
 
   res.status(200).json({ success: true, data: attendance });
 });
@@ -95,27 +89,24 @@ const endSession = asyncHandler(async (req, res) => {
     loginDate: todayStr
   });
 
-  if (!attendance) {
+  if (!attendance || attendance.sessions.length === 0) {
     return res.status(200).json({ success: true, message: 'No active attendance found for today' });
   }
 
-  const activeSession = await SessionHistory.findOne({
-    employeeEmail: email,
-    loginDate: todayStr,
-    type: 'Active'
-  });
+  const lastSession = attendance.sessions[attendance.sessions.length - 1];
 
-  if (!activeSession) {
+  if (lastSession.logoutTime) {
     return res.status(200).json({ success: true, message: 'No active session to end' });
   }
 
   const now = new Date();
-  activeSession.endTime = now;
-  activeSession.type = 'End Session';
-  activeSession.sessionDuration = now - activeSession.loginTime;
-  await activeSession.save();
-
-  attendance.sessionStatus = 'Ended';
+  lastSession.logoutTime = now;
+  lastSession.logoutReason = 'End Session';
+  lastSession.durationSeconds = Math.floor((now - lastSession.loginTime) / 1000);
+  
+  attendance.lastLogout = now;
+  updateAttendanceTotals(attendance);
+  
   await attendance.save();
 
   res.status(200).json({ success: true, data: attendance });
@@ -131,30 +122,24 @@ const recordLogout = asyncHandler(async (req, res) => {
     loginDate: todayStr
   });
 
-  if (!attendance) {
+  if (!attendance || attendance.sessions.length === 0) {
     return res.status(200).json({ success: true, message: 'No active attendance found for today' });
   }
 
-  const now = new Date();
+  const lastSession = attendance.sessions[attendance.sessions.length - 1];
 
-  // Close any active session
-  const activeSession = await SessionHistory.findOne({
-    employeeEmail: email,
-    loginDate: todayStr,
-    type: 'Active'
-  });
-
-  if (activeSession) {
-    activeSession.endTime = now;
-    activeSession.type = 'Logout';
-    activeSession.sessionDuration = now - activeSession.loginTime;
-    await activeSession.save();
+  if (lastSession.logoutTime) {
+    // No active session, that's fine, we just return. Or maybe they just wanted to close the page.
+    return res.status(200).json({ success: true, message: 'Already logged out' });
   }
 
-  // Update attendance
-  attendance.logoutTime = now;
-  attendance.sessionStatus = 'Logged Out';
-  attendance.totalHours = await calculateTotalHours(email, todayStr);
+  const now = new Date();
+  lastSession.logoutTime = now;
+  lastSession.logoutReason = 'Logout';
+  lastSession.durationSeconds = Math.floor((now - lastSession.loginTime) / 1000);
+  
+  attendance.lastLogout = now;
+  updateAttendanceTotals(attendance);
 
   await attendance.save();
 
@@ -188,18 +173,6 @@ const getHistory = asyncHandler(async (req, res) => {
     loginDate: { $in: datesToSearch }
   }).lean();
 
-  // Fetch sessions for this month and employee
-  const sessionsList = await SessionHistory.find({
-    employeeEmail: queryEmail,
-    loginDate: { $in: datesToSearch }
-  }).sort({ loginTime: 1 }).lean();
-
-  const sessionsMap = {};
-  sessionsList.forEach(s => {
-    if (!sessionsMap[s.loginDate]) sessionsMap[s.loginDate] = [];
-    sessionsMap[s.loginDate].push(s);
-  });
-
   const recordsMap = {};
   records.forEach(r => {
     recordsMap[r.loginDate] = r;
@@ -217,20 +190,21 @@ const getHistory = asyncHandler(async (req, res) => {
 
     if (recordsMap[dateStr]) {
       const rec = recordsMap[dateStr];
-      const daySessions = sessionsMap[dateStr] || [];
+      const daySessions = rec.sessions || [];
+      
       generatedHistory.push({
         date: displayDate,
         day: dayName,
-        loggedIn: formatTime(rec.firstLoginTime),
-        loggedOut: formatTime(rec.logoutTime),
-        totalHours: rec.totalHours || 'N/A',
+        loggedIn: formatTime(daySessions[0] ? daySessions[0].loginTime : null),
+        loggedOut: formatTime(rec.lastLogout),
+        totalHours: rec.totalWorkingHoursDisplay || '00:00:00',
         workMode: rec.workMode,
         status: rec.status,
         sessions: daySessions.map(s => ({
           loginTime: formatTime(s.loginTime),
-          endTime: formatTime(s.endTime),
-          type: s.type,
-          duration: s.sessionDuration ? formatTotalHours(s.sessionDuration) : 'N/A'
+          endTime: formatTime(s.logoutTime),
+          type: s.logoutReason || (s.logoutTime ? 'Closed' : 'Active'),
+          duration: s.durationSeconds != null ? formatDigitalClock(s.durationSeconds) : 'N/A'
         }))
       });
     } else {
@@ -261,39 +235,39 @@ const getHistory = asyncHandler(async (req, res) => {
 // 5. Auto Logout Cron
 const autoLogoutCron = async () => {
   try {
-    const openAttendances = await Attendance.find({ logoutTime: null });
+    const openAttendances = await Attendance.find({
+      $or: [
+        { 'sessions.logoutTime': null },
+        { 'sessions.logoutTime': { $exists: false } }
+      ]
+    });
+
+    let logoutCount = 0;
 
     for (const attendance of openAttendances) {
-      const dateStr = attendance.loginDate;
-      const lastSession = await SessionHistory.findOne({
-        employeeEmail: attendance.employeeEmail,
-        loginDate: dateStr
-      }).sort({ loginTime: -1 });
-
-      let forcedEndTime;
-
-      if (lastSession && lastSession.type === 'Active') {
+      if (!attendance.sessions || attendance.sessions.length === 0) continue;
+      
+      const lastSession = attendance.sessions[attendance.sessions.length - 1];
+      
+      if (!lastSession.logoutTime) {
+        const dateStr = attendance.loginDate;
         // Force end the active session at 11:59:59 PM of that loginDate in Asia/Kolkata
-        forcedEndTime = moment.tz(dateStr, 'YYYY-MM-DD', 'Asia/Kolkata').endOf('day').toDate();
-        lastSession.endTime = forcedEndTime;
-        lastSession.type = 'Auto Logout';
-        lastSession.sessionDuration = forcedEndTime - lastSession.loginTime;
-        await lastSession.save();
-      } else if (lastSession && lastSession.type === 'End Session') {
-        forcedEndTime = lastSession.endTime;
-        // The last session already has a duration, no need to update it
-      } else {
-        continue;
+        const forcedEndTime = moment.tz(dateStr, 'YYYY-MM-DD', 'Asia/Kolkata').endOf('day').toDate();
+        
+        lastSession.logoutTime = forcedEndTime;
+        lastSession.logoutReason = 'Auto Logout';
+        lastSession.durationSeconds = Math.floor((forcedEndTime - lastSession.loginTime) / 1000);
+        
+        attendance.lastLogout = forcedEndTime;
+        updateAttendanceTotals(attendance);
+        
+        await attendance.save();
+        logoutCount++;
       }
-
-      attendance.logoutTime = forcedEndTime;
-      attendance.sessionStatus = 'Auto Logged Out';
-      attendance.totalHours = await calculateTotalHours(attendance.employeeEmail, dateStr);
-      await attendance.save();
     }
 
-    if (openAttendances.length > 0) {
-      console.log(`Auto-logged out ${openAttendances.length} sessions.`);
+    if (logoutCount > 0) {
+      console.log(`Auto-logged out ${logoutCount} sessions.`);
     }
   } catch (error) {
     console.error('Error in autoLogoutCron:', error);

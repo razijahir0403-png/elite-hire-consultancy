@@ -18,18 +18,6 @@ const attendanceSchema = new mongoose.Schema(
       required: true,
       // Format: YYYY-MM-DD
     },
-    firstLoginTime: {
-      type: Date,
-      required: true
-    },
-    logoutTime: {
-      type: Date,
-      default: null
-    },
-    totalHours: {
-      type: String,
-      default: null
-    },
     workMode: {
       type: String,
       enum: ['WFH', 'WFO'],
@@ -39,10 +27,29 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       default: 'Present'
     },
-    sessionStatus: {
+    sessions: [
+      {
+        loginTime: { type: Date, required: true },
+        logoutTime: { type: Date, default: null },
+        logoutReason: { type: String, default: null }, // e.g. 'End Session', 'Logout', 'Auto Logout'
+        durationSeconds: { type: Number, default: 0 }
+      }
+    ],
+    totalWorkingSeconds: {
+      type: Number,
+      default: 0
+    },
+    totalWorkingHoursDisplay: {
       type: String,
-      enum: ['Active', 'Ended', 'Logged Out', 'Auto Logged Out'],
-      default: 'Active'
+      default: '00:00:00'
+    },
+    lastLogin: {
+      type: Date,
+      default: null
+    },
+    lastLogout: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }
