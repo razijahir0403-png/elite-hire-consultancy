@@ -151,7 +151,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             className="flex items-center justify-center space-x-2.5 w-full px-4 py-3 text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl border border-dashed border-red-200 transition-all duration-200"
           >
             <Power size={16} />
-            <span>Exit App</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>
@@ -187,7 +187,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-red-200 flex items-center justify-center space-x-2"
             >
               <LogOut size={16} />
-              <span>Logout</span>
+              <span>Logout Completely</span>
             </button>
             <button
               onClick={() => setIsLogoutModalOpen(false)}
