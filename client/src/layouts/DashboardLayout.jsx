@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import ExitConfirmationModal from '../components/ExitConfirmationModal';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = ''; // Shows native prompt
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans">
@@ -20,9 +32,6 @@ const DashboardLayout = () => {
           </div>
         </main>
       </div>
-      
-      {/* App Close Modal Interceptor */}
-      <ExitConfirmationModal />
     </div>
   );
 };
