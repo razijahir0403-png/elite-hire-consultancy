@@ -175,20 +175,23 @@ const getHistory = asyncHandler(async (req, res) => {
 
   const startDate = moment(`${y}-${m}-01`, 'YYYY-M-DD');
   const daysInMonth = startDate.daysInMonth();
+  
+  const datesToSearch = [];
+  for (let i = 1; i <= daysInMonth; i++) {
+    datesToSearch.push(moment(`${y}-${m}-${i}`, 'YYYY-M-D').format('YYYY-MM-DD'));
+  }
+
+  const queryEmail = email.toLowerCase();
 
   const records = await Attendance.find({
-    employeeEmail: email,
-    loginDate: {
-      $regex: `^${y}-${m.toString().padStart(2, '0')}` // match YYYY-MM
-    }
+    employeeEmail: queryEmail,
+    loginDate: { $in: datesToSearch }
   }).lean();
 
   // Fetch sessions for this month and employee
   const sessionsList = await SessionHistory.find({
-    employeeEmail: email,
-    loginDate: {
-      $regex: `^${y}-${m.toString().padStart(2, '0')}` // match YYYY-MM
-    }
+    employeeEmail: queryEmail,
+    loginDate: { $in: datesToSearch }
   }).sort({ loginTime: 1 }).lean();
 
   const sessionsMap = {};

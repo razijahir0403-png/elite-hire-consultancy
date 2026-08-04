@@ -874,7 +874,7 @@ const Employees = () => {
                   <td className="px-4 py-2.5 font-bold text-slate-800">{i + 1}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-600">{session.loginTime}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-600">{session.endTime}</td>
-                  <td className="px-4 py-2.5 font-medium text-slate-700">{session.duration || 'N/A'}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-600">{session.duration || 'N/A'}</td>
                   <td className="px-4 py-2.5 font-bold text-brand-700">{session.type}</td>
                 </tr>
               ))}
