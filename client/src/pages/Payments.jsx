@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  History, 
-  CheckSquare, 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronUp, 
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  History,
+  CheckSquare,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ChevronDown,
   X,
   FileText,
@@ -28,7 +28,7 @@ import { Navigate } from 'react-router-dom';
 // Local custom Status Badge to mimic the recruitment one but tailored for payments
 const StatusBadge = ({ status }) => {
   let badgeClasses = "bg-slate-100 text-slate-600 border border-slate-200";
-  
+
   if (status === 'Payment Pending') {
     badgeClasses = "bg-red-50 text-red-700 border border-red-200";
   } else if (status === 'Partially Paid') {
@@ -57,14 +57,14 @@ const Payments = () => {
   const [exporting, setExporting] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Dashboard Metrics
   const [metrics, setMetrics] = useState({
     totalClients: 0,
     totalPayout: 0,
     pendingPayout: 0
   });
-  
+
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -73,8 +73,8 @@ const Payments = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user } = useAuth();
-  const isAdmin = user?.email === 'admin@elitehire.com';
-  
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
+
   // Sorting state
   const [sortBy, setSortBy] = useState('updatedOn');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -98,7 +98,7 @@ const Payments = () => {
     paidAmount: '',
     remarks: '',
   });
-  
+
   const [clientValidationMsg, setClientValidationMsg] = useState('');
   const [isValidatingClient, setIsValidatingClient] = useState(false);
 
@@ -319,7 +319,7 @@ const Payments = () => {
     if (formData.paidAmount !== '' && Number(formData.paidAmount) < 0) {
       errors.paidAmount = 'Paid amount cannot be negative';
     }
-    
+
     // Total Amount Validation
     const amountPaidSoFar = activeRecord ? activeRecord.paidAmount : 0;
     if (activeRecord && Number(formData.totalAmount) < amountPaidSoFar) {
@@ -327,10 +327,10 @@ const Payments = () => {
     }
 
     // New Installment Validation
-    const dueAmountForEdit = activeRecord 
-      ? Number(formData.totalAmount) - amountPaidSoFar 
+    const dueAmountForEdit = activeRecord
+      ? Number(formData.totalAmount) - amountPaidSoFar
       : Number(formData.totalAmount);
-      
+
     if (formData.paidAmount !== '' && Number(formData.paidAmount) > dueAmountForEdit) {
       errors.paidAmount = `Paid amount cannot exceed the due amount (₹${dueAmountForEdit.toLocaleString()})`;
     }
@@ -344,7 +344,7 @@ const Payments = () => {
       toast.error('Please fix the highlighted form errors.');
       return;
     }
-    
+
     // Safety block: prevent submission if still validating
     if (isValidatingClient || clientValidationMsg) {
       toast.error('Please resolve Client ID validation first.');
@@ -773,7 +773,7 @@ const Payments = () => {
               </div>
             </div>
           )}
-          
+
           {activeRecord && activeRecord.installments && activeRecord.installments.length > 0 && (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs max-h-32 overflow-y-auto">
               <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px] mb-2">Previous Installments</p>

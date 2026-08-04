@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  History, 
-  CheckSquare, 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronUp, 
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  History,
+  CheckSquare,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ChevronDown,
   X,
   FileText,
@@ -37,7 +37,7 @@ const Analytics = () => {
   const [exporting, setExporting] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -46,8 +46,8 @@ const Analytics = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user } = useAuth();
-  const isAdmin = user?.email === 'admin@elitehire.com';
-  
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
+
   // Sorting state
   const [sortBy, setSortBy] = useState('updatedOn');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -750,8 +750,8 @@ const Analytics = () => {
                   >
                     <option value="">Select</option>
                     {recruitmentFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -856,7 +856,7 @@ const Analytics = () => {
               <div key={hist._id || idx} className="relative">
                 {/* Node icon circle */}
                 <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full bg-brand-800 border border-white shadow-sm" />
-                
+
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <StatusBadge status={hist.status} type="recruitment" />

@@ -75,4 +75,7 @@ const employeeSchema = new mongoose.Schema(
 
 employeeSchema.plugin(softDeletePlugin);
 
+employeeSchema.index({ email: 1 });
+employeeSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Employee', employeeSchema);

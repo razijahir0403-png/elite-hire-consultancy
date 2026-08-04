@@ -74,4 +74,7 @@ const paymentInfoSchema = new mongoose.Schema(
 
 paymentInfoSchema.plugin(softDeletePlugin);
 
+paymentInfoSchema.index({ clientId: 1 });
+paymentInfoSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('PaymentInfo', paymentInfoSchema);

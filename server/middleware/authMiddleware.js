@@ -36,7 +36,7 @@ const protect = asyncHandler(async (req, res, next) => {
 });
 
 const adminOnly = (req, res, next) => {
-  if (req.user?.email !== 'admin@elitehire.com') {
+  if (!['admin@elitehire.com', 'dev@elitehire.com'].includes(req.user?.email)) {
     return next(new AppError('Access denied. Administrator privileges required.', 403));
   }
   next();

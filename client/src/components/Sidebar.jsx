@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   BarChart3,
   Building2,
   CheckSquare,
-  LogOut, 
+  LogOut,
   X,
   Users as UsersIcon,
   DollarSign,
@@ -20,7 +20,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
 
-  const isAdmin = user && user.email === 'admin@elitehire.com';
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
 
   const navItems = [
     {
@@ -65,7 +65,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     <>
       {/* Mobile Sidebar Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
           onClick={toggleSidebar}
         />
@@ -73,9 +73,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       {/* Main Sidebar Panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200/90 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:flex lg:flex-col lg:h-screen shadow-sm ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200/90 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:flex lg:flex-col lg:h-screen shadow-sm ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         {/* Sidebar Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 bg-slate-50/40">
@@ -93,8 +92,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             </div>
           </div>
           {/* Close button for mobile */}
-          <button 
-            onClick={toggleSidebar} 
+          <button
+            onClick={toggleSidebar}
             className="lg:hidden p-1 rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
           >
             <X size={18} />
@@ -118,10 +117,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.exact 
-              ? location.pathname === item.path 
+            const isActive = item.exact
+              ? location.pathname === item.path
               : location.pathname === item.path;
-            
+
             return (
               <NavLink
                 key={item.name}
@@ -130,10 +129,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   if (window.innerWidth < 1024) toggleSidebar();
                 }}
                 className={({ isActive }) =>
-                  `flex items-center space-x-3.5 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 ${
-                    isActive
-                      ? 'bg-brand-50 text-brand-800 border-l-4 border-brand-800 pl-3'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                  `flex items-center space-x-3.5 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 ${isActive
+                    ? 'bg-brand-50 text-brand-800 border-l-4 border-brand-800 pl-3'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                   }`
                 }
                 end={item.exact}

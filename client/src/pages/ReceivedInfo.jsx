@@ -42,7 +42,7 @@ const ReceivedInfo = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user } = useAuth();
-  const isAdmin = user?.email === 'admin@elitehire.com';
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
 
   // Sorting state
   const [sortBy, setSortBy] = useState('createdAt');

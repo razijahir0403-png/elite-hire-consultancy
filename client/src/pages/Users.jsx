@@ -12,7 +12,7 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const isAdmin = user && user.email === 'admin@elitehire.com';
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
 
   const fetchUsers = async () => {
     if (!isAdmin) return;
@@ -82,7 +82,7 @@ const Users = () => {
             <p className="text-xs text-slate-500">Monitor registered consultants, credential details, and account creation dates</p>
           </div>
         </div>
-        <button 
+        <button
           onClick={fetchUsers}
           className="flex items-center space-x-2 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 hover:text-brand-800 hover:border-brand-300 text-xs font-bold uppercase tracking-wider transition-all"
         >
@@ -112,7 +112,7 @@ const Users = () => {
               <div className="space-y-1.5">
                 <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Privileged Admins</span>
                 <span className="text-3xl font-extrabold text-emerald-600 block">
-                  {usersList.filter(u => u.email === 'admin@elitehire.com').length}
+                  {usersList.filter(u => ['admin@elitehire.com', 'dev@elitehire.com'].includes(u.email)).length}
                 </span>
               </div>
               <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shadow-inner">
@@ -156,16 +156,15 @@ const Users = () => {
                       <td className="py-4 px-6 text-center font-bold text-slate-400 text-xs">{index + 1}</td>
                       <td className="py-4 px-6 font-bold text-slate-900">
                         <div className="flex items-center space-x-2.5">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                            usr.email === 'admin@elitehire.com' 
-                              ? 'bg-brand-800 text-white shadow-sm' 
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email)
+                              ? 'bg-brand-800 text-white shadow-sm'
                               : 'bg-slate-100 text-slate-600'
-                          }`}>
+                            }`}>
                             {usr.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <span className="block">{usr.name}</span>
-                            {usr.email === 'admin@elitehire.com' && (
+                            {['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email) && (
                               <span className="inline-block px-1.5 py-0.5 bg-brand-50 border border-brand-100 text-brand-800 text-[9px] font-bold rounded mt-0.5">
                                 Master Admin
                               </span>
@@ -184,7 +183,7 @@ const Users = () => {
                         {formatDateTimeDDMMYYYY(usr.createdAt)}
                       </td>
                       <td className="py-4 px-6">
-                        {usr.email === 'admin@elitehire.com' ? (
+                        {['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email) ? (
                           <span className="inline-flex items-center px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-lg shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
                             Always Active
@@ -202,16 +201,15 @@ const Users = () => {
                         )}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        {usr.email === 'admin@elitehire.com' ? (
+                        {['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email) ? (
                           <span className="text-xs text-slate-400 font-medium italic">System Owner</span>
                         ) : (
                           <button
                             onClick={() => handleToggleApproval(usr._id, usr.isApproved)}
-                            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                              usr.isApproved
+                            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${usr.isApproved
                                 ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300'
                                 : 'bg-brand-50 border-brand-200 text-brand-800 hover:bg-brand-100 hover:border-brand-300'
-                            }`}
+                              }`}
                           >
                             {usr.isApproved ? (
                               <>

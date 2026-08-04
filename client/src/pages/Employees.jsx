@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronUp, 
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ChevronDown,
   X,
   FileText,
@@ -30,7 +30,7 @@ import { Navigate } from 'react-router-dom';
 
 const Employees = () => {
   const { user } = useAuth();
-  const isAdmin = user?.email === 'admin@elitehire.com';
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
 
   // State for employees list & meta
   const [records, setRecords] = useState([]);
@@ -38,12 +38,12 @@ const Employees = () => {
   const [exporting, setExporting] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  
+
   // Sorting state
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -807,7 +807,7 @@ const Employees = () => {
                 {attendanceData.map((record, index) => {
                   let rowClass = "transition-colors hover:bg-slate-50/60";
                   let statusClass = "font-medium text-slate-700";
-                  
+
                   if (record.status === 'Absent') {
                     rowClass = "bg-red-50/30 transition-colors hover:bg-red-50/60";
                     statusClass = "font-bold text-red-600";
@@ -826,7 +826,7 @@ const Employees = () => {
                       <td className="px-4 py-2.5 font-medium text-slate-600">{record.day}</td>
                       <td className="px-4 py-2.5 font-medium text-slate-700">
                         {record.loggedIn !== 'N/A' ? (
-                          <span 
+                          <span
                             onClick={() => handleSessionClick(record.sessions)}
                             className="cursor-pointer hover:text-brand-800 flex items-center space-x-1 group transition-colors font-semibold text-slate-800"
                             title="View Sessions"
@@ -864,6 +864,7 @@ const Employees = () => {
                 <th className="px-4 py-3 whitespace-nowrap">Session</th>
                 <th className="px-4 py-3 whitespace-nowrap">Login Time</th>
                 <th className="px-4 py-3 whitespace-nowrap">Session End</th>
+                <th className="px-4 py-3 whitespace-nowrap">Duration</th>
                 <th className="px-4 py-3 whitespace-nowrap">Status</th>
               </tr>
             </thead>
@@ -873,6 +874,7 @@ const Employees = () => {
                   <td className="px-4 py-2.5 font-bold text-slate-800">{i + 1}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-600">{session.loginTime}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-600">{session.endTime}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-700">{session.duration || 'N/A'}</td>
                   <td className="px-4 py-2.5 font-bold text-brand-700">{session.type}</td>
                 </tr>
               ))}

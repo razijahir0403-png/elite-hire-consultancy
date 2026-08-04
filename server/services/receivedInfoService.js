@@ -148,7 +148,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
   } = body;
 
   if (requestId && requestId !== record.requestId) {
-    const exists = await ReceivedInfo.findOne({ requestId });
+    const exists = await ReceivedInfo.findOne({ requestId }).lean();
     if (exists) {
       throw new AppError('Record with this ID already exists', 400);
     }

@@ -14,7 +14,7 @@ const getRoleById = async (id) => {
 };
 
 const createRole = async (data) => {
-  const existing = await Role.findOne({ name: data.name.toLowerCase() });
+  const existing = await Role.findOne({ name: data.name.toLowerCase() }).lean();
   if (existing) {
     throw new AppError('Role with this name already exists', 400);
   }
@@ -31,7 +31,7 @@ const updateRole = async (id, data) => {
   }
 
   if (data.name && data.name.toLowerCase() !== role.name) {
-    const duplicate = await Role.findOne({ name: data.name.toLowerCase() });
+    const duplicate = await Role.findOne({ name: data.name.toLowerCase() }).lean();
     if (duplicate) {
       throw new AppError('Role with this name already exists', 400);
     }

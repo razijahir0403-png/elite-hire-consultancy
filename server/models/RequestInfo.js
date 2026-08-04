@@ -112,4 +112,8 @@ const requestInfoSchema = new mongoose.Schema(
 
 requestInfoSchema.plugin(softDeletePlugin);
 
+requestInfoSchema.index({ companyName: 1 });
+requestInfoSchema.index({ status: 1 });
+requestInfoSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('RequestInfo', requestInfoSchema);

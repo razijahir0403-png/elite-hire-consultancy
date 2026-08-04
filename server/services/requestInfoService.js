@@ -189,7 +189,7 @@ const updateRequestInfo = async (id, body, editorName) => {
   } = body;
 
   if (idnumber && idnumber !== record.idnumber) {
-    const exists = await RequestInfo.findOne({ idnumber });
+    const exists = await RequestInfo.findOne({ idnumber }).lean();
     if (exists) {
       throw new AppError('Record with this ID number already exists', 400);
     }

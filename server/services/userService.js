@@ -19,7 +19,7 @@ const updateUser = async (id, data, requesterEmail) => {
     throw new AppError('User not found', 404);
   }
 
-  if (user.email === 'admin@elitehire.com' && data.isApproved === false) {
+  if (['admin@elitehire.com', 'dev@elitehire.com'].includes(user.email) && data.isApproved === false) {
     throw new AppError('Cannot change approval status of master administrator.', 400);
   }
 
@@ -37,7 +37,7 @@ const approveUser = async (id, isApproved) => {
     throw new AppError('User not found', 404);
   }
 
-  if (user.email === 'admin@elitehire.com') {
+  if (['admin@elitehire.com', 'dev@elitehire.com'].includes(user.email)) {
     throw new AppError('Cannot change approval status of master administrator.', 400);
   }
 
@@ -61,7 +61,7 @@ const softDeleteUser = async (id) => {
     throw new AppError('User not found', 404);
   }
 
-  if (user.email === 'admin@elitehire.com') {
+  if (['admin@elitehire.com', 'dev@elitehire.com'].includes(user.email)) {
     throw new AppError('Cannot delete master administrator account', 400);
   }
 

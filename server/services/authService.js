@@ -3,7 +3,7 @@ const AppError = require('../utils/AppError');
 const generateToken = require('../utils/generateToken');
 
 const registerUser = async ({ name, email, password }) => {
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ email }).lean();
   if (userExists) {
     throw new AppError('User already exists', 400);
   }
@@ -24,7 +24,7 @@ const loginUser = async ({ email, password }) => {
     throw new AppError('Invalid email or password', 401);
   }
 
-  if (!user.isApproved && user.email !== 'admin@elitehire.com') {
+  if (!user.isApproved && !['admin@elitehire.com', 'dev@elitehire.com'].includes(user.email)) {
     throw new AppError(
       'Your account is pending administrator approval. Please wait for an administrator to review your request.',
       403

@@ -67,7 +67,7 @@ const Clients = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user } = useAuth();
-  const isAdmin = user?.email === 'admin@elitehire.com';
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
   const [sortBy, setSortBy] = useState('updatedOn');
   const [sortOrder, setSortOrder] = useState('desc');
 

@@ -108,6 +108,22 @@ const seedDB = async () => {
       await admin.save();
     }
 
+    const devEmail = 'dev@elitehire.com';
+    let devAdmin = await User.findOne({ email: devEmail });
+    if (!devAdmin) {
+      devAdmin = await User.create({
+        name: 'Dev Admin',
+        email: devEmail,
+        password: 'Password123!',
+        isApproved: true,
+        role: roleMap.admin,
+      });
+    } else {
+      devAdmin.isApproved = true;
+      if (!devAdmin.role) devAdmin.role = roleMap.admin;
+      await devAdmin.save();
+    }
+
     const count = await RequestInfo.countDocuments();
     if (count === 0) {
       await RequestInfo.insertMany(mockRequestInfos);

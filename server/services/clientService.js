@@ -159,7 +159,7 @@ const getClients = async (queryParams) => {
   const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
   const [records, totalRecords] = await Promise.all([
-    Client.find(query).sort(sort).skip(skip).limit(limitNum),
+    Client.find(query).sort(sort).skip(skip).limit(limitNum).lean(),
     Client.countDocuments(query),
   ]);
 
@@ -175,7 +175,7 @@ const getClients = async (queryParams) => {
 };
 
 const getClientById = async (id) => {
-  const record = await Client.findById(id);
+  const record = await Client.findById(id).lean();
   if (!record) {
     throw new AppError('Client not found', 404);
   }
@@ -338,7 +338,7 @@ const updateClientStatus = async (id, { status, description }, editorName) => {
 };
 
 const getStatusHistory = async (id) => {
-  const record = await Client.findById(id).select('statusHistory');
+  const record = await Client.findById(id).select('statusHistory').lean();
   if (!record) {
     throw new AppError('Client not found', 404);
   }
@@ -353,12 +353,12 @@ const exportClients = async (queryParams) => {
     queryParams;
   const query = buildListQuery({ search, status, category });
   const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
-  const records = await Client.find(query).sort(sort).limit(5000);
+  const records = await Client.find(query).sort(sort).limit(5000).lean();
   return records.map(normalizeClientRecord);
 };
 
 const streamClientDocument = async (id, res, { download = false } = {}) => {
-  const record = await Client.findById(id);
+  const record = await Client.findById(id).lean();
   if (!record) {
     throw new AppError('Client not found', 404);
   }
@@ -366,7 +366,7 @@ const streamClientDocument = async (id, res, { download = false } = {}) => {
 };
 
 const streamClientProofDocument = async (id, res, { download = false } = {}) => {
-  const record = await Client.findById(id);
+  const record = await Client.findById(id).lean();
   if (!record) {
     throw new AppError('Client not found', 404);
   }
