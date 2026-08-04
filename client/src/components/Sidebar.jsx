@@ -10,8 +10,7 @@ import {
   X,
   Users as UsersIcon,
   DollarSign,
-  Briefcase,
-  Power
+  Briefcase
 } from 'lucide-react';
 import Elitehirelogo from '../assets/Elitehirelogo.jpeg';
 import Modal from './Modal';
@@ -150,8 +149,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             onClick={() => setIsLogoutModalOpen(true)}
             className="flex items-center justify-center space-x-2.5 w-full px-4 py-3 text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl border border-dashed border-red-200 transition-all duration-200"
           >
-            <Power size={16} />
-            <span>Logout</span>
+            <LogOut size={16} />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
@@ -160,41 +159,39 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       <Modal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
-        title="Confirm Exit"
+        title="End Current Session"
         maxWidth="max-w-md"
       >
         <div className="text-center py-4">
-          <Power size={48} className="mx-auto text-brand-600 mb-4 opacity-80" />
-          <p className="text-sm text-slate-600 mb-6 px-4">
-            You are about to leave the application. Please choose how you want to exit.
+          <LogOut size={48} className="mx-auto text-brand-600 mb-4 opacity-80" />
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Do you want to Logout completely or End this Session?</h3>
+          <p className="text-sm text-slate-500 mb-6 px-4">
+            If you <strong className="text-slate-700">End Session</strong>, you can login again today and continue working.
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={async () => {
-                const success = await endSession(true);
-                if (success) setIsLogoutModalOpen(false);
+              onClick={() => {
+                setIsLogoutModalOpen(false);
+                endSession();
               }}
-              className="w-full py-2.5 bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-center space-x-2"
+              className="w-full py-2.5 bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 rounded-xl text-sm font-bold transition-all shadow-sm"
             >
-              <Power size={16} />
-              <span>End Session</span>
+              End Session
             </button>
             <button
-              onClick={async () => {
-                const success = await logout(true);
-                if (success) setIsLogoutModalOpen(false);
+              onClick={() => {
+                setIsLogoutModalOpen(false);
+                logout();
               }}
-              className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-red-200 flex items-center justify-center space-x-2"
+              className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-red-200"
             >
-              <LogOut size={16} />
-              <span>Logout Completely</span>
+              Logout completely
             </button>
             <button
               onClick={() => setIsLogoutModalOpen(false)}
-              className="w-full py-2.5 bg-transparent text-slate-500 hover:text-slate-700 rounded-xl text-sm font-semibold transition-all mt-1 flex items-center justify-center space-x-2"
+              className="w-full py-2.5 bg-transparent text-slate-500 hover:text-slate-700 rounded-xl text-sm font-semibold transition-all mt-1"
             >
-              <X size={16} />
-              <span>Cancel</span>
+              Cancel
             </button>
           </div>
         </div>
