@@ -28,47 +28,62 @@ const updateAttendanceTotals = (attendance) => {
 // 1. Record Login
 const recordLogin = asyncHandler(async (req, res) => {
   const { workMode } = req.body;
-  const email = req.user.email; // From JWT
+  const rawEmail = req.user.email; // From JWT
+  const normalizedEmail = rawEmail.trim().toLowerCase();
+
+  console.log(`[Attendance API] Login attempt for email: ${rawEmail}`);
 
   if (!workMode) {
     throw new AppError('Work mode is required', 400);
   }
 
-  const employee = await Employee.findOne({ email, deletedAt: null });
+  const employees = await Employee.find({ deletedAt: null });
+  const employee = employees.find(
+    emp => emp.email && emp.email.trim().toLowerCase() === normalizedEmail
+  );
+
   if (!employee) {
+    console.log(`[Attendance API] Employee NOT FOUND for email: ${normalizedEmail}`);
     return res.status(200).json({ success: true, message: 'Not an employee, skipping tracking' });
   }
+
+  console.log(`[Attendance API] Employee FOUND: ${employee.employeeName} (${employee.email})`);
 
   const todayStr = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
   const now = new Date();
 
   let attendance = await Attendance.findOne({
-    employeeEmail: email,
+    employeeEmail: normalizedEmail,
     loginDate: todayStr
   });
 
   if (!attendance) {
     // Create new attendance record for the day with the first session
+    console.log(`[Attendance API] Attendance CREATED for ${normalizedEmail} on ${todayStr}`);
     attendance = await Attendance.create({
       employeeName: employee.employeeName,
-      employeeEmail: email,
+      employeeEmail: normalizedEmail,
       loginDate: todayStr,
       workMode,
       status: 'Present',
       sessions: [{
         loginTime: now
       }],
+      firstLogin: now,
       lastLogin: now
     });
   } else {
     // Attendance exists, check for active session
+    console.log(`[Attendance API] Attendance UPDATED for ${normalizedEmail} on ${todayStr}`);
     const lastSession = attendance.sessions[attendance.sessions.length - 1];
     
     if (lastSession && !lastSession.logoutTime) {
+      console.log(`[Attendance API] Active session already exists for ${normalizedEmail}`);
       return res.status(200).json({ success: true, message: 'Already have an active session' });
     }
 
     // Append a new session
+    console.log(`[Attendance API] Session ADDED for ${normalizedEmail}`);
     attendance.sessions.push({
       loginTime: now
     });
@@ -81,11 +96,11 @@ const recordLogin = asyncHandler(async (req, res) => {
 
 // 2. End Session (Without Complete Logout)
 const endSession = asyncHandler(async (req, res) => {
-  const email = req.user.email;
+  const normalizedEmail = req.user.email.trim().toLowerCase();
   const todayStr = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
 
   const attendance = await Attendance.findOne({
-    employeeEmail: email,
+    employeeEmail: normalizedEmail,
     loginDate: todayStr
   });
 
@@ -108,17 +123,19 @@ const endSession = asyncHandler(async (req, res) => {
   updateAttendanceTotals(attendance);
   
   await attendance.save();
+  console.log(`[Attendance API] Session CLOSED for ${normalizedEmail} with reason: End Session`);
+  console.log(`[Attendance API] Total hours calculated for ${normalizedEmail}: ${attendance.totalWorkingHoursDisplay}`);
 
   res.status(200).json({ success: true, data: attendance });
 });
 
 // 3. Complete Logout
 const recordLogout = asyncHandler(async (req, res) => {
-  const email = req.user.email;
+  const normalizedEmail = req.user.email.trim().toLowerCase();
   const todayStr = moment().tz('Asia/Kolkata').format('YYYY-MM-DD');
 
   const attendance = await Attendance.findOne({
-    employeeEmail: email,
+    employeeEmail: normalizedEmail,
     loginDate: todayStr
   });
 
@@ -142,6 +159,8 @@ const recordLogout = asyncHandler(async (req, res) => {
   updateAttendanceTotals(attendance);
 
   await attendance.save();
+  console.log(`[Attendance API] Session CLOSED for ${normalizedEmail} with reason: Logout`);
+  console.log(`[Attendance API] Total hours calculated for ${normalizedEmail}: ${attendance.totalWorkingHoursDisplay}`);
 
   res.status(200).json({ success: true, data: attendance });
 });
@@ -166,7 +185,7 @@ const getHistory = asyncHandler(async (req, res) => {
     datesToSearch.push(moment.tz(`${y}-${m}-${i}`, 'YYYY-M-D', 'Asia/Kolkata').format('YYYY-MM-DD'));
   }
 
-  const queryEmail = email.toLowerCase();
+  const queryEmail = email.trim().toLowerCase();
 
   const records = await Attendance.find({
     employeeEmail: queryEmail,
@@ -262,6 +281,8 @@ const autoLogoutCron = async () => {
         updateAttendanceTotals(attendance);
         
         await attendance.save();
+        console.log(`[Attendance API] Session CLOSED for ${attendance.employeeEmail} with reason: Auto Logout`);
+        console.log(`[Attendance API] Total hours calculated for ${attendance.employeeEmail}: ${attendance.totalWorkingHoursDisplay}`);
         logoutCount++;
       }
     }
