@@ -5,6 +5,8 @@ import {
   Plus,
   Edit2,
   Trash2,
+  History,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -24,7 +26,25 @@ import {
   sanitizeContactNumberInput,
 } from '../utils/contactNumber';
 import { isValidEmail, normalizeEmail } from '../utils/email';
-import { formatDateDDMMYYYY } from '../utils/dateFormatter';
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
+
+const statusOptions = [
+  'New Info',
+  'Request Proposal submitted',
+  'Documents Submitted',
+  'Contact Made',
+  'Sent Follow up Message',
+  'Received Call',
+  'Issue with Management',
+  'Internal Note',
+  'Received a Message',
+  'Re-Open',
+  'Contract Cancelled',
+  'Contract Rejected',
+  'Contract Signed',
+  'Follow up Meet',
+  'Issue with Call'
+];
 
 const ReceivedInfo = () => {
   // State for received records & meta
@@ -50,10 +70,14 @@ const ReceivedInfo = () => {
 
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
+  const [historyList, setHistoryList] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Received input form state
   const [formData, setFormData] = useState({
@@ -66,8 +90,14 @@ const ReceivedInfo = () => {
     resourceName: '',
     vendor: '',
     logDescription: '',
+    initialStatus: '',
   });
   const [formErrors, setFormErrors] = useState({});
+
+  const [statusForm, setStatusForm] = useState({
+    status: '',
+    description: ''
+  });
 
   const vendorOptions = ['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'];
 
@@ -202,6 +232,7 @@ const ReceivedInfo = () => {
       resourceName: '',
       vendor: '',
       logDescription: '',
+      initialStatus: '',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -247,6 +278,9 @@ const ReceivedInfo = () => {
     }
     if (!formData.vendor) {
       errors.vendor = 'Vendor selection is required';
+    }
+    if (!activeRecord && !formData.initialStatus) {
+      errors.initialStatus = 'Initial status is required';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -306,6 +340,49 @@ const ReceivedInfo = () => {
       fetchRecords();
     } catch (error) {
       toast.error('Failed to remove record.');
+    }
+  };
+
+  // Open Update Status Modal
+  const handleUpdateStatusClick = (record) => {
+    setActiveRecord(record);
+    setStatusForm({
+      status: record.currentStatus || record.initialStatus || '',
+      description: ''
+    });
+    setIsStatusOpen(true);
+  };
+
+  // Submit new status
+  const handleStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!statusForm.description.trim()) {
+      toast.error('Please specify a description or reasoning for status update');
+      return;
+    }
+    try {
+      await api.put(`/received-info/${activeRecord._id}/status`, statusForm);
+      toast.success('Status updated!');
+      setIsStatusOpen(false);
+      fetchRecords();
+    } catch (error) {
+      toast.error('Failed to update status.');
+    }
+  };
+
+  // Open Status History modal
+  const handleHistoryClick = async (record) => {
+    setActiveRecord(record);
+    setHistoryList([]);
+    setIsHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const { data } = await api.get(`/received-info/${record._id}/status-history`);
+      setHistoryList(data);
+    } catch (error) {
+      toast.error('Failed to load history.');
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -470,6 +547,7 @@ const ReceivedInfo = () => {
                   <th className="px-6 py-4">Location</th>
                   <th className="px-6 py-4">Resource Info</th>
                   <th className="px-6 py-4">Vendor</th>
+                  <th className="px-6 py-4">Initial Status</th>
                   <th className="px-6 py-4 min-w-[200px]">Log Description</th>
                   <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
@@ -501,6 +579,11 @@ const ReceivedInfo = () => {
                         {r.vendor}
                       </span>
                     </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 text-blue-700 uppercase tracking-wide border border-blue-200">
+                        {r.initialStatus || 'NA'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap max-w-xs break-words text-xs">
                       {r.logDescription || 'NA'}
                     </td>
@@ -517,6 +600,22 @@ const ReceivedInfo = () => {
                           title="Edit Lead Fields"
                         >
                           <Edit2 size={13} />
+                        </button>
+                        {/* Update Status Trigger */}
+                        <button
+                          onClick={() => handleUpdateStatusClick(r)}
+                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all text-slate-500"
+                          title="Update Workflow Status"
+                        >
+                          <CheckSquare size={13} />
+                        </button>
+                        {/* Audit Trail Trail */}
+                        <button
+                          onClick={() => handleHistoryClick(r)}
+                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all text-slate-500"
+                          title="Show Status Audit Trails"
+                        >
+                          <History size={13} />
                         </button>
                         {/* Delete Action */}
                         {isAdmin && (
@@ -685,6 +784,27 @@ const ReceivedInfo = () => {
             </div>
           </div>
 
+          {!activeRecord && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status *</label>
+                <select
+                  value={formData.initialStatus}
+                  onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+                >
+                  <option value="">Select</option>
+                  {statusOptions.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                {formErrors.initialStatus && (
+                  <p className="text-[10px] text-red-600 mt-1">{formErrors.initialStatus}</p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Log Description</label>
             <textarea
@@ -713,7 +833,106 @@ const ReceivedInfo = () => {
         </form>
       </Modal>
 
-      {/* 2. CONFIRM DELETE MODAL */}
+      {/* 2. UPDATE STATUS MODAL */}
+      <Modal
+        isOpen={isStatusOpen}
+        onClose={() => setIsStatusOpen(false)}
+        title={`Update Status: ${activeRecord?.requestId}`}
+      >
+        <form onSubmit={handleStatusSubmit} className="space-y-4 text-slate-800">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Select Sourcing Status</label>
+            <select
+              value={statusForm.status}
+              onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+            >
+              <option value="">Select</option>
+              {statusOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Workflow Notes / Reason *</label>
+            <textarea
+              rows={3}
+              value={statusForm.description}
+              onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
+            />
+          </div>
+
+          <div className="flex items-center space-x-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setIsStatusOpen(false)}
+              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
+            >
+              Close
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand"
+            >
+              Submit Update
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 3. SHOW HISTORY AUDIT TRAIL MODAL */}
+      <Modal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title={`Audit Trail: ${activeRecord?.requestId}`}
+        maxWidth="max-w-md"
+      >
+        {historyLoading ? (
+          <div className="py-12 flex items-center justify-center">
+            <Spinner />
+          </div>
+        ) : historyList.length === 0 ? (
+          <p className="text-center text-slate-400 text-xs py-8">No status transition log records found.</p>
+        ) : (
+          <div className="relative border-l-2 border-slate-200 pl-4 py-1.5 ml-3 space-y-6 text-slate-800">
+            {historyList.map((hist, idx) => (
+              <div key={hist._id || idx} className="relative">
+                {/* Node icon circle */}
+                <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full bg-brand-800 border border-white shadow-sm" />
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
+                      {hist.status}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {formatDateTimeDDMMYYYY(hist.updatedOn)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                    {hist.description}
+                  </p>
+                  <div className="text-[10px] text-slate-500 font-medium">
+                    Updated by: <span className="text-slate-700 font-bold">{hist.updatedBy}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-6 pt-3 border-t border-slate-100 flex justify-end">
+          <button
+            onClick={() => setIsHistoryOpen(false)}
+            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all shadow-sm"
+          >
+            Dismiss
+          </button>
+        </div>
+      </Modal>
+
+      {/* 4. CONFIRM DELETE MODAL */}
       <Modal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}

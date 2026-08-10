@@ -90,8 +90,10 @@ const createReceivedInfo = async (body, editorName) => {
     email,
     mobileNumber,
     resourceName,
+    resourceName,
     vendor,
     logDescription,
+    initialStatus,
   } = body;
 
   const recordPayload = {
@@ -103,6 +105,16 @@ const createReceivedInfo = async (body, editorName) => {
     resourceName: resourceName ? String(resourceName).trim() : '',
     vendor,
     logDescription: logDescription ? String(logDescription).trim() : '',
+    initialStatus: initialStatus || 'NA',
+    currentStatus: initialStatus || 'NA',
+    statusHistory: [
+      {
+        status: initialStatus || 'NA',
+        description: logDescription ? String(logDescription).trim() : 'Initial status',
+        updatedBy: editorName,
+        updatedOn: new Date(),
+      },
+    ],
     updatedBy: editorName,
     updatedOn: new Date(),
   };
@@ -183,10 +195,47 @@ const softDeleteReceivedInfo = async (id) => {
   return { message: 'Record removed successfully' };
 };
 
+const updateReceivedStatus = async (id, body, editorName) => {
+  const record = await ReceivedInfo.findById(id);
+  if (!record) {
+    throw new AppError('Record not found', 404);
+  }
+
+  const { status, description } = body;
+
+  if (!status) {
+    throw new AppError('Please provide a status', 400);
+  }
+
+  record.currentStatus = status;
+  record.statusHistory.push({
+    status,
+    description: description || '',
+    updatedBy: editorName,
+    updatedOn: new Date(),
+  });
+
+  record.updatedBy = editorName;
+  record.updatedOn = new Date();
+
+  await record.save();
+  return record;
+};
+
+const getStatusHistory = async (id) => {
+  const record = await ReceivedInfo.findById(id).select('statusHistory');
+  if (!record) {
+    throw new AppError('Record not found', 404);
+  }
+  return record.statusHistory.sort((a, b) => b.updatedOn - a.updatedOn);
+};
+
 module.exports = {
   getReceivedInfos,
   getReceivedInfoById,
   createReceivedInfo,
   updateReceivedInfo,
   softDeleteReceivedInfo,
+  updateReceivedStatus,
+  getStatusHistory,
 };

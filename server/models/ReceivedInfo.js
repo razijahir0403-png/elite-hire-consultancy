@@ -1,6 +1,27 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('./plugins/softDeletePlugin');
 
+const receivedInfoStatusHistorySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+    },
+    updatedBy: {
+      type: String,
+      required: true,
+    },
+    updatedOn: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
 const receivedInfoSchema = new mongoose.Schema(
   {
     requestId: {
@@ -67,6 +88,14 @@ const receivedInfoSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    initialStatus: {
+      type: String,
+      required: [true, 'Please provide an initial status'],
+    },
+    currentStatus: {
+      type: String,
+      required: [true, 'Please provide a current status'],
+    },
     updatedBy: {
       type: String,
       required: true,
@@ -75,6 +104,7 @@ const receivedInfoSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    statusHistory: [receivedInfoStatusHistorySchema],
   },
   {
     timestamps: true,

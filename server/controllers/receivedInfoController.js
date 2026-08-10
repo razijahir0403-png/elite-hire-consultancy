@@ -51,10 +51,36 @@ const deleteReceivedInfo = asyncHandler(async (req, res, next) => {
   }
 });
 
+const updateStatus = asyncHandler(async (req, res, next) => {
+  try {
+    const record = await receivedInfoService.updateReceivedStatus(
+      req.params.id,
+      req.body,
+      req.user.name
+    );
+    res.json(record);
+  } catch (error) {
+    console.error('[ReceivedInfoController] Error updating status. Error:', error);
+    next(error);
+  }
+});
+
+const getStatusHistory = asyncHandler(async (req, res, next) => {
+  try {
+    const history = await receivedInfoService.getStatusHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    console.error('[ReceivedInfoController] Error getting status history. Error:', error);
+    next(error);
+  }
+});
+
 module.exports = {
   getReceivedInfos,
   getReceivedInfo,
   createReceivedInfo,
   updateReceivedInfo,
   deleteReceivedInfo,
+  updateStatus,
+  getStatusHistory,
 };
