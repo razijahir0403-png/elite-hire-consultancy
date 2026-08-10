@@ -90,6 +90,7 @@ const ReceivedInfo = () => {
     resourceName: '',
     vendor: '',
     logDescription: '',
+    status: '',
     initialStatus: '',
   });
   const [formErrors, setFormErrors] = useState({});
@@ -232,7 +233,8 @@ const ReceivedInfo = () => {
       resourceName: '',
       vendor: '',
       logDescription: '',
-      initialStatus: '',
+      status: 'New Info',
+      initialStatus: 'New Info',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -241,6 +243,7 @@ const ReceivedInfo = () => {
   // Open Edit Form modal
   const handleEditClick = (record) => {
     setActiveRecord(record);
+    const currentSt = record.status || record.initialStatus || record.currentStatus || 'New Info';
     setFormData({
       requestId: record.requestId || '',
       companyName: record.companyName || '',
@@ -251,6 +254,8 @@ const ReceivedInfo = () => {
       resourceName: record.resourceName || '',
       vendor: record.vendor || '',
       logDescription: record.logDescription || '',
+      status: currentSt,
+      initialStatus: currentSt,
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -279,7 +284,7 @@ const ReceivedInfo = () => {
     if (!formData.vendor) {
       errors.vendor = 'Vendor selection is required';
     }
-    if (!activeRecord && !formData.initialStatus) {
+    if (!formData.status && !formData.initialStatus) {
       errors.initialStatus = 'Initial status is required';
     }
     setFormErrors(errors);
@@ -294,6 +299,7 @@ const ReceivedInfo = () => {
       return;
     }
 
+    const currentSt = formData.status || formData.initialStatus || 'New Info';
     const payload = {
       ...formData,
       companyName: formData.companyName.trim(),
@@ -304,6 +310,8 @@ const ReceivedInfo = () => {
       resourceName: formData.resourceName.trim(),
       vendor: formData.vendor,
       logDescription: formData.logDescription.trim(),
+      status: currentSt,
+      initialStatus: currentSt,
     };
 
     try {
@@ -347,7 +355,7 @@ const ReceivedInfo = () => {
   const handleUpdateStatusClick = (record) => {
     setActiveRecord(record);
     setStatusForm({
-      status: record.currentStatus || record.initialStatus || '',
+      status: record.status || record.currentStatus || record.initialStatus || '',
       description: ''
     });
     setIsStatusOpen(true);
@@ -581,7 +589,7 @@ const ReceivedInfo = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 text-blue-700 uppercase tracking-wide border border-blue-200">
-                        {r.initialStatus || 'NA'}
+                        {r.status || r.currentStatus || r.initialStatus || 'NA'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap max-w-xs break-words text-xs">
@@ -784,26 +792,24 @@ const ReceivedInfo = () => {
             </div>
           </div>
 
-          {!activeRecord && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status *</label>
-                <select
-                  value={formData.initialStatus}
-                  onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-                >
-                  <option value="">Select</option>
-                  {statusOptions.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                {formErrors.initialStatus && (
-                  <p className="text-[10px] text-red-600 mt-1">{formErrors.initialStatus}</p>
-                )}
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status *</label>
+              <select
+                value={formData.status || formData.initialStatus || ''}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value, initialStatus: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+              >
+                <option value="">Select</option>
+                {statusOptions.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              {(formErrors.status || formErrors.initialStatus) && (
+                <p className="text-[10px] text-red-600 mt-1">{formErrors.status || formErrors.initialStatus}</p>
+              )}
             </div>
-          )}
+          </div>
 
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Log Description</label>

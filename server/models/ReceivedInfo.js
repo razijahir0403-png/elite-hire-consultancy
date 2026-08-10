@@ -88,13 +88,15 @@ const receivedInfoSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    status: {
+      type: String,
+      default: 'NA',
+    },
     initialStatus: {
       type: String,
-      required: [true, 'Please provide an initial status'],
     },
     currentStatus: {
       type: String,
-      required: [true, 'Please provide a current status'],
     },
     updatedBy: {
       type: String,

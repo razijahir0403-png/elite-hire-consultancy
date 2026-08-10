@@ -12,6 +12,7 @@ export const exportReceivedInfoToExcel = (records, filenamePrefix = 'received-in
     'Mobile Number': r.mobileNumber || '',
     Email: r.email || '',
     Vendor: r.vendor || '',
+    'Initial Status': r.status || r.currentStatus || r.initialStatus || 'NA',
     'Created Date': formatDateDDMMYYYY(r.createdAt),
   }));
 

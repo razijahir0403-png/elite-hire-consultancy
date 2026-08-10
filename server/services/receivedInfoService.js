@@ -7,6 +7,28 @@ const {
 } = require('../utils/receivedIdGenerator');
 const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
 
+const normalizeReceivedRecord = (doc) => {
+  if (!doc) return doc;
+  const data = doc.toObject ? doc.toObject() : { ...doc };
+  const obj = { ...data };
+  obj.id = obj._id;
+
+  const resolvedStatus = obj.status || obj.currentStatus || obj.initialStatus || 'NA';
+  obj.status = resolvedStatus;
+  obj.currentStatus = resolvedStatus;
+  obj.initialStatus = obj.initialStatus || (Array.isArray(obj.statusHistory) && obj.statusHistory[0]?.status) || resolvedStatus;
+  obj.ageInDays = calculateAgeInDays(obj.createdAt);
+
+  if (Array.isArray(obj.statusHistory)) {
+    obj.statusHistory = obj.statusHistory.map((item) => ({
+      ...(item.toObject ? item.toObject() : item),
+    }));
+  } else {
+    obj.statusHistory = [];
+  }
+  return obj;
+};
+
 const buildListQuery = ({ search = '', vendor = '', domain = '', location = '', age = '' }) => {
   const query = {};
 
@@ -20,6 +42,7 @@ const buildListQuery = ({ search = '', vendor = '', domain = '', location = '', 
       { email: { $regex: search, $options: 'i' } },
       { mobileNumber: { $regex: search, $options: 'i' } },
       { vendor: { $regex: search, $options: 'i' } },
+      { status: { $regex: search, $options: 'i' } },
     ];
   }
 
@@ -60,11 +83,7 @@ const getReceivedInfos = async (queryParams) => {
   ]);
 
   return {
-    records: records.map(record => {
-      const obj = record.toObject ? record.toObject() : { ...record };
-      obj.ageInDays = calculateAgeInDays(obj.createdAt);
-      return obj;
-    }),
+    records: records.map(normalizeReceivedRecord),
     pagination: {
       page: pageNum,
       limit: limitNum,
@@ -79,7 +98,7 @@ const getReceivedInfoById = async (id) => {
   if (!record) {
     throw new AppError('Record not found', 404);
   }
-  return record;
+  return normalizeReceivedRecord(record);
 };
 
 const createReceivedInfo = async (body, editorName) => {
@@ -90,11 +109,21 @@ const createReceivedInfo = async (body, editorName) => {
     email,
     mobileNumber,
     resourceName,
-    resourceName,
     vendor,
     logDescription,
+    status,
     initialStatus,
   } = body;
+
+  const selectedStatus = status || initialStatus || 'New Info';
+  const descriptionText = logDescription ? String(logDescription).trim() : 'Initial status';
+
+  const historyItem = {
+    status: selectedStatus,
+    description: descriptionText,
+    updatedBy: editorName,
+    updatedOn: new Date(),
+  };
 
   const recordPayload = {
     companyName,
@@ -105,16 +134,10 @@ const createReceivedInfo = async (body, editorName) => {
     resourceName: resourceName ? String(resourceName).trim() : '',
     vendor,
     logDescription: logDescription ? String(logDescription).trim() : '',
-    initialStatus: initialStatus || 'NA',
-    currentStatus: initialStatus || 'NA',
-    statusHistory: [
-      {
-        status: initialStatus || 'NA',
-        description: logDescription ? String(logDescription).trim() : 'Initial status',
-        updatedBy: editorName,
-        updatedOn: new Date(),
-      },
-    ],
+    status: selectedStatus,
+    initialStatus: selectedStatus,
+    currentStatus: selectedStatus,
+    statusHistory: [historyItem],
     updatedBy: editorName,
     updatedOn: new Date(),
   };
@@ -123,7 +146,7 @@ const createReceivedInfo = async (body, editorName) => {
     const requestId = await generateNextRequestId();
     try {
       const record = await ReceivedInfo.create({ requestId, ...recordPayload });
-      return record;
+      return normalizeReceivedRecord(record);
     } catch (err) {
       if (isDuplicateKeyError(err)) {
         console.warn(
@@ -160,6 +183,8 @@ const updateReceivedInfo = async (id, body, editorName) => {
     resourceName,
     vendor,
     logDescription,
+    status,
+    initialStatus,
   } = body;
 
   if (requestId && requestId !== record.requestId) {
@@ -179,11 +204,38 @@ const updateReceivedInfo = async (id, body, editorName) => {
   if (vendor !== undefined) record.vendor = vendor;
   if (logDescription !== undefined) record.logDescription = logDescription ? String(logDescription).trim() : '';
 
+  const newStatus = status !== undefined ? status : initialStatus;
+  if (newStatus !== undefined && newStatus !== record.status) {
+    const oldStatus = record.status || record.currentStatus || 'NA';
+    record.status = newStatus;
+    record.currentStatus = newStatus;
+
+    if (!Array.isArray(record.statusHistory)) {
+      record.statusHistory = [];
+    }
+
+    if (record.statusHistory.length === 0 && oldStatus !== 'NA') {
+      record.statusHistory.push({
+        status: oldStatus,
+        description: 'Initial status',
+        updatedBy: record.updatedBy || editorName,
+        updatedOn: record.createdAt || new Date(),
+      });
+    }
+
+    record.statusHistory.push({
+      status: newStatus,
+      description: logDescription ? String(logDescription).trim() : `Status updated from ${oldStatus} to ${newStatus}`,
+      updatedBy: editorName,
+      updatedOn: new Date(),
+    });
+  }
+
   record.updatedBy = editorName;
   record.updatedOn = new Date();
 
   const saved = await record.save();
-  return saved;
+  return normalizeReceivedRecord(saved);
 };
 
 const softDeleteReceivedInfo = async (id) => {
@@ -207,10 +259,26 @@ const updateReceivedStatus = async (id, body, editorName) => {
     throw new AppError('Please provide a status', 400);
   }
 
+  const oldStatus = record.status || record.currentStatus || 'NA';
+  record.status = status;
   record.currentStatus = status;
+
+  if (!Array.isArray(record.statusHistory)) {
+    record.statusHistory = [];
+  }
+
+  if (record.statusHistory.length === 0 && oldStatus !== 'NA') {
+    record.statusHistory.push({
+      status: oldStatus,
+      description: 'Initial status',
+      updatedBy: record.updatedBy || editorName,
+      updatedOn: record.createdAt || new Date(),
+    });
+  }
+
   record.statusHistory.push({
     status,
-    description: description || '',
+    description: description ? String(description).trim() : `Status updated to ${status}`,
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -218,16 +286,26 @@ const updateReceivedStatus = async (id, body, editorName) => {
   record.updatedBy = editorName;
   record.updatedOn = new Date();
 
-  await record.save();
-  return record;
+  const saved = await record.save();
+  return normalizeReceivedRecord(saved);
 };
 
 const getStatusHistory = async (id) => {
-  const record = await ReceivedInfo.findById(id).select('statusHistory');
+  const record = await ReceivedInfo.findById(id);
   if (!record) {
     throw new AppError('Record not found', 404);
   }
-  return record.statusHistory.sort((a, b) => b.updatedOn - a.updatedOn);
+  const history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+  if (history.length === 0 && (record.status || record.currentStatus || record.initialStatus)) {
+    const currentSt = record.status || record.currentStatus || record.initialStatus;
+    return [{
+      status: currentSt,
+      description: record.logDescription || 'Initial status',
+      updatedBy: record.updatedBy || 'System',
+      updatedOn: record.createdAt || record.updatedOn || new Date(),
+    }];
+  }
+  return history;
 };
 
 module.exports = {

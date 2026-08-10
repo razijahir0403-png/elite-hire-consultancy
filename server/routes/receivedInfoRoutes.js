@@ -15,6 +15,9 @@ const validate = require('../middleware/validate');
 
 router.use(protect);
 
+router.put('/update-status/:id', receivedInfoValidators.updateStatus, validate, updateStatus);
+router.get('/history/:id', receivedInfoValidators.idParam, validate, getStatusHistory);
+
 router.route('/')
   .get(receivedInfoValidators.listQuery, validate, getReceivedInfos)
   .post(receivedInfoValidators.create, validate, createReceivedInfo);
@@ -25,7 +28,7 @@ router.route('/:id')
   .delete(receivedInfoValidators.idParam, validate, adminOnly, deleteReceivedInfo);
 
 router.route('/:id/status')
-  .put(receivedInfoValidators.idParam, validate, updateStatus);
+  .put(receivedInfoValidators.updateStatus, validate, updateStatus);
 
 router.route('/:id/status-history')
   .get(receivedInfoValidators.idParam, validate, getStatusHistory);
