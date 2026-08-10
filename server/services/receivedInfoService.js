@@ -91,6 +91,7 @@ const createReceivedInfo = async (body, editorName) => {
     mobileNumber,
     resourceName,
     vendor,
+    logDescription,
   } = body;
 
   const recordPayload = {
@@ -101,6 +102,7 @@ const createReceivedInfo = async (body, editorName) => {
     mobileNumber: mobileNumber || '',
     resourceName: resourceName ? String(resourceName).trim() : '',
     vendor,
+    logDescription: logDescription ? String(logDescription).trim() : '',
     updatedBy: editorName,
     updatedOn: new Date(),
   };
@@ -145,6 +147,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
     mobileNumber,
     resourceName,
     vendor,
+    logDescription,
   } = body;
 
   if (requestId && requestId !== record.requestId) {
@@ -162,6 +165,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
   if (mobileNumber !== undefined) record.mobileNumber = mobileNumber || '';
   if (resourceName !== undefined) record.resourceName = resourceName ? String(resourceName).trim() : '';
   if (vendor !== undefined) record.vendor = vendor;
+  if (logDescription !== undefined) record.logDescription = logDescription ? String(logDescription).trim() : '';
 
   record.updatedBy = editorName;
   record.updatedOn = new Date();

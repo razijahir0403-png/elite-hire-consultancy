@@ -65,6 +65,7 @@ const ReceivedInfo = () => {
     mobileNumber: '',
     resourceName: '',
     vendor: '',
+    logDescription: '',
   });
   const [formErrors, setFormErrors] = useState({});
 
@@ -200,6 +201,7 @@ const ReceivedInfo = () => {
       mobileNumber: '',
       resourceName: '',
       vendor: '',
+      logDescription: '',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -217,6 +219,7 @@ const ReceivedInfo = () => {
       mobileNumber: normalizeContactNumber(record.mobileNumber),
       resourceName: record.resourceName || '',
       vendor: record.vendor || '',
+      logDescription: record.logDescription || '',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -266,6 +269,7 @@ const ReceivedInfo = () => {
       mobileNumber: formData.mobileNumber,
       resourceName: formData.resourceName.trim(),
       vendor: formData.vendor,
+      logDescription: formData.logDescription.trim(),
     };
 
     try {
@@ -675,6 +679,16 @@ const ReceivedInfo = () => {
                 <p className="text-[10px] text-red-600 mt-1">{formErrors.vendor}</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Log Description</label>
+            <textarea
+              rows={3}
+              value={formData.logDescription}
+              onChange={(e) => setFormData({ ...formData, logDescription: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
+            />
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">

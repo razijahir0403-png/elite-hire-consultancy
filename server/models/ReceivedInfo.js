@@ -63,6 +63,10 @@ const receivedInfoSchema = new mongoose.Schema(
       },
       trim: true,
     },
+    logDescription: {
+      type: String,
+      trim: true,
+    },
     updatedBy: {
       type: String,
       required: true,
