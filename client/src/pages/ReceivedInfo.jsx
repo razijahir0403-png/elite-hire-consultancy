@@ -470,6 +470,7 @@ const ReceivedInfo = () => {
                   <th className="px-6 py-4">Location</th>
                   <th className="px-6 py-4">Resource Info</th>
                   <th className="px-6 py-4">Vendor</th>
+                  <th className="px-6 py-4 min-w-[200px]">Log Description</th>
                   <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
                       <span>Created Date</span>
@@ -499,6 +500,9 @@ const ReceivedInfo = () => {
                       <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
                         {r.vendor}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap max-w-xs break-words text-xs">
+                      {r.logDescription || 'NA'}
                     </td>
                     <td className="px-6 py-4 text-slate-500">
                       <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.createdAt)}</div>
