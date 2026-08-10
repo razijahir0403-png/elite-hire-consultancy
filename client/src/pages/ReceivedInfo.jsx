@@ -46,6 +46,32 @@ const statusOptions = [
   'Issue with Call'
 ];
 
+const getReceivedStatusBadge = (statusStr) => {
+  const label = statusStr || 'NA';
+  const statusMap = {
+    'New Info': 'bg-brand-50 text-brand-800 border-brand-200',
+    'Contract Signed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'Contract Rejected': 'bg-red-50 text-red-700 border-red-200',
+    'Contract Cancelled': 'bg-slate-100 text-slate-700 border-slate-300',
+    'Contact Made': 'bg-blue-50 text-blue-700 border-blue-200',
+    'Received Call': 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    'Issue with Management': 'bg-orange-50 text-orange-700 border-orange-200',
+    'Issue with Call': 'bg-orange-50 text-orange-700 border-orange-200',
+    'Re-Open': 'bg-violet-50 text-violet-700 border-violet-200',
+    'Internal Note': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'Documents Submitted': 'bg-teal-50 text-teal-700 border-teal-200',
+    'Sent Follow up Message': 'bg-sky-50 text-sky-700 border-sky-200',
+    'Request Proposal submitted': 'bg-purple-50 text-purple-700 border-purple-200',
+  };
+  const colorClass = statusMap[label] || 'bg-slate-50 text-slate-600 border-slate-200';
+
+  return (
+    <span className={`px-2 py-0.5 border text-[10px] rounded-lg font-bold inline-block ${colorClass}`}>
+      {label}
+    </span>
+  );
+};
+
 const ReceivedInfo = () => {
   // State for received records & meta
   const [records, setRecords] = useState([]);
@@ -483,22 +509,24 @@ const ReceivedInfo = () => {
       {/* Entries Control & Total Count Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-xs">
         <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <span className="text-slate-500 font-medium">Show</span>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(parseInt(e.target.value));
-              setPage(1);
-            }}
-            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-brand-800 font-bold"
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-          <span className="text-slate-500 font-medium">entries</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-slate-500 font-medium">Show</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(parseInt(e.target.value));
+                setPage(1);
+              }}
+              className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-brand-800 font-bold"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="text-slate-500 font-medium">entries</span>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <button
@@ -542,7 +570,7 @@ const ReceivedInfo = () => {
                   </th>
                   <th onClick={() => handleSort('domain')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
                     <div className="flex items-center space-x-1">
-                      <span>Domain</span>
+                      <span>Domain Vertical</span>
                       {sortBy === 'domain' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                     </div>
                   </th>
@@ -583,14 +611,12 @@ const ReceivedInfo = () => {
                       <div className="text-[10px] text-slate-450">{normalizeContactNumber(r.mobileNumber) || '—'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
-                        {r.vendor}
+                      <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
+                        {r.vendor || 'NA'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 text-blue-700 uppercase tracking-wide border border-blue-200">
-                        {r.status || r.currentStatus || r.initialStatus || 'NA'}
-                      </span>
+                      {getReceivedStatusBadge(r.status || r.currentStatus || r.initialStatus)}
                     </td>
                     <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap max-w-xs break-words text-xs">
                       {r.logDescription || 'NA'}
@@ -605,10 +631,20 @@ const ReceivedInfo = () => {
                         <button
                           onClick={() => handleEditClick(r)}
                           className="p-1.5 bg-slate-50 border border-slate-200 hover:border-brand-300 hover:text-brand-800 hover:bg-brand-50 rounded-lg transition-all text-slate-500"
-                          title="Edit Lead Fields"
+                          title="Edit Main Fields"
                         >
                           <Edit2 size={13} />
                         </button>
+                        {/* Delete Action */}
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteClick(r)}
+                            className="p-1.5 bg-slate-50 border border-slate-200 hover:border-red-300 hover:text-red-650 hover:bg-red-50 rounded-lg transition-all text-slate-500"
+                            title="Delete Lead"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                         {/* Update Status Trigger */}
                         <button
                           onClick={() => handleUpdateStatusClick(r)}
@@ -625,16 +661,6 @@ const ReceivedInfo = () => {
                         >
                           <History size={13} />
                         </button>
-                        {/* Delete Action */}
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDeleteClick(r)}
-                            className="p-1.5 bg-slate-50 border border-slate-200 hover:border-red-300 hover:text-red-650 hover:bg-red-50 rounded-lg transition-all text-slate-500"
-                            title="Delete Lead"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -654,7 +680,7 @@ const ReceivedInfo = () => {
               </span>{' '}
               of <span className="font-semibold text-slate-800">{totalRecords}</span> entries
             </span>
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center justify-center space-x-1.5 w-full sm:w-auto">
               <button
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
                 disabled={page === 1}
@@ -910,9 +936,7 @@ const ReceivedInfo = () => {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
-                      {hist.status}
-                    </span>
+                    {getReceivedStatusBadge(hist.status)}
                     <span className="text-[10px] text-slate-400 font-medium">
                       {formatDateTimeDDMMYYYY(hist.updatedOn)}
                     </span>
@@ -948,16 +972,16 @@ const ReceivedInfo = () => {
           <p className="text-xs text-slate-600 leading-relaxed">
             Are you sure you want to delete lead <span className="font-extrabold text-brand-850">{activeRecord?.requestId}</span>? This action is permanent and will clear the sourcing details.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex items-center space-x-3 pt-2">
             <button
               onClick={() => setIsDeleteOpen(false)}
-              className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
+              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
             >
               Cancel
             </button>
             <button
               onClick={confirmDelete}
-              className="w-full sm:flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-glow-brand"
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-glow-brand"
             >
               Delete Lead
             </button>
