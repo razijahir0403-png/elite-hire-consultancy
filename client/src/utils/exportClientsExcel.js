@@ -23,7 +23,7 @@ export const exportClientsToExcel = (records, filenamePrefix = 'clients-export')
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Clients');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Received');
 
   const dateStamp = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(workbook, `${filenamePrefix}-${dateStamp}.xlsx`);

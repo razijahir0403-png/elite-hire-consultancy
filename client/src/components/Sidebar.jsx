@@ -35,7 +35,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       icon: BarChart3
     },
     {
-      name: 'Clients Info',
+      name: 'Data Received',
       path: '/dashboard/clients',
       icon: Building2
     },

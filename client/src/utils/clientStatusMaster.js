@@ -19,6 +19,8 @@ export const CLIENT_STATUS = {
   PAYMENT_COMPLETED: 17,
   PAYMENT_PENDING: 18,
   RESPONSE_RECEIVED: 19,
+  NEW_DATA: 20,
+  ON_HOLD: 21,
 };
 
 export const ClientStatus = {
@@ -42,6 +44,8 @@ export const ClientStatus = {
   17: 'Payment Completed',
   18: 'Payment Pending',
   19: 'Response Received',
+  20: 'New Data',
+  21: 'On-Hold',
 };
 
 export const ClientStatusColors = {
@@ -54,6 +58,8 @@ export const ClientStatusColors = {
   14: 'bg-violet-50 text-violet-700 border-violet-200',
   13: 'bg-slate-100 text-slate-700 border-slate-300',
   15: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  20: 'bg-sky-50 text-sky-700 border-sky-200',
+  21: 'bg-amber-50 text-amber-800 border-amber-200',
 };
 
 export const getClientStatusLabel = (code) => ClientStatus[Number(code)] ?? 'Unknown';

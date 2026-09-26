@@ -113,7 +113,7 @@ const Clients = () => {
       setTotalPages(data.pagination.totalPages);
       setTotalRecords(data.pagination.totalRecords);
     } catch {
-      toast.error('Failed to load clients.');
+      toast.error('Failed to load data received records.');
     } finally {
       setLoading(false);
     }
@@ -160,9 +160,9 @@ const Clients = () => {
         toast.info('No records to export.');
         return;
       }
-      const filenamePrefix = hasActiveFilters ? 'clients-filtered' : 'clients-all';
+      const filenamePrefix = hasActiveFilters ? 'data-received-filtered' : 'data-received-all';
       exportClientsToExcel(exportRecords, filenamePrefix);
-      toast.success(`Exported ${exportRecords.length} client record(s) to Excel.`);
+      toast.success(`Exported ${exportRecords.length} record(s) to Excel.`);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to export records.');
     } finally {
@@ -272,15 +272,15 @@ const Clients = () => {
       const fd = buildSubmitFormData();
       if (activeRecord) {
         await api.put(`/clients/${activeRecord._id}`, fd);
-        toast.success('Client updated successfully!');
+        toast.success('Data Received record updated successfully!');
       } else {
         await api.post('/clients', fd);
-        toast.success('Client created successfully!');
+        toast.success('Data Received record created successfully!');
       }
       setIsAddEditOpen(false);
       fetchRecords();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error processing client record.');
+      toast.error(error.response?.data?.message || 'Error processing record.');
     }
   };
 
@@ -326,11 +326,11 @@ const Clients = () => {
   const confirmDelete = async () => {
     try {
       await api.delete(`/clients/${activeRecord._id}`);
-      toast.success('Client deleted.');
+      toast.success('Data Received record deleted.');
       setIsDeleteOpen(false);
       fetchRecords();
     } catch {
-      toast.error('Failed to remove client.');
+      toast.error('Failed to remove record.');
     }
   };
 
@@ -455,8 +455,8 @@ const Clients = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Clients Info</h1>
-          <p className="text-xs text-slate-500">Manage client profiles, documents, and workflow status history</p>
+          <h1 className="text-xl font-bold text-slate-900">Data Received</h1>
+          <p className="text-xs text-slate-500">Manage received data, documents, and workflow status history</p>
         </div>
         <button
           type="button"
@@ -573,7 +573,7 @@ const Clients = () => {
         ) : records.length === 0 ? (
           <div className="py-20 text-center space-y-2">
             <FileText size={48} className="text-slate-300 mx-auto" />
-            <p className="text-slate-500 text-sm font-semibold">No clients found</p>
+            <p className="text-slate-500 text-sm font-semibold">No records found</p>
           </div>
         ) : (
           <div className="overflow-x-auto w-full">
@@ -681,7 +681,7 @@ const Clients = () => {
         {!loading && records.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50/50">
             <span className="text-xs text-slate-500 text-center sm:text-left">
-              Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalRecords)} of {totalRecords} clients
+              Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalRecords)} of {totalRecords} records
             </span>
             <div className="flex items-center space-x-1.5">
               <button type="button" onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page === 1} className="p-1.5 bg-white border border-slate-200 rounded-lg disabled:opacity-50">
@@ -697,10 +697,11 @@ const Clients = () => {
       </div>
 
       {/* Add / Edit */}
+      {/* Add / Edit */}
       <Modal
         isOpen={isAddEditOpen}
         onClose={() => setIsAddEditOpen(false)}
-        title={activeRecord ? `Edit Client: ${activeRecord.clientId}` : 'Add Info'}
+        title={activeRecord ? `Edit Record: ${activeRecord.clientId}` : 'Add Data Received'}
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleAddEditSubmit} className="space-y-4 text-slate-800">
@@ -986,7 +987,7 @@ const Clients = () => {
       {/* Delete */}
       <Modal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} title="Confirm Deletion">
         <p className="text-xs text-slate-600 mb-4">
-          Delete client <span className="font-bold text-brand-800">{activeRecord?.clientId}</span>?
+          Delete record <span className="font-bold text-brand-800">{activeRecord?.clientId}</span>?
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <button type="button" onClick={() => setIsDeleteOpen(false)} className="w-full sm:flex-1 py-2.5 border border-slate-200 rounded-xl text-xs font-bold">Cancel</button>

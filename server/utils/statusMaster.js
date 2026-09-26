@@ -53,9 +53,10 @@ const RECRUITMENT_STATUS = {
   RESPONSE_RECEIVED: 21,
   NEED_AN_HELP: 22,
   SENT_FOLLOW_UP: 23,
+  ON_HOLD: 24,
 };
 
-const RECRUITMENT_STATUS_MAX = 23;
+const RECRUITMENT_STATUS_MAX = 24;
 
 const CommonStatusLabel = {
   0: 'Inactive',
@@ -108,6 +109,7 @@ const RecruitmentStatusLabel = {
   21: 'Response Received',
   22: 'Need an Help',
   23: 'Sent Follow up Message',
+  24: 'On-Hold',
 };
 
 const RECRUITMENT_TEXT_TO_CODE = Object.entries(RecruitmentStatusLabel).reduce((acc, [code, label]) => {

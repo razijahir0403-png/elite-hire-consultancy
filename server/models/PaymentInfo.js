@@ -65,6 +65,10 @@ const paymentInfoSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    isOnHold: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -7,6 +7,36 @@ const {
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/paymentIdGenerator');
 
+const parseIsOnHold = (value, fallback = false) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value).trim().toLowerCase();
+  if (['true', '1', 'on', 'yes'].includes(normalized)) return true;
+  if (['false', '0', 'off', 'no'].includes(normalized)) return false;
+  return fallback;
+};
+
+const paymentStatusExpression = {
+  $cond: {
+    if: { $eq: [{ $ifNull: ['$isOnHold', false] }, true] },
+    then: 'On-Hold',
+    else: {
+      $cond: {
+        if: { $eq: ['$paidAmount', 0] },
+        then: 'Payment Pending',
+        else: {
+          $cond: {
+            if: { $lte: ['$dueAmount', 0] },
+            then: 'Payment Completed',
+            else: 'Partially Paid',
+          },
+        },
+      },
+    },
+  },
+};
+
 const buildAggregationPipeline = ({ search = '', status = '', clientId = '', clientName = '' }, sort, skip, limitNum, isExport = false) => {
   const matchStage = { isDeleted: { $ne: true } };
 
@@ -40,19 +70,7 @@ const buildAggregationPipeline = ({ search = '', status = '', clientId = '', cli
     },
     {
       $addFields: {
-        status: {
-          $cond: {
-            if: { $eq: ['$paidAmount', 0] },
-            then: 'Payment Pending',
-            else: {
-              $cond: {
-                if: { $lte: ['$dueAmount', 0] },
-                then: 'Payment Completed',
-                else: 'Partially Paid',
-              },
-            },
-          },
-        },
+        status: paymentStatusExpression,
       },
     },
   ];
@@ -153,19 +171,7 @@ const getDashboardMetrics = async (queryParams) => {
     },
     {
       $addFields: {
-        status: {
-          $cond: {
-            if: { $eq: ['$paidAmount', 0] },
-            then: 'Payment Pending',
-            else: {
-              $cond: {
-                if: { $lte: ['$dueAmount', 0] },
-                then: 'Payment Completed',
-                else: 'Partially Paid',
-              },
-            },
-          },
-        },
+        status: paymentStatusExpression,
       },
     }
   ];
@@ -209,6 +215,7 @@ const createPayment = async (body, editorName) => {
     totalAmount,
     paidAmount = 0,
     remarks = '',
+    isOnHold = false,
   } = body;
 
   await validateClientDetails(clientId, clientName);
@@ -240,6 +247,7 @@ const createPayment = async (body, editorName) => {
     clientName: String(clientName).trim(),
     totalAmount: Number(totalAmount),
     installments,
+    isOnHold: parseIsOnHold(isOnHold, false),
     createdBy: editorName,
     updatedBy: editorName,
     updatedOn: new Date(),
@@ -290,19 +298,7 @@ const getPaymentById = async (id) => {
     },
     {
       $addFields: {
-        status: {
-          $cond: {
-            if: { $eq: ['$paidAmount', 0] },
-            then: 'Payment Pending',
-            else: {
-              $cond: {
-                if: { $lte: ['$dueAmount', 0] },
-                then: 'Payment Completed',
-                else: 'Partially Paid',
-              },
-            },
-          },
-        },
+        status: paymentStatusExpression,
       },
     },
   ];
@@ -332,6 +328,7 @@ const updatePayment = async (id, body, editorName) => {
     totalAmount,
     paidAmount,
     remarks = '',
+    isOnHold,
   } = body;
 
   if (clientId !== undefined && clientName !== undefined && (clientId !== record.clientId || clientName !== record.clientName)) {
@@ -374,6 +371,10 @@ const updatePayment = async (id, body, editorName) => {
         remarks,
       });
     }
+  }
+
+  if (isOnHold !== undefined) {
+    record.isOnHold = parseIsOnHold(isOnHold, record.isOnHold);
   }
 
   record.updatedBy = editorName;

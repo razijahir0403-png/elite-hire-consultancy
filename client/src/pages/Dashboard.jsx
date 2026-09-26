@@ -75,7 +75,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Analytics Info', value: stats.analyticsCount, icon: Activity, color: 'text-brand-800 bg-brand-50 border-brand-100' },
-          { label: 'Clients Info', value: stats.clientsCount, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+          { label: 'Data Received', value: stats.clientsCount, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
           { label: 'Received Info', value: stats.receivedInfoCount, icon: Inbox, color: 'text-amber-600 bg-amber-50 border-amber-100' },
           { label: 'Analytics Aging Alert', value: stats.analyticsAgingAlertCount, icon: AlertTriangle, color: 'text-red-600 bg-red-50 border-red-100' },
         ].map((stat, idx) => (

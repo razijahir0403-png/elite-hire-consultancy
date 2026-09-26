@@ -35,6 +35,8 @@ const StatusBadge = ({ status }) => {
     badgeClasses = "bg-amber-50 text-amber-700 border border-amber-200";
   } else if (status === 'Payment Completed') {
     badgeClasses = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  } else if (status === 'On-Hold') {
+    badgeClasses = "bg-amber-50 text-amber-800 border border-amber-200";
   }
 
   return (
@@ -47,7 +49,8 @@ const StatusBadge = ({ status }) => {
 const PAYMENT_STATUS_OPTIONS = [
   { value: 'Payment Pending', label: 'Payment Pending' },
   { value: 'Partially Paid', label: 'Partially Paid' },
-  { value: 'Payment Completed', label: 'Payment Completed' }
+  { value: 'Payment Completed', label: 'Payment Completed' },
+  { value: 'On-Hold', label: 'On-Hold' },
 ];
 
 const Payments = () => {
@@ -97,6 +100,7 @@ const Payments = () => {
     totalAmount: '',
     paidAmount: '',
     remarks: '',
+    isOnHold: false,
   });
 
   const [clientValidationMsg, setClientValidationMsg] = useState('');
@@ -247,6 +251,7 @@ const Payments = () => {
       totalAmount: '',
       paidAmount: '',
       remarks: '',
+      isOnHold: false,
     });
     setFormErrors({});
     setClientValidationMsg('');
@@ -262,6 +267,7 @@ const Payments = () => {
       totalAmount: record.totalAmount || '',
       paidAmount: '', // Not editable via this modal
       remarks: '',
+      isOnHold: Boolean(record.isOnHold) || record.status === 'On-Hold',
     });
     setFormErrors({});
     setClientValidationMsg('');
@@ -359,6 +365,7 @@ const Payments = () => {
           totalAmount: formData.totalAmount,
           paidAmount: formData.paidAmount,
           remarks: formData.remarks,
+          isOnHold: formData.isOnHold,
         });
         toast.success('Payment Record Updated Successfully.');
       } else {
@@ -881,6 +888,16 @@ const Payments = () => {
               placeholder={activeRecord ? "Add reference for this new installment..." : "Add initial payment remarks..."}
             />
           </div>
+
+          <label className="flex items-center space-x-2.5 pt-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={Boolean(formData.isOnHold)}
+              onChange={(e) => setFormData({ ...formData, isOnHold: e.target.checked })}
+              className="h-3.5 w-3.5 rounded border-slate-300 text-brand-800 focus:ring-brand-800"
+            />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">On-Hold</span>
+          </label>
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
             <button

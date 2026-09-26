@@ -139,14 +139,14 @@ const seedDB = async () => {
           email: 'contact@apexretail.example',
           category: 'Retail & E-Commerce',
           status: 0,
-          description: 'Client information verified.',
+          description: 'Data Received information verified.',
           createdBy: 'Admin Seeder',
           updatedBy: 'Admin Seeder',
           updatedOn: new Date(),
           statusHistory: [
             {
               status: 0,
-              description: 'Client information verified.',
+              description: 'Data Received information verified.',
               updatedBy: 'Admin Seeder',
               updatedOn: new Date(),
             },

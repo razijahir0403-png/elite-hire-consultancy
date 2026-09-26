@@ -15,7 +15,7 @@ const Navbar = ({ onMenuClick }) => {
     if (path === '/dashboard/naukri') return 'Naukri Integration';
     if (path === '/dashboard/indeed') return 'Indeed Integration';
     if (path === '/dashboard/analytics') return 'Analytics Info';
-    if (path === '/dashboard/clients') return 'Clients Info';
+    if (path === '/dashboard/clients') return 'Data Received';
     if (path === '/dashboard/received-info') return 'Received Info';
     if (path === '/dashboard/users') return 'System Users';
     return 'Consultancy System';

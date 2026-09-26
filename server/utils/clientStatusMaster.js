@@ -23,9 +23,11 @@ const CLIENT_STATUS = {
   PAYMENT_COMPLETED: 17,
   PAYMENT_PENDING: 18,
   RESPONSE_RECEIVED: 19,
+  NEW_DATA: 20,
+  ON_HOLD: 21,
 };
 
-const CLIENT_STATUS_MAX = 19;
+const CLIENT_STATUS_MAX = 21;
 
 const ClientStatusLabel = {
   0: 'Info Verified',
@@ -48,6 +50,8 @@ const ClientStatusLabel = {
   17: 'Payment Completed',
   18: 'Payment Pending',
   19: 'Response Received',
+  20: 'New Data',
+  21: 'On-Hold',
 };
 
 const CLIENT_TEXT_TO_CODE = Object.entries(ClientStatusLabel).reduce((acc, [code, label]) => {

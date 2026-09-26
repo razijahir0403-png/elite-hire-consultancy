@@ -31,9 +31,10 @@ export const RECRUITMENT_STATUS = {
   RESPONSE_RECEIVED: 21,
   NEED_AN_HELP: 22,
   SENT_FOLLOW_UP: 23,
+  ON_HOLD: 24,
 };
 
-export const RECRUITMENT_STATUS_MAX = 23;
+export const RECRUITMENT_STATUS_MAX = 24;
 
 export const CommonStatus = { 0: 'Inactive', 1: 'Active' };
 
@@ -68,6 +69,7 @@ export const RecruitmentStatus = {
   21: 'Response Received',
   22: 'Need an Help',
   23: 'Sent Follow up Message',
+  24: 'On-Hold',
 };
 
 /** Tailwind badge classes per status type */
@@ -83,6 +85,7 @@ export const StatusColors = {
     17: 'bg-violet-50 text-violet-700 border-violet-200',
     18: 'bg-slate-100 text-slate-700 border-slate-300',
     19: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    24: 'bg-amber-50 text-amber-800 border-amber-200',
   },
   common: {
     0: 'bg-slate-50 text-slate-600 border-slate-200',
