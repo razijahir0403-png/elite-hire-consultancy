@@ -1,30 +1,40 @@
 import React from 'react';
+import ThreeBarLogo from './ThreeBarLogo';
 
-const Spinner = ({ size = 'medium', fullPage = false }) => {
-  const sizeClasses = {
-    small: 'h-6 w-6 border-2',
-    medium: 'h-12 w-12 border-[3px]',
-    large: 'h-16 w-16 border-4'
+/**
+ * Spinner — Reusable brand loader using the Recruitix Analytica Solution
+ * three ascending green bars animation.
+ */
+const Spinner = ({ size = 'medium', fullPage = false, text = 'Loading...' }) => {
+  const logoSizes = {
+    small: 'xs',
+    medium: 'md',
+    large: 'lg',
   };
 
   const spinnerContent = (
-    <div className="flex flex-col items-center justify-center space-y-4">
-      <div className="relative">
-        {/* Outer brand-themed premium rotating ring */}
-        <div className={`animate-spin rounded-full border-slate-200 border-t-brand-800 ${sizeClasses[size]}`} />
-        <div className="absolute inset-0 rounded-full blur-xs opacity-30 border border-brand-100" />
+    <div className="flex flex-col items-center justify-center space-y-3">
+      {/* Animated Three Ascending Green Bars */}
+      <div className="relative p-2 rounded-2xl bg-white/80 border border-[#D8E9E2] shadow-[0_4px_20px_rgba(0,185,107,0.15)] backdrop-blur-xs">
+        <ThreeBarLogo size={logoSizes[size] || 'md'} animated={true} />
       </div>
+
       {fullPage && (
-        <span className="text-xs font-semibold tracking-widest text-slate-600 uppercase animate-pulse">
-          Loading Elite Hire...
-        </span>
+        <div className="flex flex-col items-center text-center space-y-1">
+          <span className="text-xs font-bold tracking-widest text-ras-teal uppercase animate-pulse">
+            {text}
+          </span>
+          <span className="text-[10px] font-extrabold tracking-widest text-[#00B96B] uppercase">
+            Data • Talent • Solutions
+          </span>
+        </div>
       )}
     </div>
   );
 
   if (fullPage) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#EAF8F3]/90 backdrop-blur-md">
         {spinnerContent}
       </div>
     );

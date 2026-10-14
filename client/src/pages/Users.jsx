@@ -137,24 +137,24 @@ const Users = () => {
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/40">
               <h3 className="text-sm font-bold text-slate-900 font-sans tracking-wide">Registered Accounts Registry</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+              <table className="w-max min-w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50 text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-150">
-                    <th className="py-4 px-6 text-center w-16">#</th>
-                    <th className="py-4 px-6">Name</th>
-                    <th className="py-4 px-6">Email Address</th>
-                    <th className="py-4 px-6 whitespace-nowrap min-w-[120px]">Account ID</th>
-                    <th className="py-4 px-6">Registered On</th>
-                    <th className="py-4 px-6">Approval Status</th>
-                    <th className="py-4 px-6 text-right">Actions</th>
+                  <tr className="bg-[#07566A] text-white uppercase text-[10px] font-extrabold tracking-wider">
+                    <th className="py-4 px-6 text-center w-16 whitespace-nowrap">#</th>
+                    <th className="py-4 px-6 whitespace-nowrap min-w-[160px]">Name</th>
+                    <th className="py-4 px-6 whitespace-nowrap min-w-[180px]">Email Address</th>
+                    <th className="py-4 px-6 whitespace-nowrap min-w-[140px]">Account ID</th>
+                    <th className="py-4 px-6 whitespace-nowrap min-w-[150px]">Registered On</th>
+                    <th className="py-4 px-6 whitespace-nowrap min-w-[150px]">Approval Status</th>
+                    <th className="py-4 px-6 text-right whitespace-nowrap min-w-[140px]">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="divide-y divide-slate-100 bg-white text-sm">
                   {usersList.map((usr, index) => (
-                    <tr key={usr._id} className="hover:bg-slate-50/50 transition-colors text-slate-750">
-                      <td className="py-4 px-6 text-center font-bold text-slate-400 text-xs">{index + 1}</td>
-                      <td className="py-4 px-6 font-bold text-slate-900">
+                    <tr key={usr._id} className="hover:bg-[#D9FFF0]/25 transition-colors text-slate-750">
+                      <td className="py-4 px-6 text-center font-bold text-slate-400 text-xs whitespace-nowrap">{index + 1}</td>
+                      <td className="py-4 px-6 font-bold text-slate-900 whitespace-nowrap min-w-[160px]">
                         <div className="flex items-center space-x-2.5">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email)
                               ? 'bg-brand-800 text-white shadow-sm'
@@ -172,17 +172,17 @@ const Users = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-6 font-medium">
+                      <td className="py-4 px-6 font-medium whitespace-nowrap min-w-[180px]">
                         <div className="flex items-center space-x-2">
                           <Mail size={14} className="text-slate-400" />
                           <span>{usr.email}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 font-mono text-xs text-slate-400 whitespace-nowrap min-w-[120px]">{usr._id}</td>
-                      <td className="py-4 px-6 font-medium text-slate-500">
+                      <td className="py-4 px-6 font-mono text-xs text-slate-400 whitespace-nowrap min-w-[140px]">{usr._id}</td>
+                      <td className="py-4 px-6 font-medium text-slate-500 whitespace-nowrap min-w-[150px]">
                         {formatDateTimeDDMMYYYY(usr.createdAt)}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 whitespace-nowrap min-w-[150px]">
                         {['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email) ? (
                           <span className="inline-flex items-center px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-lg shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
@@ -200,7 +200,7 @@ const Users = () => {
                           </span>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-4 px-6 text-right whitespace-nowrap min-w-[140px]">
                         {['admin@elitehire.com', 'dev@elitehire.com'].includes(usr.email) ? (
                           <span className="text-xs text-slate-400 font-medium italic">System Owner</span>
                         ) : (

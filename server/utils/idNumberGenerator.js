@@ -1,17 +1,20 @@
 const RequestInfo = require('../models/RequestInfo');
 
-const ID_PREFIX = 'EH';
+const ID_PREFIX = 'RAS';
 const SEQUENCE_PAD_LENGTH = 3;
 const MAX_GENERATION_ATTEMPTS = 5;
 
-/** Matches EH-YYYY-XXX (sequence is 3+ digits when sequence exceeds 999). */
-const ID_NUMBER_PATTERN = /^EH-(\d{4})-(\d+)$/;
+/** Matches RAS-YYYY-XXX (sequence is 3+ digits when sequence exceeds 999). */
+const ID_NUMBER_PATTERN = /^RAS-(\d{4})-(\d+)$/;
+
+/** Matches both RAS-YYYY-XXX and legacy EH-YYYY-XXX formats for parsing. */
+const LEGACY_ID_NUMBER_PATTERN = /^(?:RAS|EH)-(\d{4})-(\d+)$/;
 
 const formatRequestId = (year, sequence) =>
   `${ID_PREFIX}-${year}-${String(sequence).padStart(SEQUENCE_PAD_LENGTH, '0')}`;
 
 const parseRequestId = (idnumber) => {
-  const match = String(idnumber || '').match(ID_NUMBER_PATTERN);
+  const match = String(idnumber || '').match(LEGACY_ID_NUMBER_PATTERN);
   if (!match) return null;
   return {
     year: Number(match[1]),
@@ -22,14 +25,14 @@ const parseRequestId = (idnumber) => {
 /**
  * Highest numeric sequence for the year across all records (including soft-deleted).
  * Aggregate bypasses soft-delete query middleware so occupied IDs are not reused.
+ * Matches both RAS and legacy EH prefixes so existing records and new records
+ * coexist seamlessly without duplicate sequence numbers.
  */
 const getMaxSequenceForYear = async (year) => {
-  const yearPrefix = `${ID_PREFIX}-${year}-`;
-
   const [result] = await RequestInfo.aggregate([
     {
       $match: {
-        idnumber: { $regex: `^${yearPrefix}\\d+$` },
+        idnumber: { $regex: `^(?:${ID_PREFIX}|EH)-${year}-\\d+$` },
       },
     },
     {
@@ -61,6 +64,7 @@ const isDuplicateKeyError = (err) =>
 module.exports = {
   ID_PREFIX,
   ID_NUMBER_PATTERN,
+  LEGACY_ID_NUMBER_PATTERN,
   SEQUENCE_PAD_LENGTH,
   MAX_GENERATION_ATTEMPTS,
   formatRequestId,

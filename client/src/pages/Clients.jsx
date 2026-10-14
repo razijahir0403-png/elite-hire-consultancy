@@ -161,7 +161,7 @@ const Clients = () => {
         return;
       }
       const filenamePrefix = hasActiveFilters ? 'data-received-filtered' : 'data-received-all';
-      exportClientsToExcel(exportRecords, filenamePrefix);
+      await exportClientsToExcel(exportRecords, filenamePrefix);
       toast.success(`Exported ${exportRecords.length} record(s) to Excel.`);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to export records.');
@@ -461,7 +461,7 @@ const Clients = () => {
         <button
           type="button"
           onClick={handleAddClick}
-          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
+          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] hover:shadow-[0_6px_18px_rgba(0,217,139,0.4)] transition-all uppercase tracking-wider active:scale-[0.98]"
         >
           <Plus size={16} />
           <span>Add Info</span>
@@ -576,46 +576,46 @@ const Clients = () => {
             <p className="text-slate-500 text-sm font-semibold">No records found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+          <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+            <table className="w-max min-w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-extrabold tracking-wider text-slate-500">
-                  <th onClick={() => handleSort('clientId')} className="px-6 py-4 cursor-pointer hover:text-slate-800 whitespace-nowrap min-w-[120px]">
+                <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                  <th onClick={() => handleSort('clientId')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[130px]">
                     <div className="flex items-center space-x-1">
                       <span>Client ID</span>
-                      {sortBy === 'clientId' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'clientId' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('clientName')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('clientName')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[160px]">
                     <div className="flex items-center space-x-1">
                       <span>Client Name</span>
-                      {sortBy === 'clientName' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'clientName' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4">Mobile</th>
-                  <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">Category</th>
-                  <th className="px-6 py-4 text-center">Profile Docs</th>
-                  <th className="px-6 py-4 text-center">Proof Docs</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Mobile</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[160px]">Email</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[120px]">Category</th>
+                  <th className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">Profile Docs</th>
+                  <th className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">Proof Docs</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Status</th>
+                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Updated On</span>
-                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-slate-50/60'}`}>
-                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.clientId}</td>
-                    <td className="px-6 py-4 font-bold text-slate-900">{r.clientName}</td>
-                    <td className="px-6 py-4 text-slate-600">{normalizeContactNumber(r.mobile) || '—'}</td>
-                    <td className="px-6 py-4 text-slate-600 truncate max-w-[120px]" title={r.email}>{r.email || '—'}</td>
-                    <td className="px-6 py-4 text-slate-600">{r.category || '—'}</td>
-                    <td className="px-6 py-4 text-center">
+                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-[#D9FFF0]/25'}`}>
+                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[130px]">{r.clientId}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap min-w-[160px]">{r.clientName}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[130px]">{normalizeContactNumber(r.mobile) || '—'}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[160px]">{r.email || '—'}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[120px]">{r.category || '—'}</td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">
                       {r.profileDocumentPath ? (
                         <button
                           type="button"
@@ -629,7 +629,7 @@ const Clients = () => {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">
                       {r.proofDocumentPath ? (
                         <button
                           type="button"
@@ -643,14 +643,14 @@ const Clients = () => {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap min-w-[130px]">
                       <StatusBadge status={r.status} type="client" />
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap min-w-[140px]">
                       <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.updatedDate || r.updatedOn || r.createdDate || r.createdAt)}</div>
                       <div className="text-[9px] text-slate-400">By {r.updatedBy || r.createdBy || 'System'}</div>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">
                       <div className="flex items-center justify-end space-x-1.5">
                         <button type="button" onClick={() => handleViewClick(r)} className="p-1.5 bg-slate-50 border border-slate-200 hover:border-slate-400 rounded-lg text-slate-500" title="View">
                           <Eye size={13} />
@@ -835,7 +835,7 @@ const Clients = () => {
             <button type="button" onClick={() => setIsAddEditOpen(false)} className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold">
               Cancel
             </button>
-            <button type="submit" className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 text-white font-bold text-xs rounded-xl">
+            <button type="submit" className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]">
               {activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
           </div>
@@ -954,7 +954,7 @@ const Clients = () => {
           />
           <div className="flex flex-col sm:flex-row gap-3">
             <button type="button" onClick={() => setIsStatusOpen(false)} className="w-full sm:flex-1 py-2.5 border border-slate-200 rounded-xl text-xs font-bold">Close</button>
-            <button type="submit" className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 text-white rounded-xl text-xs font-bold">Submit</button>
+            <button type="submit" className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]">Submit</button>
           </div>
         </form>
       </Modal>

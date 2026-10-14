@@ -25,6 +25,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
+const leaveRoutes = require('./routes/leaveRoutes');
 
 const cron = require('node-cron');
 const { autoLogoutCron } = require('./controllers/attendanceController');
@@ -102,13 +103,24 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/leave', leaveRoutes);
 
 /* -------------------------- SERVE FRONTEND --------------------------- */
 
 if (nodeEnv === 'production' && serveClient) {
   const clientDist = path.join(__dirname, '../client/dist');
 
-  app.use(express.static(clientDist));
+  app.use(
+    express.static(clientDist, {
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      },
+    })
+  );
 
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) {

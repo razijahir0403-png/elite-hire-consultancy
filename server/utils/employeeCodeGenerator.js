@@ -1,17 +1,17 @@
 const Employee = require('../models/Employee');
 
-const ID_PREFIX = 'EHC';
+const ID_PREFIX = 'EMP';
 const SEQUENCE_PAD_LENGTH = 3;
 const MAX_GENERATION_ATTEMPTS = 5;
 
-/** Matches EHC001, EHC002, etc. (sequence is 3+ digits) */
-const ID_NUMBER_PATTERN = /^EHC(\d+)$/;
+/** Matches EMP001, EMP002, etc. (sequence is 3+ digits) */
+const ID_NUMBER_PATTERN = /^EMP(\d+)$/;
 
 const formatEmployeeCode = (sequence) =>
   `${ID_PREFIX}${String(sequence).padStart(SEQUENCE_PAD_LENGTH, '0')}`;
 
 const parseEmployeeCode = (employeeCode) => {
-  const match = String(employeeCode || '').match(ID_NUMBER_PATTERN);
+  const match = String(employeeCode || '').match(/^(?:EMP|EHC)(\d+)$/);
   if (!match) return null;
   return {
     sequence: Number(match[1]),
@@ -21,18 +21,31 @@ const parseEmployeeCode = (employeeCode) => {
 /**
  * Highest numeric sequence across all records (including soft-deleted).
  * Aggregate bypasses soft-delete query middleware so occupied IDs are not reused.
+ * Matches both EMP and legacy EHC prefixes to ensure seamless sequence continuity.
  */
 const getMaxSequenceForEmployee = async () => {
   const [result] = await Employee.aggregate([
     {
       $match: {
-        employeeCode: { $regex: `^${ID_PREFIX}\\d+$` },
+        employeeCode: { $regex: '^(?:EMP|EHC)\\d+$' },
       },
     },
     {
       $addFields: {
         sequence: {
-          $toInt: { $substrCP: ['$employeeCode', ID_PREFIX.length, { $strLenCP: '$employeeCode' }] },
+          $toInt: {
+            $replaceAll: {
+              input: {
+                $replaceAll: {
+                  input: '$employeeCode',
+                  find: 'EMP',
+                  replacement: '',
+                },
+              },
+              find: 'EHC',
+              replacement: '',
+            },
+          },
         },
       },
     },

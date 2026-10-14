@@ -78,7 +78,7 @@ const getReceivedInfos = async (queryParams) => {
   const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
   const [records, totalRecords] = await Promise.all([
-    ReceivedInfo.find(query).sort(sort).skip(skip).limit(limitNum),
+    ReceivedInfo.find(query).sort(sort).skip(skip).limit(limitNum).lean(),
     ReceivedInfo.countDocuments(query),
   ]);
 
@@ -94,7 +94,7 @@ const getReceivedInfos = async (queryParams) => {
 };
 
 const getReceivedInfoById = async (id) => {
-  const record = await ReceivedInfo.findById(id);
+  const record = await ReceivedInfo.findById(id).lean();
   if (!record) {
     throw new AppError('Record not found', 404);
   }
@@ -291,7 +291,7 @@ const updateReceivedStatus = async (id, body, editorName) => {
 };
 
 const getStatusHistory = async (id) => {
-  const record = await ReceivedInfo.findById(id);
+  const record = await ReceivedInfo.findById(id).lean();
   if (!record) {
     throw new AppError('Record not found', 404);
   }

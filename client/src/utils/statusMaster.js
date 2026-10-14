@@ -75,21 +75,53 @@ export const RecruitmentStatus = {
 /** Tailwind badge classes per status type */
 export const StatusColors = {
   recruitment: {
-    0: 'bg-brand-50 text-brand-800 border-brand-200',
-    13: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    14: 'bg-red-50 text-red-700 border-red-200',
-    11: 'bg-yellow-50 text-yellow-800 border-yellow-200',
-    2: 'bg-orange-50 text-orange-700 border-orange-200',
-    3: 'bg-orange-50 text-orange-700 border-orange-200',
-    12: 'bg-orange-50 text-orange-700 border-orange-200',
-    17: 'bg-violet-50 text-violet-700 border-violet-200',
-    18: 'bg-slate-100 text-slate-700 border-slate-300',
-    19: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    24: 'bg-amber-50 text-amber-800 border-amber-200',
+    0: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Verified
+    1: 'bg-[#F0F9FF] text-[#0369A1] border-[#38BDF8]/40', // Need to Verify
+    2: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Invalid Info
+    3: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Wrong Info
+    4: 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]/50', // Mis-Matched
+    5: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Message Forwarded
+    6: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // E Mail Sent
+    7: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Call Received
+    8: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Contact
+    9: 'bg-[#F5F3FF] text-[#6D28D9] border-[#8B5CF6]/40', // Applied by Portal
+    10: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Issue with Applying
+    11: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Call Back
+    12: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Invalid or Wrong Number
+    13: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B] font-extrabold', // Selected
+    14: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FCA5A5]', // Rejected
+    15: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Cancelled as per SLA
+    16: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Duplicate
+    17: 'bg-[#F5F3FF] text-[#6D28D9] border-[#8B5CF6]/40', // Reopen
+    18: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Cancelled
+    19: 'bg-[#EEF2FF] text-[#4338CA] border-[#A5B4FC]/40', // Internal Note
+    20: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Info Updated
+    21: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Response Received
+    22: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Need an Help
+    23: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Sent Follow up Message
+    24: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // On-Hold
+  },
+  approval: {
+    0: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Pending
+    1: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Approved
+    2: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FCA5A5]',     // Rejected
+    3: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Hold
+  },
+  ticket: {
+    0: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Open
+    1: 'bg-[#F5F3FF] text-[#6D28D9] border-[#8B5CF6]/40', // In Progress
+    2: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Resolved
+    3: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]',     // Closed
+  },
+  asset: {
+    0: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Available
+    1: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Assigned
+    2: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Maintenance
+    3: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FCA5A5]',     // Scrap
   },
   common: {
-    0: 'bg-slate-50 text-slate-600 border-slate-200',
-    1: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    0: 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]',     // Inactive
+    1: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Active
   },
 };
 

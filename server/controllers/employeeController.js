@@ -2,8 +2,30 @@ const employeeService = require('../services/employeeService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getEmployees = asyncHandler(async (req, res) => {
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(req.user?.email);
+  if (!isAdmin) {
+    // Non-admin employees strictly receive only their own employee profile
+    const record = await employeeService.getEmployeeByEmail(req.user.email);
+    return res.status(200).json({
+      success: true,
+      data: {
+        employees: record ? [record] : [],
+        pagination: {
+          total: record ? 1 : 0,
+          page: 1,
+          pages: 1,
+          limit: 10,
+        },
+      },
+    });
+  }
   const result = await employeeService.getEmployees(req.query);
   res.status(200).json({ success: true, data: result });
+});
+
+const getMyProfile = asyncHandler(async (req, res) => {
+  const record = await employeeService.getEmployeeByEmail(req.user.email);
+  res.status(200).json({ success: true, data: record || null });
 });
 
 const getEmployee = asyncHandler(async (req, res) => {
@@ -28,8 +50,10 @@ const deleteEmployee = asyncHandler(async (req, res) => {
 
 module.exports = {
   getEmployees,
+  getMyProfile,
   getEmployee,
   createEmployee,
   updateEmployee,
   deleteEmployee,
 };
+

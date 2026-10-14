@@ -1,5 +1,6 @@
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
+const LeaveRequest = require('../models/LeaveRequest');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const moment = require('moment-timezone');
@@ -155,6 +156,15 @@ const getHistory = asyncHandler(async (req, res) => {
     throw new AppError('Month and Year are required', 400);
   }
 
+  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(req.user?.email);
+  const requestedEmail = (email || '').trim().toLowerCase();
+  const authUserEmail = (req.user?.email || '').trim().toLowerCase();
+
+  // If not admin, regular employees can only query their own attendance history
+  if (!isAdmin && requestedEmail !== authUserEmail) {
+    throw new AppError('Access denied. You can only view your own attendance history.', 403);
+  }
+
   const m = parseInt(month, 10);
   const y = parseInt(year, 10);
 
@@ -166,20 +176,42 @@ const getHistory = asyncHandler(async (req, res) => {
     datesToSearch.push(moment.tz(`${y}-${m}-${i}`, 'YYYY-M-D', 'Asia/Kolkata').format('YYYY-MM-DD'));
   }
 
-  const queryEmail = email.trim().toLowerCase();
+  // Strictly enforce user's own email if not admin
+  const queryEmail = isAdmin ? requestedEmail : authUserEmail;
 
-  const records = await Attendance.find({
-    employeeEmail: queryEmail,
-    loginDate: { $in: datesToSearch }
-  }).lean();
+  const [records, leaveRequests] = await Promise.all([
+    Attendance.find({
+      employeeEmail: queryEmail,
+      loginDate: { $in: datesToSearch }
+    }).lean(),
+    LeaveRequest.find({
+      employeeEmail: queryEmail,
+      requestDate: { $in: datesToSearch }
+    }).sort({ createdAt: -1 }).lean()
+  ]);
 
   const recordsMap = {};
   records.forEach(r => {
     recordsMap[r.loginDate] = r;
   });
 
+  const leaveMap = {};
+  leaveRequests.forEach(l => {
+    if (!leaveMap[l.requestDate]) {
+      leaveMap[l.requestDate] = l;
+    } else {
+      const existing = leaveMap[l.requestDate];
+      if (l.status === 'Approved') {
+        leaveMap[l.requestDate] = l;
+      } else if (l.status === 'Pending' && existing.status === 'Rejected') {
+        leaveMap[l.requestDate] = l;
+      }
+    }
+  });
+
   const generatedHistory = [];
   const formatTime = (dateObj) => dateObj ? moment(dateObj).tz('Asia/Kolkata').format('hh:mm A') : 'N/A';
+  const todayKolkata = moment().tz('Asia/Kolkata').startOf('day');
 
   for (let i = 1; i <= daysInMonth; i++) {
     const current = moment.tz(`${y}-${m}-${i}`, 'YYYY-M-D', 'Asia/Kolkata');
@@ -187,13 +219,21 @@ const getHistory = asyncHandler(async (req, res) => {
     const displayDate = current.format('DD-MM-YYYY');
     const dayName = current.format('dddd');
     const isWeekend = dayName === 'Saturday' || dayName === 'Sunday';
+    const currentDayMoment = current.clone().startOf('day');
+    const isUpcoming = currentDayMoment.isSameOrAfter(todayKolkata);
 
-    if (recordsMap[dateStr]) {
-      const rec = recordsMap[dateStr];
+    const rec = recordsMap[dateStr];
+    const leaveReq = leaveMap[dateStr];
+
+    const hasActiveRequest = leaveReq && (leaveReq.status === 'Pending' || leaveReq.status === 'Approved');
+    const isEligibleForLeave = isUpcoming && !isWeekend && !hasActiveRequest && !rec;
+
+    if (rec) {
       const daySessions = rec.sessions || [];
       
       generatedHistory.push({
         date: displayDate,
+        rawDate: dateStr,
         day: dayName,
         loggedIn: formatTime(daySessions[0] ? daySessions[0].loginTime : null),
         loggedOut: formatTime(rec.lastLogout),
@@ -205,26 +245,59 @@ const getHistory = asyncHandler(async (req, res) => {
           endTime: formatTime(s.logoutTime),
           type: s.logoutReason || (s.logoutTime ? 'Closed' : 'Active'),
           duration: s.durationSeconds != null ? formatDigitalClock(s.durationSeconds) : 'N/A'
-        }))
+        })),
+        isUpcoming,
+        isWeekend,
+        isEligibleForLeave: false,
+        leaveRequest: leaveReq ? {
+          id: leaveReq._id,
+          type: leaveReq.requestType,
+          status: leaveReq.status,
+          reason: leaveReq.reason || '',
+          submittedAt: leaveReq.createdAt,
+          reviewedBy: leaveReq.reviewedBy,
+          reviewedAt: leaveReq.reviewedAt,
+          rejectionReason: leaveReq.rejectionReason || '',
+        } : null
       });
     } else {
       let status = 'Absent';
-      if (isWeekend) status = 'Week Off';
-      // If it's a future date
-      const todayKolkata = moment().tz('Asia/Kolkata');
-      if (current.isSame(todayKolkata, 'day') || current.isAfter(todayKolkata, 'day')) {
+      if (isWeekend) {
+        status = 'Week Off';
+      } else if (leaveReq && leaveReq.status === 'Approved') {
+        status = leaveReq.requestType; // 'CL', 'SL', or 'OD'
+      } else if (isUpcoming) {
         status = '--';
+      }
+
+      let totalHoursDisplay = status;
+      if (leaveReq && leaveReq.status === 'Approved') {
+        totalHoursDisplay = leaveReq.requestType; // 'CL', 'SL', or 'OD'
       }
 
       generatedHistory.push({
         date: displayDate,
+        rawDate: dateStr,
         day: dayName,
         loggedIn: 'N/A',
         loggedOut: 'N/A',
-        totalHours: status,
+        totalHours: totalHoursDisplay,
         workMode: '--',
         status: status,
-        sessions: []
+        sessions: [],
+        isUpcoming,
+        isWeekend,
+        isEligibleForLeave,
+        leaveRequest: leaveReq ? {
+          id: leaveReq._id,
+          type: leaveReq.requestType,
+          status: leaveReq.status,
+          reason: leaveReq.reason || '',
+          submittedAt: leaveReq.createdAt,
+          reviewedBy: leaveReq.reviewedBy,
+          reviewedAt: leaveReq.reviewedAt,
+          rejectionReason: leaveReq.rejectionReason || '',
+        } : null
       });
     }
   }

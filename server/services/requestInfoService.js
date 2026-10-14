@@ -78,7 +78,7 @@ const getRequestInfos = async (queryParams) => {
   const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
   const [records, totalRecords] = await Promise.all([
-    RequestInfo.find(query).sort(sort).skip(skip).limit(limitNum),
+    RequestInfo.find(query).sort(sort).skip(skip).limit(limitNum).lean(),
     RequestInfo.countDocuments(query),
   ]);
 
@@ -94,7 +94,7 @@ const getRequestInfos = async (queryParams) => {
 };
 
 const getRequestInfoById = async (id) => {
-  const record = await RequestInfo.findById(id);
+  const record = await RequestInfo.findById(id).lean();
   if (!record) {
     throw new AppError('Record not found', 404);
   }
@@ -260,11 +260,11 @@ const updateRequestStatus = async (id, { status, description }, editorName) => {
 };
 
 const getStatusHistory = async (id) => {
-  const record = await RequestInfo.findById(id).select('statusHistory');
+  const record = await RequestInfo.findById(id).select('statusHistory').lean();
   if (!record) {
     throw new AppError('Record not found', 404);
   }
-  return record.statusHistory.map((item) => ({
+  return (record.statusHistory || []).map((item) => ({
     ...(item.toObject ? item.toObject() : item),
     status: toRecruitmentStatusCode(item.status),
   }));

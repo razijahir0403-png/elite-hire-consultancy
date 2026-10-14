@@ -1,11 +1,11 @@
-import * as XLSX from 'xlsx';
 import { RecruitmentStatus } from './statusMaster';
 
 import { formatDateDDMMYYYY } from './dateFormatter';
 
 const statusLabel = (code) => RecruitmentStatus[Number(code)] ?? '';
 
-export const exportAnalyticsToExcel = (records, filenamePrefix = 'analytics-export') => {
+export const exportAnalyticsToExcel = async (records, filenamePrefix = 'analytics-export') => {
+  const XLSX = await import('xlsx');
   const rows = records.map((r) => ({
     'ID Number': r.idnumber || '',
     'Company Name': r.companyName || '',

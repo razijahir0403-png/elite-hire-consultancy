@@ -23,6 +23,31 @@ const employeeSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    aadhaarNumber: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator(v) {
+          if (!v) return true;
+          return /^\d{12}$/.test(v);
+        },
+        message: 'Aadhaar Card Number must be exactly 12 digits',
+      },
+    },
+    panNumber: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+      validate: {
+        validator(v) {
+          if (!v) return true;
+          return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v);
+        },
+        message: 'PAN Card Number must be in the format ABCDE1234F',
+      },
+    },
     contactNumber: {
       type: String,
       required: [true, 'Please provide Contact Number'],
@@ -76,6 +101,10 @@ const employeeSchema = new mongoose.Schema(
 employeeSchema.plugin(softDeletePlugin);
 
 employeeSchema.index({ email: 1 });
+employeeSchema.index({ aadhaarNumber: 1 });
+employeeSchema.index({ panNumber: 1 });
 employeeSchema.index({ createdAt: -1 });
+employeeSchema.index({ isDeleted: 1, createdAt: -1 });
+employeeSchema.index({ isDeleted: 1, employeeCode: 1 });
 
 module.exports = mongoose.model('Employee', employeeSchema);

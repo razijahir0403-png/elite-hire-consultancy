@@ -80,5 +80,7 @@ paymentInfoSchema.plugin(softDeletePlugin);
 
 paymentInfoSchema.index({ clientId: 1 });
 paymentInfoSchema.index({ createdAt: -1 });
+paymentInfoSchema.index({ isDeleted: 1, createdAt: -1 });
+paymentInfoSchema.index({ isDeleted: 1, clientId: 1 });
 
 module.exports = mongoose.model('PaymentInfo', paymentInfoSchema);

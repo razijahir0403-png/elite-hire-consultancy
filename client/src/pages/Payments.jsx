@@ -220,7 +220,7 @@ const Payments = () => {
         return;
       }
       const filenamePrefix = hasActiveFilters ? 'payments-filtered' : 'payments-all';
-      exportPaymentsToExcel(exportRecords, filenamePrefix);
+      await exportPaymentsToExcel(exportRecords, filenamePrefix);
       toast.success(
         hasActiveFilters
           ? `Exported ${exportRecords.length} filtered record(s) to Excel.`
@@ -461,7 +461,7 @@ const Payments = () => {
         </div>
         <button
           onClick={handleAddClick}
-          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
+          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all uppercase tracking-wider"
         >
           <Plus size={16} />
           <span>Add Info</span>
@@ -554,7 +554,7 @@ const Payments = () => {
           <div className="flex items-center space-x-2">
             <button
               type="submit"
-              className="flex-1 py-2 bg-brand-800 hover:bg-brand-900 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+              className="flex-1 py-2 bg-[#07566A] hover:bg-[#064757] text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
             >
               Search
             </button>
@@ -624,63 +624,63 @@ const Payments = () => {
             <p className="text-xs text-slate-400">Try modifying your query or adding new records.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+          <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+            <table className="w-max min-w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-extrabold tracking-wider text-slate-500">
-                  <th onClick={() => handleSort('paymentId')} className="px-6 py-4 cursor-pointer hover:text-slate-800 whitespace-nowrap min-w-[120px]">
+                <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                  <th onClick={() => handleSort('paymentId')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[130px]">
                     <div className="flex items-center space-x-1">
                       <span>Payment ID</span>
-                      {sortBy === 'paymentId' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'paymentId' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('clientId')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('clientId')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Client ID</span>
-                      {sortBy === 'clientId' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'clientId' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('clientName')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('clientName')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[160px]">
                     <div className="flex items-center space-x-1">
                       <span>Client Name</span>
-                      {sortBy === 'clientName' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'clientName' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('totalAmount')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('totalAmount')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[130px]">
                     <div className="flex items-center space-x-1">
                       <span>Total Amount</span>
-                      {sortBy === 'totalAmount' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'totalAmount' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4">Paid Amount</th>
-                  <th className="px-6 py-4">Due Amount</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Paid Amount</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Due Amount</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[140px]">Status</th>
+                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Updated On</span>
-                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r.id || r._id} className="transition-colors hover:bg-slate-50/60">
-                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.paymentId}</td>
-                    <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]" title={r.clientId}>{r.clientId}</td>
-                    <td className="px-6 py-4 text-slate-700 font-medium">{r.clientName || '—'}</td>
-                    <td className="px-6 py-4 text-slate-900 font-black">₹{r.totalAmount?.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-emerald-600 font-extrabold">₹{r.paidAmount?.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-red-600 font-extrabold">₹{r.dueAmount?.toLocaleString()}</td>
-                    <td className="px-6 py-4">
+                  <tr key={r.id || r._id} className="transition-colors hover:bg-[#D9FFF0]/25">
+                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[130px]">{r.paymentId}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap min-w-[140px]">{r.clientId}</td>
+                    <td className="px-6 py-4 text-slate-700 font-medium whitespace-nowrap min-w-[160px]">{r.clientName || '—'}</td>
+                    <td className="px-6 py-4 text-slate-900 font-black whitespace-nowrap min-w-[130px]">₹{r.totalAmount?.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-emerald-600 font-extrabold whitespace-nowrap min-w-[130px]">₹{r.paidAmount?.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-red-600 font-extrabold whitespace-nowrap min-w-[130px]">₹{r.dueAmount?.toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap min-w-[140px]">
                       <StatusBadge status={r.status} />
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap min-w-[140px]">
                       <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.updatedOn)}</div>
                       <div className="text-[9px] text-slate-400">By {r.updatedBy}</div>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">
                       <div className="flex items-center justify-end space-x-1.5">
                         {r.dueAmount > 0 && (
                           <button
@@ -910,7 +910,7 @@ const Payments = () => {
             <button
               type="submit"
               disabled={isValidatingClient || !!clientValidationMsg}
-              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
@@ -976,7 +976,7 @@ const Payments = () => {
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-bold text-xs rounded-xl shadow-sm"
+              className="flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all"
             >
               Record Payment
             </button>

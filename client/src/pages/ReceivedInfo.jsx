@@ -224,7 +224,7 @@ const ReceivedInfo = () => {
       }
 
       const filenamePrefix = hasActiveFilters ? 'received-info-filtered' : 'received-info-all';
-      exportReceivedInfoToExcel(exportRecords, filenamePrefix);
+      await exportReceivedInfoToExcel(exportRecords, filenamePrefix);
       toast.success(
         hasActiveFilters
           ? `Exported ${exportRecords.length} filtered record(s) to Excel.`
@@ -430,7 +430,7 @@ const ReceivedInfo = () => {
         </div>
         <button
           onClick={handleAddClick}
-          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
+          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all uppercase tracking-wider"
         >
           <Plus size={16} />
           <span>Add Info</span>
@@ -488,7 +488,7 @@ const ReceivedInfo = () => {
           <div className="flex items-center space-x-2">
             <button
               type="submit"
-              className="flex-1 py-2 bg-brand-800 hover:bg-brand-900 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+              className="flex-1 py-2 bg-[#07566A] hover:bg-[#064757] text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
             >
               Search
             </button>
@@ -558,74 +558,74 @@ const ReceivedInfo = () => {
             <p className="text-xs text-slate-400">Try modifying your query or adding new records.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+          <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+            <table className="w-max min-w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-extrabold tracking-wider text-slate-500">
-                  <th onClick={() => handleSort('requestId')} className="px-6 py-4 cursor-pointer hover:text-slate-800 whitespace-nowrap min-w-[120px]">
+                <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                  <th onClick={() => handleSort('requestId')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[130px]">
                     <div className="flex items-center space-x-1">
                       <span>Request ID</span>
-                      {sortBy === 'requestId' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'requestId' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('domain')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('domain')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Domain Vertical</span>
-                      {sortBy === 'domain' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'domain' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('companyName')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('companyName')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[160px]">
                     <div className="flex items-center space-x-1">
                       <span>Company Name</span>
-                      {sortBy === 'companyName' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'companyName' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4">Location</th>
-                  <th className="px-6 py-4">Resource Info</th>
-                  <th className="px-6 py-4">Vendor</th>
-                  <th className="px-6 py-4">Initial Status</th>
-                  <th className="px-6 py-4 min-w-[200px]">Log Description</th>
-                  <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Location</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[180px]">Resource Info</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[110px]">Vendor</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Initial Status</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[220px]">Log Description</th>
+                  <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Created Date</span>
-                      {sortBy === 'createdAt' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'createdAt' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-slate-50/60'}`}>
-                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.requestId}</td>
-                    <td className="px-6 py-4 font-bold text-slate-900">{r.domain}</td>
-                    <td className="px-6 py-4 text-slate-700 font-medium">{r.companyName || '—'}</td>
-                    <td className="px-6 py-4 text-slate-600">{r.location}</td>
-                    <td className="px-6 py-4 text-slate-600">
+                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-[#D9FFF0]/25'}`}>
+                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[130px]">{r.requestId}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap min-w-[140px]">{r.domain}</td>
+                    <td className="px-6 py-4 text-slate-700 font-medium whitespace-nowrap min-w-[160px]">{r.companyName || '—'}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[130px]">{r.location}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[180px]">
                       <div className="font-semibold text-slate-800">{r.resourceName || '—'}</div>
                       {r.email && (
-                        <div className="text-[10px] text-slate-500 truncate max-w-[140px]" title={r.email}>
+                        <div className="text-[10px] text-slate-500 whitespace-nowrap font-normal">
                           {r.email}
                         </div>
                       )}
                       <div className="text-[10px] text-slate-450">{normalizeContactNumber(r.mobileNumber) || '—'}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap min-w-[110px]">
                       <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">
                         {r.vendor || 'NA'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap min-w-[130px]">
                       {getReceivedStatusBadge(r.status || r.currentStatus || r.initialStatus)}
                     </td>
-                    <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap max-w-xs break-words text-xs">
+                    <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap min-w-[220px] break-words text-xs">
                       {r.logDescription || 'NA'}
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap min-w-[140px]">
                       <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.createdAt)}</div>
                       <div className="text-[9px] text-slate-400">By {r.updatedBy}</div>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">
                       <div className="flex items-center justify-end space-x-1.5">
                         {/* Edit Action */}
                         <button
@@ -857,7 +857,7 @@ const ReceivedInfo = () => {
             </button>
             <button
               type="submit"
-              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all"
+              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all"
             >
               {activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
@@ -906,7 +906,7 @@ const ReceivedInfo = () => {
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand"
+              className="flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all"
             >
               Submit Update
             </button>

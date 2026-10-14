@@ -115,5 +115,7 @@ requestInfoSchema.plugin(softDeletePlugin);
 requestInfoSchema.index({ companyName: 1 });
 requestInfoSchema.index({ status: 1 });
 requestInfoSchema.index({ createdAt: -1 });
+requestInfoSchema.index({ isDeleted: 1, status: 1, updatedOn: -1 });
+requestInfoSchema.index({ isDeleted: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('RequestInfo', requestInfoSchema);

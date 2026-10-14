@@ -125,5 +125,7 @@ clientSchema.plugin(softDeletePlugin);
 
 clientSchema.index({ status: 1 });
 clientSchema.index({ createdAt: -1 });
+clientSchema.index({ isDeleted: 1, status: 1, updatedOn: -1 });
+clientSchema.index({ isDeleted: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Client', clientSchema);

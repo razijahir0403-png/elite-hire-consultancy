@@ -7,7 +7,7 @@ const {
 } = require('../utils/employeeCodeGenerator');
 
 const getEmployees = async (query) => {
-  const { search, page = 1, limit = 10 } = query;
+  const { search, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = query;
   
   const filter = {};
 
@@ -18,16 +18,20 @@ const getEmployees = async (query) => {
       { contactNumber: { $regex: search, $options: 'i' } },
       { email: { $regex: search, $options: 'i' } },
       { domain: { $regex: search, $options: 'i' } },
+      { bloodGroup: { $regex: search, $options: 'i' } },
+      { aadhaarNumber: { $regex: search, $options: 'i' } },
+      { panNumber: { $regex: search, $options: 'i' } },
     ];
   }
 
   const pageNumber = parseInt(page, 10);
   const pageSize = parseInt(limit, 10);
   const skip = (pageNumber - 1) * pageSize;
+  const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
   const [employees, total] = await Promise.all([
     Employee.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .skip(skip)
       .limit(pageSize)
       .lean(),
@@ -54,13 +58,21 @@ const getEmployeeById = async (id) => {
 };
 
 const createEmployee = async (recordPayload, userName) => {
+  const sanitizedPayload = { ...recordPayload };
+  if (sanitizedPayload.aadhaarNumber !== undefined) {
+    sanitizedPayload.aadhaarNumber = String(sanitizedPayload.aadhaarNumber || '').replace(/\D/g, '').slice(0, 12);
+  }
+  if (sanitizedPayload.panNumber !== undefined) {
+    sanitizedPayload.panNumber = String(sanitizedPayload.panNumber || '').trim().toUpperCase().slice(0, 10);
+  }
+
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
     const employeeCode = await generateNextEmployeeCode();
     
     try {
       const record = await Employee.create({ 
         employeeCode, 
-        ...recordPayload, 
+        ...sanitizedPayload, 
         createdBy: userName, 
         updatedBy: userName 
       });
@@ -95,6 +107,8 @@ const updateEmployee = async (id, payload, userName) => {
     'employeeName',
     'dob',
     'bloodGroup',
+    'aadhaarNumber',
+    'panNumber',
     'contactNumber',
     'email',
     'homeAddress',
@@ -103,7 +117,13 @@ const updateEmployee = async (id, payload, userName) => {
 
   allowedFields.forEach((field) => {
     if (payload[field] !== undefined) {
-      employee[field] = payload[field];
+      if (field === 'aadhaarNumber') {
+        employee[field] = String(payload[field] || '').replace(/\D/g, '').slice(0, 12);
+      } else if (field === 'panNumber') {
+        employee[field] = String(payload[field] || '').trim().toUpperCase().slice(0, 10);
+      } else {
+        employee[field] = payload[field];
+      }
     }
   });
 
@@ -124,10 +144,25 @@ const softDeleteEmployee = async (id) => {
   return { message: 'Employee deleted successfully' };
 };
 
+const getEmployeeByEmail = async (email) => {
+  if (!email) return null;
+  const normalized = email.trim().toLowerCase();
+  const employee = await Employee.findOne({
+    email: normalized,
+  }).lean();
+  if (employee) return employee;
+
+  return Employee.findOne({
+    email: { $regex: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+  }).lean();
+};
+
 module.exports = {
   getEmployees,
   getEmployeeById,
+  getEmployeeByEmail,
   createEmployee,
   updateEmployee,
   softDeleteEmployee,
 };
+

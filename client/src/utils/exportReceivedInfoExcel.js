@@ -1,8 +1,7 @@
-import * as XLSX from 'xlsx';
-
 import { formatDateDDMMYYYY } from './dateFormatter';
 
-export const exportReceivedInfoToExcel = (records, filenamePrefix = 'received-info-export') => {
+export const exportReceivedInfoToExcel = async (records, filenamePrefix = 'received-info-export') => {
+  const XLSX = await import('xlsx');
   const rows = records.map((r) => ({
     'Request ID': r.requestId || '',
     Domain: r.domain || '',

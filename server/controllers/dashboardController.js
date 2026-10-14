@@ -2,6 +2,7 @@ const RequestInfo = require('../models/RequestInfo');
 const Client = require('../models/Client');
 const ReceivedInfo = require('../models/ReceivedInfo');
 const User = require('../models/User');
+const { getAgeDateRange } = require('../utils/ageFilterHelper');
 
 let statsCache = { data: null, lastFetch: 0 };
 const CACHE_TTL = 60 * 1000; // 1 minute
@@ -13,7 +14,6 @@ const getDashboardStats = async (req, res, next) => {
       return res.status(200).json({ success: true, data: statsCache.data });
     }
 
-    const { getAgeDateRange } = require('../utils/ageFilterHelper');
     const ageQuery = getAgeDateRange('> 25 days');
 
     const [analyticsCount, clientsCount, receivedInfoCount, analyticsAgingAlertCount] = await Promise.all([

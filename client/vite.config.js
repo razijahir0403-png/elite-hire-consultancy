@@ -34,7 +34,22 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            return id.toString().split('node_modules/')[1].split('/')[0].toString();
+            if (id.includes('xlsx')) {
+              return 'vendor-xlsx';
+            }
+            if (id.includes('react') || id.includes('scheduler') || id.includes('@remix-run')) {
+              return 'vendor-react';
+            }
+            if (id.includes('recharts') || id.includes('d3-') || id.includes('victory-vendor')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('lucide-react') || id.includes('react-toastify') || id.includes('clsx')) {
+              return 'vendor-ui';
+            }
+            if (id.includes('axios')) {
+              return 'vendor-axios';
+            }
+            return 'vendor-utils';
           }
         }
       }

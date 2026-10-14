@@ -40,6 +40,30 @@ const optionalContactNumberValidator = (fieldPath = 'contactNumber') =>
       return true;
     });
 
+const optionalAadhaarValidator = (fieldPath = 'aadhaarNumber') =>
+  body(fieldPath)
+    .optional({ values: 'falsy' })
+    .customSanitizer((v) => String(v ?? '').replace(/\D/g, ''))
+    .custom((v) => {
+      if (!v) return true;
+      if (!/^\d{12}$/.test(v)) {
+        throw new Error('Aadhaar Card Number must be exactly 12 digits');
+      }
+      return true;
+    });
+
+const optionalPanValidator = (fieldPath = 'panNumber') =>
+  body(fieldPath)
+    .optional({ values: 'falsy' })
+    .customSanitizer((v) => String(v ?? '').trim().toUpperCase())
+    .custom((v) => {
+      if (!v) return true;
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v)) {
+        throw new Error('PAN Card Number must be in the format ABCDE1234F');
+      }
+      return true;
+    });
+
 const optionalEmailValidator = (fieldPath = 'email') =>
   body(fieldPath)
     .optional({ values: 'falsy' })
@@ -193,6 +217,8 @@ const employeeValidators = {
     body('employeeName').trim().notEmpty().withMessage('Employee Name is required'),
     body('dob').trim().notEmpty().withMessage('Date of Birth is required').isISO8601().withMessage('Valid Date of Birth is required'),
     body('bloodGroup').optional({ values: 'falsy' }).trim(),
+    optionalAadhaarValidator('aadhaarNumber'),
+    optionalPanValidator('panNumber'),
     optionalContactNumberValidator('contactNumber'),
     optionalEmailValidator('email'),
     body('homeAddress').optional({ values: 'falsy' }).trim(),
@@ -204,6 +230,8 @@ const employeeValidators = {
     body('employeeName').optional({ values: 'falsy' }).trim().notEmpty().withMessage('Employee Name cannot be empty'),
     body('dob').optional({ values: 'falsy' }).trim().notEmpty().withMessage('Date of Birth cannot be empty').isISO8601().withMessage('Valid Date of Birth is required'),
     body('bloodGroup').optional({ values: 'falsy' }).trim(),
+    optionalAadhaarValidator('aadhaarNumber'),
+    optionalPanValidator('panNumber'),
     optionalContactNumberValidator('contactNumber'),
     optionalEmailValidator('email'),
     body('homeAddress').optional({ values: 'falsy' }).trim(),
@@ -213,6 +241,9 @@ const employeeValidators = {
   listQuery: [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('search').optional().trim(),
+    query('sortBy').optional().trim(),
+    query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('sortOrder must be asc or desc'),
   ],
 };
 

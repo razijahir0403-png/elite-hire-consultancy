@@ -116,4 +116,9 @@ const receivedInfoSchema = new mongoose.Schema(
 
 receivedInfoSchema.plugin(softDeletePlugin);
 
+receivedInfoSchema.index({ vendor: 1 });
+receivedInfoSchema.index({ createdAt: -1 });
+receivedInfoSchema.index({ isDeleted: 1, vendor: 1, createdAt: -1 });
+receivedInfoSchema.index({ isDeleted: 1, createdAt: -1 });
+
 module.exports = mongoose.model('ReceivedInfo', receivedInfoSchema);

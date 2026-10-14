@@ -1,12 +1,14 @@
-import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY } from './dateFormatter';
 
-export const exportEmployeesToExcel = (records, filenamePrefix = 'employees-export') => {
+export const exportEmployeesToExcel = async (records, filenamePrefix = 'employees-export') => {
+  const XLSX = await import('xlsx');
   const rows = records.map((r) => ({
     'Employee Code': r.employeeCode || '',
     'Employee Name': r.employeeName || '',
     'Date of Birth': formatDateDDMMYYYY(r.dob),
     'Blood Group': r.bloodGroup || '',
+    'Aadhaar Card Number': r.aadhaarNumber || '',
+    'PAN Card Number': r.panNumber || '',
     'Contact Number': r.contactNumber || '',
     'Email ID': r.email || '',
     'Home Address': r.homeAddress || '',

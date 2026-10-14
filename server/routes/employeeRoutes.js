@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   getEmployees,
+  getMyProfile,
   getEmployee,
   createEmployee,
   updateEmployee,
@@ -12,18 +13,22 @@ const { employeeValidators } = require('../utils/validators');
 
 const router = express.Router();
 
-// All employee routes are strictly admin-only
-router.use(protect, adminOnly);
+// All employee routes require authentication
+router.use(protect);
+
+// Current user profile endpoint
+router.get('/me', getMyProfile);
 
 router
   .route('/')
   .get(employeeValidators.listQuery, validate, getEmployees)
-  .post(employeeValidators.create, validate, createEmployee);
+  .post(adminOnly, employeeValidators.create, validate, createEmployee);
 
 router
   .route('/:id')
-  .get(employeeValidators.idParam, validate, getEmployee)
-  .put(employeeValidators.update, validate, updateEmployee)
-  .delete(employeeValidators.idParam, validate, deleteEmployee);
+  .get(adminOnly, employeeValidators.idParam, validate, getEmployee)
+  .put(adminOnly, employeeValidators.update, validate, updateEmployee)
+  .delete(adminOnly, employeeValidators.idParam, validate, deleteEmployee);
 
 module.exports = router;
+

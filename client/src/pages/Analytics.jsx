@@ -180,7 +180,7 @@ const Analytics = () => {
       }
 
       const filenamePrefix = hasActiveFilters ? 'analytics-filtered' : 'analytics-all';
-      exportAnalyticsToExcel(exportRecords, filenamePrefix);
+      await exportAnalyticsToExcel(exportRecords, filenamePrefix);
       toast.success(
         hasActiveFilters
           ? `Exported ${exportRecords.length} filtered record(s) to Excel.`
@@ -370,7 +370,7 @@ const Analytics = () => {
         </div>
         <button
           onClick={handleAddClick}
-          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all uppercase tracking-wider"
+          className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] hover:shadow-[0_6px_18px_rgba(0,217,139,0.4)] transition-all uppercase tracking-wider active:scale-[0.98]"
         >
           <Plus size={16} />
           <span>Add Info</span>
@@ -499,64 +499,64 @@ const Analytics = () => {
             <p className="text-xs text-slate-400">Try modifying your query or adding new records.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+          <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+            <table className="w-max min-w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-extrabold tracking-wider text-slate-500">
-                  <th onClick={() => handleSort('idnumber')} className="px-6 py-4 cursor-pointer hover:text-slate-800 whitespace-nowrap min-w-[120px]">
+                <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                  <th onClick={() => handleSort('idnumber')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[130px]">
                     <div className="flex items-center space-x-1">
                       <span>ID Number</span>
-                      {sortBy === 'idnumber' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'idnumber' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('domain')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('domain')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Domain Vertical</span>
-                      {sortBy === 'domain' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'domain' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('companyName')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th onClick={() => handleSort('companyName')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[160px]">
                     <div className="flex items-center space-x-1">
                       <span>Company Name</span>
-                      {sortBy === 'companyName' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'companyName' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4">Location</th>
-                  <th className="px-6 py-4">Resource Info</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-slate-800">
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Location</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[180px]">Resource Info</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Status</th>
+                  <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
                       <span>Updated On</span>
-                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-right whitespace-nowrap min-w-[140px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {records.map((r) => (
-                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-slate-50/60'}`}>
-                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[120px]">{r.idnumber}</td>
-                    <td className="px-6 py-4 font-bold text-slate-900">{r.domain}</td>
-                    <td className="px-6 py-4 text-slate-700 font-medium">{r.companyName || '—'}</td>
-                    <td className="px-6 py-4 text-slate-600">{r.location}</td>
-                    <td className="px-6 py-4 text-slate-600">
+                  <tr key={r._id} className={`transition-colors ${r.ageInDays >= 25 ? 'warning-row' : 'hover:bg-[#D9FFF0]/25'}`}>
+                    <td className="px-6 py-4 font-extrabold text-brand-800 whitespace-nowrap min-w-[130px]">{r.idnumber}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap min-w-[140px]">{r.domain}</td>
+                    <td className="px-6 py-4 text-slate-700 font-medium whitespace-nowrap min-w-[160px]">{r.companyName || '—'}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[130px]">{r.location}</td>
+                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[180px]">
                       <div className="font-semibold text-slate-800">{r.resourcePerson || '—'}</div>
                       {r.email && (
-                        <div className="text-[10px] text-slate-500 truncate max-w-[140px]" title={r.email}>
+                        <div className="text-[10px] text-slate-500 whitespace-nowrap font-normal">
                           {r.email}
                         </div>
                       )}
                       <div className="text-[10px] text-slate-450">{normalizeContactNumber(r.contactNumber) || '—'}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap min-w-[130px]">
                       <StatusBadge status={r.status} type="recruitment" />
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap min-w-[140px]">
                       <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.updatedOn)}</div>
                       <div className="text-[9px] text-slate-400">By {r.updatedBy}</div>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-6 py-4 text-right whitespace-nowrap min-w-[140px]">
                       <div className="flex items-center justify-end space-x-1.5">
                         {/* Edit Action */}
                         <button
@@ -780,7 +780,7 @@ const Analytics = () => {
             </button>
             <button
               type="submit"
-              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand transition-all"
+              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]"
             >
               {activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
@@ -829,7 +829,7 @@ const Analytics = () => {
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 bg-gradient-to-r from-brand-800 to-blue-700 hover:from-brand-700 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-glow-brand"
+              className="flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]"
             >
               Submit Update
             </button>

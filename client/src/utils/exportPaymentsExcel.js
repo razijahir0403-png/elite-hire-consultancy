@@ -1,7 +1,7 @@
-import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY } from './dateFormatter';
 
-export const exportPaymentsToExcel = (records, filenamePrefix = 'payments-export') => {
+export const exportPaymentsToExcel = async (records, filenamePrefix = 'payments-export') => {
+  const XLSX = await import('xlsx');
   const rows = records.map((r) => ({
     'Payment ID': r.paymentId || '',
     'Client ID': r.clientId || '',

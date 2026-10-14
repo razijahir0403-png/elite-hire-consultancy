@@ -80,7 +80,7 @@ const Naukri = () => {
                   </div>
                   <div>
                     <span className="text-slate-450 block font-medium">Email</span>
-                    <span className="text-slate-700 font-semibold truncate block" title={c.email}>
+                    <span className="text-slate-700 font-semibold break-all block">
                       {c.email || '—'}
                     </span>
                   </div>
@@ -94,7 +94,7 @@ const Naukri = () => {
                   </div>
                   <div>
                     <span className="text-slate-450 block font-medium">Contact</span>
-                    <span className="text-slate-700 font-semibold truncate block">
+                    <span className="text-slate-700 font-semibold break-words block">
                       {normalizeContactNumber(c.contactNumber) || '—'}
                     </span>
                   </div>
@@ -113,10 +113,10 @@ const Naukri = () => {
                     href={c.portalLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center space-x-2 px-3.5 py-2 bg-brand-50 border border-brand-100 text-brand-800 hover:bg-brand-800 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                    className="flex-1 flex items-center justify-center space-x-2 px-3.5 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] rounded-xl text-xs font-extrabold transition-all shadow-[0_4px_12px_rgba(0,217,139,0.25)] active:scale-[0.98]"
                   >
                     <span>Visit Naukri Listing</span>
-                    <ExternalLink size={12} />
+                    <ExternalLink size={13} />
                   </a>
                 )}
               </div>

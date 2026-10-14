@@ -1,11 +1,11 @@
-import * as XLSX from 'xlsx';
 import { ClientStatus } from './clientStatusMaster';
 
 import { formatDateDDMMYYYY } from './dateFormatter';
 
 const statusLabel = (code) => ClientStatus[Number(code)] ?? '';
 
-export const exportClientsToExcel = (records, filenamePrefix = 'clients-export') => {
+export const exportClientsToExcel = async (records, filenamePrefix = 'clients-export') => {
+  const XLSX = await import('xlsx');
   const rows = records.map((r) => ({
     'Client ID': r.clientId || '',
     'Client Name': r.clientName || '',
