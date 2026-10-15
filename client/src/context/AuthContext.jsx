@@ -7,6 +7,7 @@ import {
   getStoredUserInfo,
   isTokenExpired,
   setAuthMessage,
+  isUserAdmin,
   SESSION_EXPIRED_MESSAGE,
 } from '../utils/authToken';
 
@@ -151,7 +152,8 @@ export const AuthProvider = ({ children }) => {
         register,
         endSession,
         logout,
-        isAuthenticated: !!user
+        isAuthenticated: !!user,
+        isAdmin: isUserAdmin(user)
       }}
     >
       {children}

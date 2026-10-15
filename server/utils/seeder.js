@@ -91,21 +91,14 @@ const seedDB = async () => {
       roleMap[roleData.name] = role._id;
     }
 
-    const adminEmail = 'admin@elitehire.com';
-    let admin = await User.findOne({ email: adminEmail });
-
-    if (!admin) {
-      admin = await User.create({
-        name: 'Admin Manager',
-        email: adminEmail,
-        password: 'EliteHire@2026',
-        isApproved: true,
-        role: roleMap.admin,
-      });
-    } else {
-      admin.isApproved = true;
-      if (!admin.role) admin.role = roleMap.admin;
-      await admin.save();
+    const adminEmails = ['admin@recruitixanalytica.com', 'admin@elitehire.com'];
+    for (const adminEmail of adminEmails) {
+      let admin = await User.findOne({ email: adminEmail });
+      if (admin) {
+        admin.isApproved = true;
+        if (!admin.role) admin.role = roleMap.admin;
+        await admin.save();
+      }
     }
 
     const devEmail = 'dev@elitehire.com';

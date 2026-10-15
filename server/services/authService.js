@@ -19,12 +19,14 @@ const registerUser = async ({ name, email, password }) => {
 };
 
 const loginUser = async ({ email, password }) => {
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email }).select('+password').populate('role', 'name permissions');
   if (!user || !(await user.comparePassword(password))) {
     throw new AppError('Invalid email or password', 401);
   }
 
-  if (!user.isApproved && !['admin@elitehire.com', 'dev@elitehire.com'].includes(user.email)) {
+  const roleName = user.role?.name || (['admin@elitehire.com', 'dev@elitehire.com', 'admin@recruitixanalytica.com'].includes(user.email) ? 'admin' : null);
+
+  if (!user.isApproved && roleName !== 'admin') {
     throw new AppError(
       'Your account is pending administrator approval. Please wait for an administrator to review your request.',
       403
@@ -35,6 +37,8 @@ const loginUser = async ({ email, password }) => {
     _id: user._id,
     name: user.name,
     email: user.email,
+    role: roleName,
+    roleDetails: user.role || null,
     token: generateToken(user._id),
   };
 };

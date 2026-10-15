@@ -44,8 +44,7 @@ import { formatDateDDMMYYYY } from '../utils/dateFormatter';
 import { Navigate } from 'react-router-dom';
 
 const Employees = () => {
-  const { user } = useAuth();
-  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
+  const { user, isAdmin } = useAuth();
 
   // State for employees list & meta
   const [records, setRecords] = useState([]);
@@ -99,10 +98,16 @@ const Employees = () => {
   const [myEmployee, setMyEmployee] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
+  // Staff Tab Switcher & Requests state
+  const [staffTab, setStaffTab] = useState('attendance'); // 'attendance' | 'requests'
+  const [staffRequestFilter, setStaffRequestFilter] = useState('All');
+  const [staffRequestSearch, setStaffRequestSearch] = useState('');
+  const [myLeaveStats, setMyLeaveStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+
   // Apply Leave / OD modal state (Regular Employee)
   const [isApplyLeaveOpen, setIsApplyLeaveOpen] = useState(false);
-  const [applyLeaveDate, setApplyLeaveDate] = useState('');
-  const [applyLeaveDisplayDate, setApplyLeaveDisplayDate] = useState('');
+  const [applyLeaveStartDate, setApplyLeaveStartDate] = useState('');
+  const [applyLeaveEndDate, setApplyLeaveEndDate] = useState('');
   const [applyLeaveType, setApplyLeaveType] = useState('CL');
   const [applyLeaveReason, setApplyLeaveReason] = useState('');
   const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
@@ -152,7 +157,18 @@ const Employees = () => {
     setLoadingMyRequests(true);
     try {
       const { data } = await api.get('/leave/my-requests');
-      setMyLeaveRequests(data.data || []);
+      const list = data.data || [];
+      setMyLeaveRequests(list);
+      if (data.stats) {
+        setMyLeaveStats(data.stats);
+      } else {
+        setMyLeaveStats({
+          total: list.length,
+          pending: list.filter(r => r.status === 'Pending').length,
+          approved: list.filter(r => r.status === 'Approved').length,
+          rejected: list.filter(r => r.status === 'Rejected').length,
+        });
+      }
     } catch (error) {
       console.error('Failed to load my leave requests:', error);
     } finally {
@@ -480,9 +496,11 @@ const Employees = () => {
   };
 
   // Open Apply Leave Modal
-  const handleOpenApplyModal = (rawDate, displayDate) => {
-    setApplyLeaveDate(rawDate);
-    setApplyLeaveDisplayDate(displayDate);
+  const handleOpenApplyModal = (defaultDate = '') => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const initialDate = defaultDate || todayStr;
+    setApplyLeaveStartDate(initialDate);
+    setApplyLeaveEndDate(initialDate);
     setApplyLeaveType('CL');
     setApplyLeaveReason('');
     setIsApplyLeaveOpen(true);
@@ -491,14 +509,50 @@ const Employees = () => {
   // Submit Leave Request
   const handleSubmitLeaveRequest = async (e) => {
     e.preventDefault();
+    if (!applyLeaveStartDate) {
+      toast.error('Please select a start date.');
+      return;
+    }
     if (!applyLeaveType) {
       toast.error('Please select a request type.');
       return;
     }
+
+    // Frontend validation for monthly CL/SL limits on selected month
+    const selectedMonth = applyLeaveStartDate.slice(0, 7);
+    const activeRequests = myLeaveRequests.filter(r => r.status === 'Pending' || r.status === 'Approved');
+
+    if (applyLeaveType === 'CL') {
+      const hasCl = activeRequests.some(r => {
+        if (r.requestType !== 'CL') return false;
+        const months = r.monthsCovered && r.monthsCovered.length > 0 ? r.monthsCovered : [(r.requestDate || '').slice(0, 7)];
+        return months.includes(selectedMonth);
+      });
+      if (hasCl) {
+        const monthName = new Date(applyLeaveStartDate + 'T00:00:00').toLocaleString('default', { month: 'long', year: 'numeric' });
+        toast.error(`Monthly limit reached: You already have a pending or approved CL for ${monthName}. Only 1 CL per calendar month is allowed.`);
+        return;
+      }
+    }
+
+    if (applyLeaveType === 'SL') {
+      const hasSl = activeRequests.some(r => {
+        if (r.requestType !== 'SL') return false;
+        const months = r.monthsCovered && r.monthsCovered.length > 0 ? r.monthsCovered : [(r.requestDate || '').slice(0, 7)];
+        return months.includes(selectedMonth);
+      });
+      if (hasSl) {
+        const monthName = new Date(applyLeaveStartDate + 'T00:00:00').toLocaleString('default', { month: 'long', year: 'numeric' });
+        toast.error(`Monthly limit reached: You already have a pending or approved SL for ${monthName}. Only 1 SL per calendar month is allowed.`);
+        return;
+      }
+    }
+
     setIsSubmittingLeave(true);
     try {
       await api.post('/leave/apply', {
-        requestDate: applyLeaveDate,
+        requestDate: applyLeaveStartDate,
+        endDate: applyLeaveEndDate || applyLeaveStartDate,
         requestType: applyLeaveType,
         reason: applyLeaveReason.trim()
       });
@@ -641,333 +695,669 @@ const Employees = () => {
           </div>
         )}
 
-        {/* Attendance History Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between items-center p-5 border-b border-slate-200 gap-3 bg-slate-50/50">
-            <div>
-              <h2 className="text-sm font-bold text-slate-800">Attendance History</h2>
-              <p className="text-xs text-slate-500">Track your daily login, logout, total working hours, and session history</p>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select
-                value={trackMonth}
-                onChange={(e) => setTrackMonth(parseInt(e.target.value))}
-                className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-brand-800 text-xs font-bold w-full sm:w-auto shadow-xs"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                  <option key={m} value={m}>
-                    {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={trackYear}
-                onChange={(e) => setTrackYear(parseInt(e.target.value))}
-                className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-brand-800 text-xs font-bold w-full sm:w-auto shadow-xs"
-              >
-                {[2025, 2026, 2027].map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+        {/* Staff Tab Switcher */}
+        <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+          <button
+            type="button"
+            onClick={() => setStaffTab('attendance')}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              staffTab === 'attendance'
+                ? 'bg-brand-800 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Clock size={15} />
+            <span>Attendance History</span>
+          </button>
 
-          {isTracking ? (
-            <div className="py-20 flex items-center justify-center">
-              <Spinner />
-            </div>
-          ) : attendanceData.length === 0 ? (
-            <div className="py-20 text-center space-y-2 border-dashed border-slate-200 bg-slate-50">
-              <Clock size={32} className="text-slate-300 mx-auto" />
-              <p className="text-slate-500 text-sm font-semibold">No attendance records found.</p>
-            </div>
-          ) : (
-            <div className="responsive-table-container w-full max-w-full overflow-x-auto">
-              <table className="w-max min-w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Date</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[110px]">Day</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Logged In</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Logged Out</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Total Hours</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Work Mode</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap min-w-[200px]">Leave / OD</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-xs">
-                  {attendanceData.map((record, index) => {
-                    let rowClass = "transition-colors hover:bg-[#D9FFF0]/25";
-                    let statusClass = "font-medium text-slate-700";
+          <button
+            type="button"
+            onClick={() => setStaffTab('requests')}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              staffTab === 'requests'
+                ? 'bg-brand-800 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Calendar size={15} />
+            <span>Leave / OD Request</span>
+            {myLeaveStats.pending > 0 ? (
+              <span className="px-2 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-extrabold animate-pulse">
+                {myLeaveStats.pending} Pending
+              </span>
+            ) : (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                staffTab === 'requests' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {myLeaveStats.total || 0}
+              </span>
+            )}
+          </button>
+        </div>
 
-                    if (record.status === 'Absent') {
-                      rowClass = "bg-red-50/30 transition-colors hover:bg-red-50/60";
-                      statusClass = "font-bold text-red-600";
-                    } else if (record.status === 'Week Off') {
-                      rowClass = "bg-slate-50/80 transition-colors hover:bg-slate-100";
-                      statusClass = "font-medium text-slate-500";
-                    } else if (record.status === 'Present') {
-                      statusClass = "font-bold text-emerald-600";
-                    } else if (record.status === 'Half Day') {
-                      statusClass = "font-bold text-amber-600";
-                    } else if (['CL', 'SL', 'OD'].includes(record.status)) {
-                      rowClass = "bg-blue-50/20 transition-colors hover:bg-blue-50/40";
-                      statusClass = "font-bold text-blue-600";
-                    }
+        {/* TAB 1: Attendance History */}
+        {staffTab === 'attendance' && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-center p-5 border-b border-slate-200 gap-3 bg-slate-50/50">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800">Attendance History</h2>
+                <p className="text-xs text-slate-500">Track your daily login, logout, total working hours, and session history</p>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={trackMonth}
+                  onChange={(e) => setTrackMonth(parseInt(e.target.value))}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-brand-800 text-xs font-bold w-full sm:w-auto shadow-xs"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <option key={m} value={m}>
+                      {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={trackYear}
+                  onChange={(e) => setTrackYear(parseInt(e.target.value))}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-brand-800 text-xs font-bold w-full sm:w-auto shadow-xs"
+                >
+                  {[2025, 2026, 2027].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-                    return (
-                      <tr key={index} className={rowClass}>
-                        <td className="px-5 py-3 font-bold text-slate-800 whitespace-nowrap">{record.date}</td>
-                        <td className="px-5 py-3 font-medium text-slate-600">{record.day}</td>
-                        <td className="px-5 py-3 font-medium text-slate-700">
-                          {record.loggedIn !== 'N/A' ? (
-                            <span
-                              onClick={() => handleSessionClick(record.sessions)}
-                              className="cursor-pointer hover:text-brand-800 flex items-center space-x-1 group transition-colors font-semibold text-slate-800"
-                              title="View Sessions"
-                            >
+            {isTracking ? (
+              <div className="py-20 flex items-center justify-center">
+                <Spinner />
+              </div>
+            ) : attendanceData.length === 0 ? (
+              <div className="py-20 text-center space-y-2 border-dashed border-slate-200 bg-slate-50">
+                <Clock size={32} className="text-slate-300 mx-auto" />
+                <p className="text-slate-500 text-sm font-semibold">No attendance records found.</p>
+              </div>
+            ) : (
+              <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+                <table className="w-max min-w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Date</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[110px]">Day</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Logged In</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Logged Out</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Total Hours</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Work Mode</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white text-xs">
+                    {attendanceData.map((record, index) => {
+                      let rowClass = "transition-colors hover:bg-[#D9FFF0]/25";
+                      let statusBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+
+                      if (record.status === 'Absent') {
+                        rowClass = "bg-red-50/30 transition-colors hover:bg-red-50/60";
+                        statusBadgeClass = "bg-red-50 text-red-700 border-red-200 font-bold";
+                      } else if (record.status === 'Week Off') {
+                        rowClass = "bg-slate-50/80 transition-colors hover:bg-slate-100";
+                        statusBadgeClass = "bg-slate-100 text-slate-600 border-slate-200 font-medium";
+                      } else if (record.status === 'Present') {
+                        statusBadgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold";
+                      } else if (record.status === 'Half Day') {
+                        statusBadgeClass = "bg-amber-50 text-amber-700 border-amber-200 font-bold";
+                      } else if (['CL', 'SL', 'OD'].includes(record.status)) {
+                        rowClass = "bg-blue-50/20 transition-colors hover:bg-blue-50/40";
+                        statusBadgeClass = record.status === 'CL'
+                          ? "bg-blue-50 text-blue-700 border-blue-200 font-bold"
+                          : record.status === 'SL'
+                          ? "bg-amber-50 text-amber-700 border-amber-200 font-bold"
+                          : "bg-purple-50 text-purple-700 border-purple-200 font-bold";
+                      }
+
+                      return (
+                        <tr key={index} className={rowClass}>
+                          <td className="px-5 py-3 font-bold text-slate-800 whitespace-nowrap">{record.date}</td>
+                          <td className="px-5 py-3 font-medium text-slate-600">{record.day}</td>
+                          <td className="px-5 py-3 font-medium text-slate-700">
+                            {record.loggedIn !== 'N/A' ? (
+                              <span
+                                onClick={() => handleSessionClick(record.sessions)}
+                                className="cursor-pointer hover:text-brand-800 flex items-center space-x-1 group transition-colors font-semibold text-slate-800"
+                                title="View Sessions"
+                              >
+                                <span>{record.loggedIn}</span>
+                                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs">🔍</span>
+                              </span>
+                            ) : (
                               <span>{record.loggedIn}</span>
-                              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs">🔍</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3 font-medium text-slate-700">{record.loggedOut}</td>
+                          <td className="px-5 py-3 font-semibold text-slate-800">{record.totalHours}</td>
+                          <td className="px-5 py-3 font-bold text-slate-600">{record.workMode}</td>
+                          <td className="px-5 py-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border ${statusBadgeClass}`}>
+                              {record.status}
                             </span>
-                          ) : (
-                            <span>{record.loggedIn}</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 font-medium text-slate-700">{record.loggedOut}</td>
-                        <td className={`px-5 py-3 ${statusClass}`}>{record.totalHours}</td>
-                        <td className="px-5 py-3 font-bold text-slate-600">{record.workMode}</td>
-                        <td className="px-5 py-3 whitespace-nowrap">
-                          {record.leaveRequest ? (
-                            <div className="flex flex-col gap-0.5">
-                              {record.leaveRequest.status === 'Approved' && (
-                                <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <CheckCircle2 size={11} />
-                                  <span>{record.leaveRequest.type} — Approved</span>
-                                </span>
-                              )}
-                              {record.leaveRequest.status === 'Pending' && (
-                                <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
-                                  <Clock size={11} />
-                                  <span>{record.leaveRequest.type} — Pending</span>
-                                </span>
-                              )}
-                              {record.leaveRequest.status === 'Rejected' && (
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
-                                    <XCircle size={11} />
-                                    <span>{record.leaveRequest.type} — Rejected</span>
-                                  </span>
-                                  {record.isEligibleForLeave && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenApplyModal(record.rawDate, record.date)}
-                                      className="text-[10px] text-brand-800 hover:underline font-bold"
-                                    >
-                                      Re-apply
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                              {record.leaveRequest.reason ? (
-                                <span className="text-[10px] text-slate-500 italic whitespace-normal break-words min-w-[180px]">
-                                  Reason: {record.leaveRequest.reason}
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : record.isEligibleForLeave ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenApplyModal(record.rawDate, record.date)}
-                              className="inline-flex items-center space-x-1 px-2.5 py-1 bg-[#D9FFF0] hover:bg-[#00D98B]/20 text-[#07566A] border border-[#00D98B]/40 rounded-lg text-xs font-bold transition-all shadow-xs active:scale-[0.98]"
-                              title="Apply for Leave or On Duty for this date"
-                            >
-                              <CalendarPlus size={12} className="text-[#00B96B]" />
-                              <span>Apply Leave / OD</span>
-                            </button>
-                          ) : (
-                            <span className="text-slate-300 font-medium">—</span>
-                          )}
-                        </td>
-                      </tr>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: Leave / OD Request */}
+        {staffTab === 'requests' && (() => {
+          const todayObj = new Date();
+          const currentMonthKey = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}`;
+          const currentMonthName = todayObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+          const activeStaffRequests = myLeaveRequests.filter(r => r.status === 'Pending' || r.status === 'Approved');
+
+          const currentMonthCl = activeStaffRequests.find(r => {
+            if (r.requestType !== 'CL') return false;
+            const months = r.monthsCovered && r.monthsCovered.length > 0
+              ? r.monthsCovered
+              : [(r.requestDate || '').slice(0, 7)];
+            return months.includes(currentMonthKey);
+          });
+
+          const currentMonthSl = activeStaffRequests.find(r => {
+            if (r.requestType !== 'SL') return false;
+            const months = r.monthsCovered && r.monthsCovered.length > 0
+              ? r.monthsCovered
+              : [(r.requestDate || '').slice(0, 7)];
+            return months.includes(currentMonthKey);
+          });
+
+          const filteredMyRequests = myLeaveRequests.filter((req) => {
+            if (staffRequestFilter !== 'All' && req.status !== staffRequestFilter) {
+              return false;
+            }
+            if (staffRequestSearch && staffRequestSearch.trim()) {
+              const q = staffRequestSearch.trim().toLowerCase();
+              const matchType = (req.requestType || '').toLowerCase().includes(q);
+              const matchReason = (req.reason || '').toLowerCase().includes(q);
+              const matchDate = (req.requestDate || '').toLowerCase().includes(q);
+              const matchEndDate = (req.endDate || '').toLowerCase().includes(q);
+              const matchStatus = (req.status || '').toLowerCase().includes(q);
+              return matchType || matchReason || matchDate || matchEndDate || matchStatus;
+            }
+            return true;
+          });
+
+          return (
+            <div className="space-y-4">
+              {/* Monthly Leave Allowance Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {/* CL Card */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Casual Leave (CL)</span>
+                    </div>
+                    <div className="text-base font-black text-slate-900 mt-0.5">
+                      {currentMonthCl ? '0 / 1 Available' : '1 / 1 Available'}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {currentMonthCl
+                        ? `Reserved for ${currentMonthName} (${currentMonthCl.status})`
+                        : `1 CL available for ${currentMonthName}`}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold border ${
+                    currentMonthCl
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {currentMonthCl ? 'Limit Used' : 'Available'}
+                  </span>
+                </div>
+
+                {/* SL Card */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Sick Leave (SL)</span>
+                    </div>
+                    <div className="text-base font-black text-slate-900 mt-0.5">
+                      {currentMonthSl ? '0 / 1 Available' : '1 / 1 Available'}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {currentMonthSl
+                        ? `Reserved for ${currentMonthName} (${currentMonthSl.status})`
+                        : `1 SL available for ${currentMonthName}`}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold border ${
+                    currentMonthSl
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {currentMonthSl ? 'Limit Used' : 'Available'}
+                  </span>
+                </div>
+
+                {/* OD Card */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">On Duty (OD)</span>
+                    </div>
+                    <div className="text-base font-black text-slate-900 mt-0.5">
+                      Unlimited
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      No monthly quota restrictions
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold border bg-purple-50 text-purple-700 border-purple-200">
+                    Active
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Bar (Filters, Search, Apply Button) */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                {/* Status Filter Pills */}
+                <div className="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+                  {['All', 'Pending', 'Approved', 'Rejected'].map((statusKey) => {
+                    const count = statusKey === 'All'
+                      ? myLeaveStats.total
+                      : statusKey === 'Pending'
+                      ? myLeaveStats.pending
+                      : statusKey === 'Approved'
+                      ? myLeaveStats.approved
+                      : myLeaveStats.rejected;
+                    const isActive = staffRequestFilter === statusKey;
+                    return (
+                      <button
+                        key={statusKey}
+                        type="button"
+                        onClick={() => setStaffRequestFilter(statusKey)}
+                        className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                          isActive
+                            ? 'bg-brand-800 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        <span>{statusKey}</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-white text-slate-700'
+                        }`}>
+                          {count || 0}
+                        </span>
+                      </button>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                </div>
 
-        {/* My Leave / OD Requests History Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
-            <div>
-              <h2 className="text-sm font-bold text-slate-800">My Leave / OD Requests</h2>
-              <p className="text-xs text-slate-500">History and approval statuses of your submitted requests</p>
-            </div>
-            <button
-              type="button"
-              onClick={fetchMyLeaveRequests}
-              className="p-1.5 bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg text-xs font-semibold transition-all shadow-xs flex items-center space-x-1"
-              title="Refresh requests"
-            >
-              <RefreshCw size={13} />
-              <span>Refresh</span>
-            </button>
-          </div>
+                {/* Search, Refresh and Apply Button */}
+                <div className="flex items-center space-x-2 w-full md:w-auto">
+                  <div className="relative flex-1 md:w-64">
+                    <input
+                      type="text"
+                      value={staffRequestSearch}
+                      onChange={(e) => setStaffRequestSearch(e.target.value)}
+                      placeholder="Search by date, type, reason..."
+                      className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+                    />
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                    {staffRequestSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setStaffRequestSearch('')}
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
 
-          {loadingMyRequests ? (
-            <div className="py-12 flex items-center justify-center">
-              <Spinner />
+                  <button
+                    type="button"
+                    onClick={fetchMyLeaveRequests}
+                    disabled={loadingMyRequests}
+                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-xs disabled:opacity-50"
+                    title="Refresh requests"
+                  >
+                    <RefreshCw size={15} className={loadingMyRequests ? 'animate-spin text-brand-800' : ''} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenApplyModal()}
+                    className="flex items-center justify-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all whitespace-nowrap active:scale-[0.98]"
+                  >
+                    <Plus size={15} />
+                    <span>Apply for Leave / OD</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Requests Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                {loadingMyRequests ? (
+                  <div className="py-20 flex items-center justify-center">
+                    <Spinner />
+                  </div>
+                ) : filteredMyRequests.length === 0 ? (
+                  <div className="py-20 text-center space-y-3 border-dashed border-slate-200">
+                    <Calendar size={36} className="text-slate-300 mx-auto" />
+                    <div>
+                      <p className="text-slate-700 font-bold text-sm">No leave / OD requests found</p>
+                      <p className="text-slate-400 text-xs mt-0.5">
+                        {staffRequestFilter !== 'All'
+                          ? `No ${staffRequestFilter.toLowerCase()} requests match your current filters.`
+                          : 'You have not submitted any leave or on-duty requests yet.'}
+                      </p>
+                    </div>
+                    {staffRequestFilter === 'All' && !staffRequestSearch && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenApplyModal()}
+                        className="inline-flex items-center space-x-1.5 px-4 py-2 bg-brand-800 hover:bg-brand-900 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+                      >
+                        <Plus size={14} />
+                        <span>Apply for Leave / OD</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="responsive-table-container w-full max-w-full overflow-x-auto">
+                    <table className="w-max min-w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                          <th className="px-5 py-3 whitespace-nowrap min-w-[150px]">Requested Date</th>
+                          <th className="px-5 py-3 whitespace-nowrap min-w-[150px]">Leave / OD Type</th>
+                          <th className="px-5 py-3 min-w-[220px] whitespace-nowrap">Reason</th>
+                          <th className="px-5 py-3 whitespace-nowrap min-w-[150px]">Submitted On</th>
+                          <th className="px-5 py-3 whitespace-nowrap min-w-[150px]">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white text-xs">
+                        {filteredMyRequests.map((req) => {
+                          const isPending = req.status === 'Pending';
+                          const isApproved = req.status === 'Approved';
+                          const isRejected = req.status === 'Rejected';
+
+                          const isRange = req.endDate && req.endDate !== req.requestDate;
+
+                          return (
+                            <tr key={req._id} className="transition-colors hover:bg-[#D9FFF0]/25">
+                              {/* Requested Date / Date Range */}
+                              <td className="px-5 py-3.5 whitespace-nowrap min-w-[150px]">
+                                {isRange ? (
+                                  <div>
+                                    <div className="font-bold text-slate-800">
+                                      {formatDateDDMMYYYY(req.requestDate)} <span className="text-slate-400 font-normal">to</span> {formatDateDDMMYYYY(req.endDate)}
+                                    </div>
+                                    <div className="text-[10px] text-brand-800 font-semibold">
+                                      {req.datesCovered?.length || 'Multiple'} days
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className="font-bold text-slate-800">{formatDateDDMMYYYY(req.requestDate)}</div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {new Date(req.requestDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Type */}
+                              <td className="px-5 py-3.5 whitespace-nowrap min-w-[150px]">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold border ${
+                                  req.requestType === 'CL'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : req.requestType === 'SL'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-purple-50 text-purple-700 border-purple-200'
+                                }`}>
+                                  {req.requestType === 'CL' ? 'CL (Casual Leave)' : req.requestType === 'SL' ? 'SL (Sick Leave)' : 'OD (On Duty)'}
+                                </span>
+                              </td>
+
+                              {/* Reason */}
+                              <td className="px-5 py-3.5 text-slate-700 min-w-[220px]">
+                                {req.reason ? (
+                                  <span className="whitespace-normal break-words block">{req.reason}</span>
+                                ) : (
+                                  <span className="text-slate-400 italic">No reason provided</span>
+                                )}
+                              </td>
+
+                              {/* Submitted On */}
+                              <td className="px-5 py-3.5 text-slate-500 text-[11px] whitespace-nowrap min-w-[150px]">
+                                {req.createdAt ? new Date(req.createdAt).toLocaleString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                }) : '—'}
+                              </td>
+
+                              {/* Status */}
+                              <td className="px-5 py-3.5 whitespace-nowrap min-w-[150px]">
+                                {isPending && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <Clock size={12} />
+                                    <span>Pending Approval</span>
+                                  </span>
+                                )}
+                                {isApproved && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      <CheckCircle2 size={12} />
+                                      <span>Approved</span>
+                                    </span>
+                                    {req.reviewedBy && (
+                                      <span className="text-[9px] text-slate-400">By {req.reviewedBy}</span>
+                                    )}
+                                  </div>
+                                )}
+                                {isRejected && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-full text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
+                                      <XCircle size={12} />
+                                      <span>Rejected</span>
+                                    </span>
+                                    {req.rejectionReason && (
+                                      <span className="text-[10px] text-red-600 italic whitespace-normal break-words block">
+                                        Reason: {req.rejectionReason}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : myLeaveRequests.length === 0 ? (
-            <div className="py-10 text-center space-y-1 bg-slate-50">
-              <p className="text-slate-500 text-xs font-medium">You have not submitted any Leave or OD requests yet.</p>
-              <p className="text-[10px] text-slate-400">Click "Apply Leave / OD" on an upcoming date in the table above to request time off.</p>
-            </div>
-          ) : (
-            <div className="responsive-table-container w-full max-w-full overflow-x-auto">
-              <table className="w-max min-w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
-                    <th className="px-5 py-3 whitespace-nowrap min-w-[130px]">Requested Date</th>
-                    <th className="px-5 py-3 whitespace-nowrap min-w-[150px]">Request Type</th>
-                    <th className="px-5 py-3 whitespace-nowrap min-w-[200px]">Reason</th>
-                    <th className="px-5 py-3 whitespace-nowrap min-w-[160px]">Submitted On</th>
-                    <th className="px-5 py-3 whitespace-nowrap min-w-[140px]">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-xs">
-                  {myLeaveRequests.map((req) => (
-                    <tr key={req._id} className="transition-colors hover:bg-[#D9FFF0]/25">
-                      <td className="px-5 py-3 font-bold text-slate-800 whitespace-nowrap min-w-[130px]">
-                        {formatDateDDMMYYYY(req.requestDate)}
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap min-w-[150px]">
-                        <span className={`px-2 py-0.5 rounded-lg text-xs font-extrabold border ${
-                          req.requestType === 'CL'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : req.requestType === 'SL'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-purple-50 text-purple-700 border-purple-200'
-                        }`}>
-                          {req.requestType === 'CL' ? 'Casual Leave (CL)' : req.requestType === 'SL' ? 'Sick Leave (SL)' : 'On Duty (OD)'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-600 min-w-[200px] whitespace-normal break-words">
-                        {req.reason || <span className="text-slate-400 italic">No reason specified</span>}
-                      </td>
-                      <td className="px-5 py-3 text-slate-500 text-[11px] whitespace-nowrap">
-                        {req.createdAt ? new Date(req.createdAt).toLocaleString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true
-                        }) : '—'}
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        {req.status === 'Pending' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
-                            <Clock size={11} />
-                            <span>Pending</span>
-                          </span>
-                        )}
-                        {req.status === 'Approved' && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 size={11} />
-                            <span>Approved</span>
-                          </span>
-                        )}
-                        {req.status === 'Rejected' && (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1 w-fit px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
-                              <XCircle size={11} />
-                              <span>Rejected</span>
-                            </span>
-                            {req.rejectionReason && (
-                              <span className="text-[10px] text-red-600 italic">Note: {req.rejectionReason}</span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* APPLY LEAVE / OD MODAL */}
         <Modal
           isOpen={isApplyLeaveOpen}
           onClose={() => setIsApplyLeaveOpen(false)}
-          title="Apply Leave / On Duty"
+          title="Apply for Leave / On Duty"
           maxWidth="max-w-md"
         >
-          <form onSubmit={handleSubmitLeaveRequest} className="space-y-4 text-slate-800">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Selected Date</label>
-              <input
-                type="text"
-                disabled
-                value={applyLeaveDisplayDate}
-                className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-xs font-bold"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Date cannot be changed to an ineligible date.</p>
-            </div>
+          {(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const selectedMonthStr = applyLeaveStartDate ? applyLeaveStartDate.slice(0, 7) : '';
+            const selectedMonthName = applyLeaveStartDate
+              ? new Date(applyLeaveStartDate + 'T00:00:00').toLocaleString('default', { month: 'long', year: 'numeric' })
+              : 'this month';
 
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Request Type *</label>
-              <select
-                required
-                value={applyLeaveType}
-                onChange={(e) => setApplyLeaveType(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-semibold"
-              >
-                <option value="CL">CL — Casual Leave</option>
-                <option value="SL">SL — Sick Leave</option>
-                <option value="OD">OD — On Duty</option>
-              </select>
-            </div>
+            const activeStaffRequests = myLeaveRequests.filter(r => r.status === 'Pending' || r.status === 'Approved');
 
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Reason (Optional)</label>
-              <textarea
-                rows={3}
-                value={applyLeaveReason}
-                onChange={(e) => setApplyLeaveReason(e.target.value)}
-                placeholder="e.g. Personal work, Family emergency, Fever, Client visit..."
-                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-              />
-            </div>
+            const isClLimitReached = Boolean(
+              selectedMonthStr && activeStaffRequests.some(r => {
+                if (r.requestType !== 'CL') return false;
+                const months = r.monthsCovered && r.monthsCovered.length > 0
+                  ? r.monthsCovered
+                  : [(r.requestDate || '').slice(0, 7)];
+                return months.includes(selectedMonthStr);
+              })
+            );
 
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsApplyLeaveOpen(false)}
-                disabled={isSubmittingLeave}
-                className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all shadow-sm"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmittingLeave}
-                className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] disabled:opacity-50 text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all flex items-center justify-center space-x-1.5 active:scale-[0.98]"
-              >
-                {isSubmittingLeave ? (
-                  <>
-                    <Spinner size="small" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <span>Submit Request</span>
+            const isSlLimitReached = Boolean(
+              selectedMonthStr && activeStaffRequests.some(r => {
+                if (r.requestType !== 'SL') return false;
+                const months = r.monthsCovered && r.monthsCovered.length > 0
+                  ? r.monthsCovered
+                  : [(r.requestDate || '').slice(0, 7)];
+                return months.includes(selectedMonthStr);
+              })
+            );
+
+            const isSelectedTypeLimitReached =
+              (applyLeaveType === 'CL' && isClLimitReached) ||
+              (applyLeaveType === 'SL' && isSlLimitReached);
+
+            return (
+              <form onSubmit={handleSubmitLeaveRequest} className="space-y-4 text-slate-800">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                      Start Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      min={todayStr}
+                      value={applyLeaveStartDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setApplyLeaveStartDate(val);
+                        if (!applyLeaveEndDate || applyLeaveEndDate < val) {
+                          setApplyLeaveEndDate(val);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-bold focus:outline-none focus:border-brand-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      min={applyLeaveStartDate || todayStr}
+                      value={applyLeaveEndDate}
+                      onChange={(e) => setApplyLeaveEndDate(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-bold focus:outline-none focus:border-brand-800"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Request Type *
+                  </label>
+                  <select
+                    required
+                    value={applyLeaveType}
+                    onChange={(e) => setApplyLeaveType(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-semibold"
+                  >
+                    <option value="CL" disabled={isClLimitReached}>
+                      CL — Casual Leave {isClLimitReached ? '(Monthly limit reached)' : ''}
+                    </option>
+                    <option value="SL" disabled={isSlLimitReached}>
+                      SL — Sick Leave {isSlLimitReached ? '(Monthly limit reached)' : ''}
+                    </option>
+                    <option value="OD">
+                      OD — On Duty (No monthly quota limit)
+                    </option>
+                  </select>
+                </div>
+
+                {/* Validation Warnings for Limit Violation */}
+                {applyLeaveType === 'CL' && isClLimitReached && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                    <div className="flex items-center space-x-1.5 font-bold">
+                      <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
+                      <span>Monthly CL Limit Reached</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      You have already submitted a pending or approved Casual Leave request for {selectedMonthName}.
+                      Each employee is permitted a maximum of <strong>one CL per calendar month</strong>.
+                    </p>
+                  </div>
                 )}
-              </button>
-            </div>
-          </form>
+
+                {applyLeaveType === 'SL' && isSlLimitReached && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                    <div className="flex items-center space-x-1.5 font-bold">
+                      <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
+                      <span>Monthly SL Limit Reached</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      You have already submitted a pending or approved Sick Leave request for {selectedMonthName}.
+                      Each employee is permitted a maximum of <strong>one SL per calendar month</strong>.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Reason (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={applyLeaveReason}
+                    onChange={(e) => setApplyLeaveReason(e.target.value)}
+                    placeholder="e.g. Personal work, Family emergency, Fever, Client visit..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsApplyLeaveOpen(false)}
+                    disabled={isSubmittingLeave}
+                    className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingLeave || isSelectedTypeLimitReached}
+                    className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] disabled:opacity-40 disabled:cursor-not-allowed text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all flex items-center justify-center space-x-1.5 active:scale-[0.98]"
+                  >
+                    {isSubmittingLeave ? (
+                      <>
+                        <Spinner size="small" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <span>Submit Request</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            );
+          })()}
         </Modal>
 
         {/* LOGIN SESSION HISTORY MODAL */}
@@ -1521,10 +1911,23 @@ const Employees = () => {
 
                           {/* Requested Date */}
                           <td className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">
-                            <div className="font-bold text-slate-800">{formatDateDDMMYYYY(req.requestDate)}</div>
-                            <div className="text-[10px] text-slate-400">
-                              {new Date(req.requestDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
-                            </div>
+                            {req.endDate && req.endDate !== req.requestDate ? (
+                              <div>
+                                <div className="font-bold text-slate-800">
+                                  {formatDateDDMMYYYY(req.requestDate)} <span className="text-slate-400 font-normal">to</span> {formatDateDDMMYYYY(req.endDate)}
+                                </div>
+                                <div className="text-[10px] text-brand-800 font-semibold">
+                                  {req.datesCovered?.length || 'Multiple'} days
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="font-bold text-slate-800">{formatDateDDMMYYYY(req.requestDate)}</div>
+                                <div className="text-[10px] text-slate-400">
+                                  {new Date(req.requestDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+                                </div>
+                              </div>
+                            )}
                           </td>
 
                           {/* Type */}
@@ -1907,27 +2310,31 @@ const Employees = () => {
                   <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">Logged Out</th>
                   <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Total Hours</th>
                   <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Work Mode</th>
-                  <th className="px-4 py-3 whitespace-nowrap min-w-[200px]">Leave / OD</th>
+                  <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
                 {attendanceData.map((record, index) => {
                   let rowClass = "transition-colors hover:bg-[#D9FFF0]/25";
-                  let statusClass = "font-medium text-slate-700";
+                  let statusBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
 
                   if (record.status === 'Absent') {
                     rowClass = "bg-red-50/30 transition-colors hover:bg-red-50/60";
-                    statusClass = "font-bold text-red-600";
+                    statusBadgeClass = "bg-red-50 text-red-700 border-red-200 font-bold";
                   } else if (record.status === 'Week Off') {
                     rowClass = "bg-slate-50/80 transition-colors hover:bg-slate-100";
-                    statusClass = "font-medium text-slate-500";
+                    statusBadgeClass = "bg-slate-100 text-slate-600 border-slate-200 font-medium";
                   } else if (record.status === 'Present') {
-                    statusClass = "font-bold text-emerald-600";
+                    statusBadgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold";
                   } else if (record.status === 'Half Day') {
-                    statusClass = "font-bold text-amber-600";
+                    statusBadgeClass = "bg-amber-50 text-amber-700 border-amber-200 font-bold";
                   } else if (['CL', 'SL', 'OD'].includes(record.status)) {
                     rowClass = "bg-blue-50/20 transition-colors hover:bg-blue-50/40";
-                    statusClass = "font-bold text-blue-600";
+                    statusBadgeClass = record.status === 'CL'
+                      ? "bg-blue-50 text-blue-700 border-blue-200 font-bold"
+                      : record.status === 'SL'
+                      ? "bg-amber-50 text-amber-700 border-amber-200 font-bold"
+                      : "bg-purple-50 text-purple-700 border-purple-200 font-bold";
                   }
 
                   return (
@@ -1949,38 +2356,12 @@ const Employees = () => {
                         )}
                       </td>
                       <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap min-w-[130px]">{record.loggedOut}</td>
-                      <td className={`px-4 py-2.5 whitespace-nowrap min-w-[120px] ${statusClass}`}>{record.totalHours}</td>
+                      <td className="px-4 py-2.5 font-semibold text-slate-800 whitespace-nowrap min-w-[120px]">{record.totalHours}</td>
                       <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap min-w-[120px]">{record.workMode}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap min-w-[200px]">
-                        {record.leaveRequest ? (
-                          <div className="flex flex-col gap-0.5">
-                            {record.leaveRequest.status === 'Approved' && (
-                              <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <CheckCircle2 size={11} />
-                                <span>{record.leaveRequest.type} — Approved</span>
-                              </span>
-                            )}
-                            {record.leaveRequest.status === 'Pending' && (
-                              <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
-                                <Clock size={11} />
-                                <span>{record.leaveRequest.type} — Pending</span>
-                              </span>
-                            )}
-                            {record.leaveRequest.status === 'Rejected' && (
-                              <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
-                                <XCircle size={11} />
-                                <span>{record.leaveRequest.type} — Rejected</span>
-                              </span>
-                            )}
-                            {record.leaveRequest.reason ? (
-                              <span className="text-[10px] text-slate-500 italic whitespace-normal break-words min-w-[180px]">
-                                Reason: {record.leaveRequest.reason}
-                              </span>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <span className="text-slate-300 font-medium">—</span>
-                        )}
+                      <td className="px-4 py-2.5 whitespace-nowrap min-w-[120px]">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border ${statusBadgeClass}`}>
+                          {record.status}
+                        </span>
                       </td>
                     </tr>
                   );
@@ -2133,7 +2514,11 @@ const Employees = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-bold uppercase text-[10px]">Requested Date</span>
-                <span className="font-bold text-slate-800">{formatDateDDMMYYYY(selectedRequestToReject.requestDate)}</span>
+                <span className="font-bold text-slate-800">
+                  {selectedRequestToReject.endDate && selectedRequestToReject.endDate !== selectedRequestToReject.requestDate
+                    ? `${formatDateDDMMYYYY(selectedRequestToReject.requestDate)} to ${formatDateDDMMYYYY(selectedRequestToReject.endDate)}`
+                    : formatDateDDMMYYYY(selectedRequestToReject.requestDate)}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-bold uppercase text-[10px]">Request Type</span>

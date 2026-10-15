@@ -1,15 +1,16 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { Menu, Calendar, ShieldCheck } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu, Calendar, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { formatDateDDMMYYYY } from '../utils/dateFormatter';
 import ThreeBarLogo from './ThreeBarLogo';
 
 const Navbar = ({ onMenuClick }) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
 
-  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
+  const isAboutActive = location.pathname === '/dashboard/employees';
 
   // Map paths to beautiful titles
   const getPageTitle = () => {
@@ -64,16 +65,37 @@ const Navbar = ({ onMenuClick }) => {
         </div>
 
         {/* User Profile Badge (Rightmost) */}
-        <div className="flex items-center space-x-3 border-l border-[#D8E9E2] pl-4">
-          <div className="hidden sm:block text-right">
-            <span className="text-[10px] text-[#526B70] uppercase tracking-wider font-extrabold block">
-              {isAdmin ? 'Admin Console' : 'Consultant Portal'}
-            </span>
-            <span className="text-xs font-bold text-[#07566A] block truncate max-w-[200px]" title={user?.email}>
-              {user?.email}
-            </span>
+        <div className="flex items-center space-x-2.5 sm:space-x-3 border-l border-[#D8E9E2] pl-3 sm:pl-4">
+          <div className="flex flex-col items-end text-right">
+            <div className="hidden sm:block">
+              <span className="text-[10px] text-[#526B70] uppercase tracking-wider font-extrabold block">
+                {isAdmin ? 'Admin Portal' : 'Employee Portal'}
+              </span>
+              <span className="text-xs font-bold text-[#07566A] block truncate max-w-[200px]" title={user?.email}>
+                {user?.email}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/employees')}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 sm:mt-1.5 rounded-lg text-xs font-bold transition-all duration-200 border group ${
+                isAboutActive
+                  ? 'bg-[#D5F5E7] text-[#07566A] border-[#00B96B] shadow-2xs'
+                  : 'bg-white text-[#526B70] border-[#D8E9E2] hover:bg-[#D5F5E7]/70 hover:text-[#07566A] hover:border-[#00B96B]/40'
+              }`}
+              title="Profile"
+              aria-label="Profile"
+            >
+              <UserRound
+                size={13}
+                className={`transition-colors ${
+                  isAboutActive ? 'text-[#00B96B]' : 'text-[#526B70] group-hover:text-[#07566A]'
+                }`}
+              />
+              <span>Profile</span>
+            </button>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#07566A] font-extrabold text-xs shadow-xs">
+          <div className="w-8 h-8 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#07566A] font-extrabold text-xs shadow-xs flex-shrink-0">
             <ShieldCheck size={16} className="text-[#00B96B]" />
           </div>
         </div>

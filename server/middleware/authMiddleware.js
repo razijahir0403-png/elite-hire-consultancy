@@ -66,11 +66,19 @@ const protect = asyncHandler(async (req, res, next) => {
   throw new AppError('Not authorized, no token provided', 401);
 });
 
+const isUserAdmin = (user) => {
+  if (!user) return false;
+  const roleName = typeof user.role === 'object' ? user.role?.name : user.role;
+  if (roleName === 'admin') return true;
+  const masterAdmins = ['admin@elitehire.com', 'dev@elitehire.com', 'admin@recruitixanalytica.com'];
+  return masterAdmins.includes(user.email?.toLowerCase());
+};
+
 const adminOnly = (req, res, next) => {
-  if (!['admin@elitehire.com', 'dev@elitehire.com'].includes(req.user?.email)) {
+  if (!isUserAdmin(req.user)) {
     return next(new AppError('Access denied. Administrator privileges required.', 403));
   }
   next();
 };
 
-module.exports = { protect, adminOnly };
+module.exports = { protect, adminOnly, isUserAdmin };

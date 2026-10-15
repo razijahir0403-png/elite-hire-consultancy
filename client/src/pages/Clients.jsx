@@ -66,8 +66,7 @@ const Clients = () => {
   const [ageFilter, setAgeFilter] = useState('All');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const { user } = useAuth();
-  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
+  const { user, isAdmin } = useAuth();
   const [sortBy, setSortBy] = useState('updatedOn');
   const [sortOrder, setSortOrder] = useState('desc');
 

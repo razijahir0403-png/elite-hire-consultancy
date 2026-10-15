@@ -75,8 +75,7 @@ const Payments = () => {
   const [clientNameFilter, setClientNameFilter] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const { user } = useAuth();
-  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
+  const { user, isAdmin } = useAuth();
 
   // Sorting state
   const [sortBy, setSortBy] = useState('updatedOn');

@@ -58,4 +58,12 @@ export const isAuthRequest = (config) => {
   return url.includes('/auth/login') || url.includes('/auth/register');
 };
 
+export const isUserAdmin = (user) => {
+  if (!user) return false;
+  const roleName = typeof user.role === 'object' ? user.role?.name : user.role;
+  if (roleName === 'admin') return true;
+  const adminEmails = ['admin@elitehire.com', 'dev@elitehire.com', 'admin@recruitixanalytica.com'];
+  return adminEmails.includes(user.email?.toLowerCase());
+};
+
 export { SESSION_EXPIRED_MESSAGE };

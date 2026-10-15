@@ -29,7 +29,23 @@ const leaveRequestSchema = new mongoose.Schema(
       required: true,
       trim: true,
       index: true,
-      // Format: YYYY-MM-DD
+      // Format: YYYY-MM-DD (Start Date)
+    },
+    endDate: {
+      type: String,
+      default: null,
+      trim: true,
+      // Format: YYYY-MM-DD (End Date, optional)
+    },
+    datesCovered: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    monthsCovered: {
+      type: [String],
+      default: [],
+      index: true,
     },
     requestType: {
       type: String,
@@ -69,6 +85,8 @@ const leaveRequestSchema = new mongoose.Schema(
 );
 
 leaveRequestSchema.index({ employeeEmail: 1, requestDate: 1 });
+leaveRequestSchema.index({ employeeEmail: 1, requestType: 1, status: 1 });
+leaveRequestSchema.index({ employeeEmail: 1, monthsCovered: 1, requestType: 1, status: 1 });
 leaveRequestSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('LeaveRequest', leaveRequestSchema);

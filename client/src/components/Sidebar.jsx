@@ -17,11 +17,9 @@ import Modal from './Modal';
 import ThreeBarLogo from './ThreeBarLogo';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const { logout, endSession, user } = useAuth();
+  const { logout, endSession, user, isAdmin } = useAuth();
   const location = useLocation();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
-
-  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(user?.email);
 
   const navItems = [
     {
@@ -125,7 +123,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             <div className="overflow-hidden">
               <h4 className="text-xs font-bold text-[#07566A] truncate">{user?.name}</h4>
               <span className="text-[11px] text-[#526B70] truncate block">
-                {isAdmin ? 'System Administrator' : 'Talent Consultant'}
+                {isAdmin ? 'System Administrator' : 'Employee Portal'}
               </span>
             </div>
           </div>

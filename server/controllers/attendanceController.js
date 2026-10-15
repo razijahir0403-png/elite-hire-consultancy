@@ -4,6 +4,7 @@ const LeaveRequest = require('../models/LeaveRequest');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const moment = require('moment-timezone');
+const { isUserAdmin } = require('../middleware/authMiddleware');
 
 const { formatDigitalClock, updateAttendanceTotals } = require('../utils/attendanceUtils');
 
@@ -156,7 +157,7 @@ const getHistory = asyncHandler(async (req, res) => {
     throw new AppError('Month and Year are required', 400);
   }
 
-  const isAdmin = ['admin@elitehire.com', 'dev@elitehire.com'].includes(req.user?.email);
+  const isAdmin = isUserAdmin(req.user);
   const requestedEmail = (email || '').trim().toLowerCase();
   const authUserEmail = (req.user?.email || '').trim().toLowerCase();
 
@@ -186,7 +187,10 @@ const getHistory = asyncHandler(async (req, res) => {
     }).lean(),
     LeaveRequest.find({
       employeeEmail: queryEmail,
-      requestDate: { $in: datesToSearch }
+      $or: [
+        { requestDate: { $in: datesToSearch } },
+        { datesCovered: { $in: datesToSearch } }
+      ]
     }).sort({ createdAt: -1 }).lean()
   ]);
 
@@ -197,16 +201,19 @@ const getHistory = asyncHandler(async (req, res) => {
 
   const leaveMap = {};
   leaveRequests.forEach(l => {
-    if (!leaveMap[l.requestDate]) {
-      leaveMap[l.requestDate] = l;
-    } else {
-      const existing = leaveMap[l.requestDate];
-      if (l.status === 'Approved') {
-        leaveMap[l.requestDate] = l;
-      } else if (l.status === 'Pending' && existing.status === 'Rejected') {
-        leaveMap[l.requestDate] = l;
+    const dates = l.datesCovered && l.datesCovered.length > 0 ? l.datesCovered : [l.requestDate];
+    dates.forEach(d => {
+      if (!leaveMap[d]) {
+        leaveMap[d] = l;
+      } else {
+        const existing = leaveMap[d];
+        if (l.status === 'Approved') {
+          leaveMap[d] = l;
+        } else if (l.status === 'Pending' && existing.status === 'Rejected') {
+          leaveMap[d] = l;
+        }
       }
-    }
+    });
   });
 
   const generatedHistory = [];
