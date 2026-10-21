@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useChat } from '../context/ChatContext';
 import {
   LayoutDashboard,
   BarChart3,
@@ -10,7 +11,8 @@ import {
   X,
   Users as UsersIcon,
   DollarSign,
-  Briefcase
+  Briefcase,
+  MessageSquare
 } from 'lucide-react';
 import rasLogo from '../assets/ras.jpeg';
 import Modal from './Modal';
@@ -18,6 +20,7 @@ import ThreeBarLogo from './ThreeBarLogo';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { logout, endSession, user, isAdmin } = useAuth();
+  const { totalUnread } = useChat();
   const location = useLocation();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
 
@@ -127,6 +130,31 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               </span>
             </div>
           </div>
+
+          {/* Dedicated Chat Button below user profile */}
+          <NavLink
+            to="/dashboard/chat"
+            onClick={() => {
+              if (window.innerWidth < 1024) toggleSidebar();
+            }}
+            className={({ isActive }) =>
+              `mt-3 flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border group ${
+                isActive
+                  ? 'bg-[#00B96B] text-white border-[#00B96B] shadow-xs'
+                  : 'bg-white text-[#07566A] border-[#D8E9E2] hover:bg-[#D5F5E7] hover:border-[#00B96B]/50 hover:text-[#07566A] shadow-2xs'
+              }`
+            }
+          >
+            <div className="flex items-center space-x-2">
+              <MessageSquare size={15} className="flex-shrink-0" />
+              <span>Chat</span>
+            </div>
+            {totalUnread > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-black leading-none text-white bg-red-500 rounded-full shadow-xs animate-pulse">
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
+          </NavLink>
         </div>
 
         {/* Navigation Menu */}

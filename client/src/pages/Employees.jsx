@@ -128,6 +128,223 @@ const Employees = () => {
   const [myLeaveRequests, setMyLeaveRequests] = useState([]);
   const [loadingMyRequests, setLoadingMyRequests] = useState(false);
 
+  // -------------------------------------------------------------
+  // PERMISSION REQUEST MODULE STATE & HANDLERS (EMPLOYEE & ADMIN)
+  // -------------------------------------------------------------
+  // Regular Employee Permissions state
+  const [myPermissionRequests, setMyPermissionRequests] = useState([]);
+  const [myPermissionStats, setMyPermissionStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [myPermissionAllowance, setMyPermissionAllowance] = useState({
+    limitHours: 6,
+    approvedHoursUsed: 0,
+    pendingHours: 0,
+    remainingHours: 6,
+    remainingAvailable: 6,
+  });
+  const [loadingMyPermissions, setLoadingMyPermissions] = useState(false);
+  const [staffPermissionFilter, setStaffPermissionFilter] = useState('All');
+  const [staffPermissionSearch, setStaffPermissionSearch] = useState('');
+
+  // Apply Permission Modal state (Employee)
+  const [isApplyPermissionOpen, setIsApplyPermissionOpen] = useState(false);
+  const [applyPermType, setApplyPermType] = useState('Personal Work');
+  const [applyPermDate, setApplyPermDate] = useState('');
+  const [applyPermFromTime, setApplyPermFromTime] = useState('10:00');
+  const [applyPermToTime, setApplyPermToTime] = useState('12:00');
+  const [applyPermReason, setApplyPermReason] = useState('');
+  const [isSubmittingPermission, setIsSubmittingPermission] = useState(false);
+
+  // Admin Permission Management state
+  const [adminPermissionRequests, setAdminPermissionRequests] = useState([]);
+  const [adminPermissionStats, setAdminPermissionStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
+  const [loadingAdminPermissions, setLoadingAdminPermissions] = useState(false);
+  const [adminPermissionStatusFilter, setAdminPermissionStatusFilter] = useState('All');
+  const [adminPermissionSearch, setAdminPermissionSearch] = useState('');
+  const [isRejectPermissionModalOpen, setIsRejectPermissionModalOpen] = useState(false);
+  const [selectedPermissionToReject, setSelectedPermissionToReject] = useState(null);
+  const [adminPermissionRejectionRemarks, setAdminPermissionRejectionRemarks] = useState('');
+  const [isReviewingPermission, setIsReviewingPermission] = useState(false);
+
+  // Helper to format HH:mm time to 12-hour format (e.g. 10:00 AM)
+  const formatTimeHHMM = (timeStr) => {
+    if (!timeStr) return '—';
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
+    let h = parseInt(parts[0], 10);
+    const m = parts[1];
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+  };
+
+  // Helper to calculate duration in hours and minutes
+  const calculateDurationHelper = (from, to) => {
+    if (!from || !to) return { text: '—', hours: 0, minutes: 0, valid: false };
+    const [fh, fm] = from.split(':').map(Number);
+    const [th, tm] = to.split(':').map(Number);
+    if (isNaN(fh) || isNaN(fm) || isNaN(th) || isNaN(tm)) {
+      return { text: '—', hours: 0, minutes: 0, valid: false };
+    }
+    let startMins = fh * 60 + fm;
+    let endMins = th * 60 + tm;
+    if (endMins <= startMins) {
+      endMins += 24 * 60; // Overnight
+    }
+    const diffMins = endMins - startMins;
+    const h = Math.floor(diffMins / 60);
+    const m = diffMins % 60;
+    const decimalHours = Math.round((diffMins / 60) * 100) / 100;
+    return {
+      text: m > 0 ? `${h} hr${h === 1 ? '' : 's'} ${m} min${m === 1 ? '' : 's'} (${decimalHours} hrs)` : `${h} hr${h === 1 ? '' : 's'} (${decimalHours} hrs)`,
+      hours: decimalHours,
+      minutes: diffMins,
+      valid: diffMins > 0,
+    };
+  };
+
+  // Fetch my permission requests (Employee)
+  const fetchMyPermissionRequests = async () => {
+    setLoadingMyPermissions(true);
+    try {
+      const { data } = await api.get('/permission/my-requests');
+      const list = data.data || [];
+      setMyPermissionRequests(list);
+      if (data.stats) {
+        setMyPermissionStats(data.stats);
+      }
+      if (data.monthlyAllowance) {
+        setMyPermissionAllowance(data.monthlyAllowance);
+      }
+    } catch (error) {
+      console.error('Failed to load permission requests:', error);
+    } finally {
+      setLoadingMyPermissions(false);
+    }
+  };
+
+  // Fetch all permission requests (Admin)
+  const fetchAdminPermissionRequests = async () => {
+    setLoadingAdminPermissions(true);
+    try {
+      const params = {};
+      if (adminPermissionStatusFilter !== 'All') {
+        params.status = adminPermissionStatusFilter;
+      }
+      if (adminPermissionSearch.trim()) {
+        params.search = adminPermissionSearch.trim();
+      }
+      const { data } = await api.get('/permission/all', { params });
+      setAdminPermissionRequests(data.data || []);
+      if (data.stats) {
+        setAdminPermissionStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Failed to load admin permission requests:', error);
+      toast.error('Failed to load permission requests.');
+    } finally {
+      setLoadingAdminPermissions(false);
+    }
+  };
+
+  // Open apply permission modal
+  const handleOpenApplyPermissionModal = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setApplyPermDate(todayStr);
+    setApplyPermType('Personal Work');
+    setApplyPermFromTime('10:00');
+    setApplyPermToTime('12:00');
+    setApplyPermReason('');
+    setIsApplyPermissionOpen(true);
+  };
+
+  // Submit permission request (Employee)
+  const handleSubmitPermissionRequest = async (e) => {
+    e.preventDefault();
+    if (!applyPermDate) {
+      toast.error('Please select a permission date.');
+      return;
+    }
+    if (!applyPermFromTime || !applyPermToTime) {
+      toast.error('Both From Time and To Time are required.');
+      return;
+    }
+    const duration = calculateDurationHelper(applyPermFromTime, applyPermToTime);
+    if (!duration.valid || duration.hours <= 0) {
+      toast.error('To Time must be later than From Time.');
+      return;
+    }
+    if (duration.hours > 6) {
+      toast.error('A single permission request cannot exceed the 6-hour monthly limit.');
+      return;
+    }
+    if (!applyPermReason || !applyPermReason.trim()) {
+      toast.error('Please provide a reason for the permission request.');
+      return;
+    }
+
+    setIsSubmittingPermission(true);
+    try {
+      await api.post('/permission/apply', {
+        permissionDate: applyPermDate,
+        fromTime: applyPermFromTime,
+        toTime: applyPermToTime,
+        permissionType: applyPermType,
+        reason: applyPermReason.trim(),
+      });
+      toast.success('Permission request submitted successfully!');
+      setIsApplyPermissionOpen(false);
+
+      // Refresh permissions and attendance history
+      fetchMyPermissionRequests();
+      if (user?.email) {
+        const { data } = await api.get(`/attendance/history/${user.email}`, {
+          params: { month: trackMonth, year: trackYear },
+        });
+        setAttendanceData(data.data || []);
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to submit permission request.';
+      toast.error(msg);
+    } finally {
+      setIsSubmittingPermission(false);
+    }
+  };
+
+  // Admin Review Permission Request (Approve / Reject)
+  const handleReviewPermission = async (id, statusDecision, adminRemarks = '') => {
+    setIsReviewingPermission(true);
+    try {
+      await api.patch(`/permission/${id}/review`, {
+        status: statusDecision,
+        adminRemarks,
+      });
+      toast.success(`Permission request ${statusDecision.toLowerCase()} successfully!`);
+      setIsRejectPermissionModalOpen(false);
+      setSelectedPermissionToReject(null);
+      setAdminPermissionRejectionRemarks('');
+      fetchAdminPermissionRequests();
+
+      // If admin has tracking modal open for an employee, refresh it too
+      if (isTrackOpen && activeRecord?.email) {
+        const { data } = await api.get(`/attendance/history/${activeRecord.email}`, {
+          params: { month: trackMonth, year: trackYear },
+        });
+        setAttendanceData(data.data || []);
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || `Failed to ${statusDecision.toLowerCase()} permission request.`;
+      toast.error(msg);
+    } finally {
+      setIsReviewingPermission(false);
+    }
+  };
+
+  const handleOpenRejectPermissionModal = (request) => {
+    setSelectedPermissionToReject(request);
+    setAdminPermissionRejectionRemarks('');
+    setIsRejectPermissionModalOpen(true);
+  };
+
   // Fetch leave requests for Admin
   const fetchLeaveRequests = async () => {
     setLoadingRequests(true);
@@ -217,17 +434,23 @@ const Employees = () => {
     if (isAdmin) {
       fetchRecords();
       fetchLeaveRequests();
+      fetchAdminPermissionRequests();
     } else {
       fetchMyProfile();
       fetchMyLeaveRequests();
+      fetchMyPermissionRequests();
     }
   }, [isAdmin, page, limit, sortBy, sortOrder]);
 
   useEffect(() => {
-    if (isAdmin && adminTab === 'requests') {
-      fetchLeaveRequests();
+    if (isAdmin) {
+      if (adminTab === 'requests') {
+        fetchLeaveRequests();
+      } else if (adminTab === 'permissions') {
+        fetchAdminPermissionRequests();
+      }
     }
-  }, [isAdmin, adminTab, requestStatusFilter, requestSearch]);
+  }, [isAdmin, adminTab, requestStatusFilter, requestSearch, adminPermissionStatusFilter, adminPermissionSearch]);
 
   // Handle Search submit
   const handleSearchSubmit = (e) => {
@@ -696,11 +919,11 @@ const Employees = () => {
         )}
 
         {/* Staff Tab Switcher */}
-        <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+        <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
           <button
             type="button"
             onClick={() => setStaffTab('attendance')}
-            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               staffTab === 'attendance'
                 ? 'bg-brand-800 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -713,7 +936,7 @@ const Employees = () => {
           <button
             type="button"
             onClick={() => setStaffTab('requests')}
-            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               staffTab === 'requests'
                 ? 'bg-brand-800 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -730,6 +953,30 @@ const Employees = () => {
                 staffTab === 'requests' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
               }`}>
                 {myLeaveStats.total || 0}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStaffTab('permissions')}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              staffTab === 'permissions'
+                ? 'bg-brand-800 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Clock size={15} />
+            <span>Permission Request</span>
+            {myPermissionStats.pending > 0 ? (
+              <span className="px-2 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-extrabold animate-pulse">
+                {myPermissionStats.pending} Pending
+              </span>
+            ) : (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                staffTab === 'permissions' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {myPermissionStats.total || 0}
               </span>
             )}
           </button>
@@ -798,6 +1045,9 @@ const Employees = () => {
                       if (record.status === 'Absent') {
                         rowClass = "bg-red-50/30 transition-colors hover:bg-red-50/60";
                         statusBadgeClass = "bg-red-50 text-red-700 border-red-200 font-bold";
+                      } else if (record.status === 'Loss of Pay' || record.status === 'LOP') {
+                        rowClass = "bg-rose-50/30 transition-colors hover:bg-rose-50/60";
+                        statusBadgeClass = "bg-rose-50 text-rose-700 border-rose-200 font-bold";
                       } else if (record.status === 'Week Off') {
                         rowClass = "bg-slate-50/80 transition-colors hover:bg-slate-100";
                         statusBadgeClass = "bg-slate-100 text-slate-600 border-slate-200 font-medium";
@@ -833,7 +1083,14 @@ const Employees = () => {
                             )}
                           </td>
                           <td className="px-5 py-3 font-medium text-slate-700">{record.loggedOut}</td>
-                          <td className="px-5 py-3 font-semibold text-slate-800">{record.totalHours}</td>
+                          <td className="px-5 py-3 font-semibold text-slate-800">
+                            <div>{record.totalHours}</div>
+                            {record.permissionRequest && (
+                              <div className="text-[10px] text-brand-800 font-semibold mt-0.5">
+                                Perm ({record.permissionRequest.type}): {record.permissionRequest.status === 'Approved' ? `${record.validPermHours}h credited` : record.permissionRequest.status}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-5 py-3 font-bold text-slate-600">{record.workMode}</td>
                           <td className="px-5 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border ${statusBadgeClass}`}>
@@ -1192,6 +1449,463 @@ const Employees = () => {
           );
         })()}
 
+        {/* TAB 3: Permission Request */}
+        {staffTab === 'permissions' && (() => {
+          const filteredMyPermissions = myPermissionRequests.filter((req) => {
+            if (staffPermissionFilter !== 'All' && req.status !== staffPermissionFilter) {
+              return false;
+            }
+            if (staffPermissionSearch && staffPermissionSearch.trim()) {
+              const q = staffPermissionSearch.trim().toLowerCase();
+              const matchType = (req.permissionType || '').toLowerCase().includes(q);
+              const matchReason = (req.reason || '').toLowerCase().includes(q);
+              const matchDate = (req.permissionDate || '').toLowerCase().includes(q);
+              const matchId = (req.requestId || '').toLowerCase().includes(q);
+              const matchStatus = (req.status || '').toLowerCase().includes(q);
+              return matchType || matchReason || matchDate || matchId || matchStatus;
+            }
+            return true;
+          });
+
+          return (
+            <div className="space-y-4">
+              {/* Monthly Permission Quota Banner / Cards */}
+              <div className="bg-gradient-to-r from-[#07566A]/5 via-emerald-50/50 to-teal-50/40 p-4 rounded-2xl border border-emerald-100/80 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-brand-900 flex items-center gap-1.5">
+                      <Clock size={14} className="text-brand-700" />
+                      <span>Monthly Permission Quota Allowance</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Standard allocation allows up to <strong>6 permission hours per calendar month</strong>.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenApplyPermissionModal}
+                    className="inline-flex items-center justify-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98] w-fit"
+                  >
+                    <Plus size={14} />
+                    <span>Apply for Permission</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Limit Card */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Monthly Permission Limit</span>
+                    <div className="text-lg font-black text-slate-800 mt-0.5">
+                      {myPermissionAllowance.limitHours || 6} hours
+                    </div>
+                    <span className="text-[10px] text-slate-400">Fixed calendar allowance</span>
+                  </div>
+
+                  {/* Used Card */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Approved Permission Hours Used</span>
+                    <div className="text-lg font-black text-emerald-700 mt-0.5">
+                      {myPermissionAllowance.approvedHoursUsed || 0} hours
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      {myPermissionAllowance.pendingHours > 0 ? `+ ${myPermissionAllowance.pendingHours} hrs pending approval` : 'Credited in attendance'}
+                    </span>
+                  </div>
+
+                  {/* Remaining Card */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Remaining Permission Hours</span>
+                    <div className={`text-lg font-black mt-0.5 ${(myPermissionAllowance.remainingHours ?? 6) <= 0 ? 'text-rose-600' : 'text-brand-800'}`}>
+                      {myPermissionAllowance.remainingHours ?? 6} hours
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      Available for this calendar month
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Requests</span>
+                  <div className="text-xl font-black text-slate-800 mt-0.5">{myPermissionStats.total || 0}</div>
+                </div>
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending</span>
+                  </div>
+                  <div className="text-xl font-black text-amber-600 mt-0.5">{myPermissionStats.pending || 0}</div>
+                </div>
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Approved</span>
+                  </div>
+                  <div className="text-xl font-black text-emerald-600 mt-0.5">{myPermissionStats.approved || 0}</div>
+                </div>
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected</span>
+                  </div>
+                  <div className="text-xl font-black text-red-600 mt-0.5">{myPermissionStats.rejected || 0}</div>
+                </div>
+              </div>
+
+              {/* Action Bar: Filters, Search & Apply */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  {/* Status Pills */}
+                  <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0">
+                    {['All', 'Pending', 'Approved', 'Rejected'].map((filterVal) => (
+                      <button
+                        key={filterVal}
+                        type="button"
+                        onClick={() => setStaffPermissionFilter(filterVal)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                          staffPermissionFilter === filterVal
+                            ? 'bg-brand-800 text-white shadow-xs'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        {filterVal}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search box */}
+                  <div className="flex items-center space-x-2">
+                    <div className="relative flex-1 sm:w-64">
+                      <input
+                        type="text"
+                        value={staffPermissionSearch}
+                        onChange={(e) => setStaffPermissionSearch(e.target.value)}
+                        placeholder="Search ID, type, reason..."
+                        className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 text-xs"
+                      />
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      {staffPermissionSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setStaffPermissionSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table */}
+                {loadingMyPermissions ? (
+                  <div className="py-16 flex items-center justify-center">
+                    <Spinner />
+                  </div>
+                ) : filteredMyPermissions.length === 0 ? (
+                  <div className="py-16 text-center space-y-2 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                    <Clock size={32} className="text-slate-300 mx-auto" />
+                    <p className="text-slate-500 text-sm font-semibold">No permission requests found.</p>
+                    <p className="text-slate-400 text-xs">
+                      {staffPermissionSearch || staffPermissionFilter !== 'All'
+                        ? 'Try adjusting your search or filters.'
+                        : 'Submit a new permission request to get started.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="responsive-table-container w-full max-w-full overflow-x-auto border border-slate-200 rounded-xl">
+                    <table className="w-max min-w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Request ID</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Permission Date</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Permission Type</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[110px]">From Time</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[110px]">To Time</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Total Hours</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[180px]">Reason</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Submitted Date</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Approval Status</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[160px]">Admin Remarks</th>
+                          <th className="px-5 py-3.5 whitespace-nowrap min-w-[100px] text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white text-xs">
+                        {filteredMyPermissions.map((req) => {
+                          const isPending = req.status === 'Pending';
+                          const isApproved = req.status === 'Approved';
+                          const isRejected = req.status === 'Rejected';
+
+                          return (
+                            <tr key={req._id} className="transition-colors hover:bg-[#D9FFF0]/25">
+                              {/* Request ID */}
+                              <td className="px-5 py-3.5 font-bold font-mono text-brand-800 whitespace-nowrap">
+                                {req.requestId || req._id.slice(-6).toUpperCase()}
+                              </td>
+
+                              {/* Permission Date */}
+                              <td className="px-5 py-3.5 font-semibold text-slate-800 whitespace-nowrap">
+                                {formatDateDDMMYYYY(req.permissionDate)}
+                              </td>
+
+                              {/* Permission Type */}
+                              <td className="px-5 py-3.5 font-medium text-slate-700 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                  {req.permissionType}
+                                </span>
+                              </td>
+
+                              {/* From Time */}
+                              <td className="px-5 py-3.5 font-medium text-slate-600 whitespace-nowrap">
+                                {formatTimeHHMM(req.fromTime)}
+                              </td>
+
+                              {/* To Time */}
+                              <td className="px-5 py-3.5 font-medium text-slate-600 whitespace-nowrap">
+                                {formatTimeHHMM(req.toTime)}
+                              </td>
+
+                              {/* Total Permission Hours */}
+                              <td className="px-5 py-3.5 font-bold text-slate-900 whitespace-nowrap">
+                                <span className="px-2 py-0.5 bg-brand-50 text-brand-800 rounded-md font-extrabold border border-brand-200">
+                                  {req.totalHours} hrs
+                                </span>
+                              </td>
+
+                              {/* Reason */}
+                              <td className="px-5 py-3.5 text-slate-600 max-w-xs break-words">
+                                {req.reason || '—'}
+                              </td>
+
+                              {/* Submitted Date */}
+                              <td className="px-5 py-3.5 font-medium text-slate-500 whitespace-nowrap">
+                                {formatDateDDMMYYYY(req.createdAt)}
+                              </td>
+
+                              {/* Approval Status */}
+                              <td className="px-5 py-3.5 whitespace-nowrap">
+                                {isPending && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <Clock size={12} />
+                                    <span>Pending</span>
+                                  </span>
+                                )}
+                                {isApproved && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      <CheckCircle2 size={12} />
+                                      <span>Approved</span>
+                                    </span>
+                                    {req.reviewedBy && (
+                                      <span className="text-[9px] text-slate-400">By {req.reviewedBy}</span>
+                                    )}
+                                  </div>
+                                )}
+                                {isRejected && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-full text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
+                                      <XCircle size={12} />
+                                      <span>Rejected</span>
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Admin Remarks */}
+                              <td className="px-5 py-3.5 text-slate-600 max-w-xs break-words">
+                                {req.adminRemarks ? (
+                                  <span className="text-slate-700 italic">{req.adminRemarks}</span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+
+                              {/* Actions */}
+                              <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                                {isPending ? (
+                                  <span className="text-amber-600 font-semibold text-[11px]">Awaiting Review</span>
+                                ) : isApproved ? (
+                                  <span className="text-emerald-700 font-semibold text-[11px]">Hours Credited</span>
+                                ) : (
+                                  <span className="text-slate-400 text-[11px]">Closed</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* APPLY PERMISSION MODAL */}
+        <Modal
+          isOpen={isApplyPermissionOpen}
+          onClose={() => setIsApplyPermissionOpen(false)}
+          title="Apply for Permission"
+          maxWidth="max-w-md"
+        >
+          {(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const duration = calculateDurationHelper(applyPermFromTime, applyPermToTime);
+            const remainingHours = myPermissionAllowance.remainingHours ?? 6;
+            const willExceedRemaining = duration.hours > remainingHours;
+            const willExceedMaxLimit = duration.hours > 6;
+
+            return (
+              <form onSubmit={handleSubmitPermissionRequest} className="space-y-4 text-slate-800">
+                <div className="p-3 bg-brand-50/70 border border-brand-200 rounded-xl text-xs space-y-1">
+                  <div className="flex justify-between items-center text-brand-900 font-bold">
+                    <span>Monthly Quota Status</span>
+                    <span>Remaining: {remainingHours} hrs</span>
+                  </div>
+                  <div className="text-[11px] text-slate-600">
+                    Approved: {myPermissionAllowance.approvedHoursUsed || 0}h / 6h | Pending: {myPermissionAllowance.pendingHours || 0}h
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Permission Type *
+                  </label>
+                  <select
+                    required
+                    value={applyPermType}
+                    onChange={(e) => setApplyPermType(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-semibold"
+                  >
+                    <option value="Personal Work">Personal Work</option>
+                    <option value="Medical Appointment">Medical Appointment</option>
+                    <option value="Official Permission">Official Permission</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Early Departure">Early Departure</option>
+                    <option value="Late Arrival">Late Arrival</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Permission Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={applyPermDate}
+                    onChange={(e) => setApplyPermDate(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-bold focus:outline-none focus:border-brand-800"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                      From Time *
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={applyPermFromTime}
+                      onChange={(e) => setApplyPermFromTime(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-bold focus:outline-none focus:border-brand-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                      To Time *
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={applyPermToTime}
+                      onChange={(e) => setApplyPermToTime(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-bold focus:outline-none focus:border-brand-800"
+                    />
+                  </div>
+                </div>
+
+                {/* Duration & Quota calculation */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+                  <span className="text-slate-600 font-semibold">Calculated Duration:</span>
+                  <span className={`font-black ${duration.valid && !willExceedRemaining ? 'text-brand-800' : 'text-rose-600'}`}>
+                    {duration.text}
+                  </span>
+                </div>
+
+                {willExceedRemaining && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                    <div className="flex items-center space-x-1.5 font-bold">
+                      <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
+                      <span>Exceeds Monthly Allowance</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      You have <strong>{remainingHours} hours</strong> remaining this month. This request asks for <strong>{duration.hours} hours</strong>.
+                    </p>
+                  </div>
+                )}
+
+                {willExceedMaxLimit && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 space-y-1">
+                    <div className="flex items-center space-x-1.5 font-bold">
+                      <AlertCircle size={14} className="text-red-600 flex-shrink-0" />
+                      <span>Exceeds Maximum Limit</span>
+                    </div>
+                    <p className="text-[11px] text-red-700 leading-relaxed">
+                      A single permission request cannot exceed the 6-hour monthly quota limit.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Reason *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={applyPermReason}
+                    onChange={(e) => setApplyPermReason(e.target.value)}
+                    placeholder="Provide a clear reason for the permission request..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsApplyPermissionOpen(false)}
+                    disabled={isSubmittingPermission}
+                    className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPermission || !duration.valid || willExceedRemaining || willExceedMaxLimit}
+                    className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] disabled:opacity-40 disabled:cursor-not-allowed text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all flex items-center justify-center space-x-1.5 active:scale-[0.98]"
+                  >
+                    {isSubmittingPermission ? (
+                      <>
+                        <Spinner size="small" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <span>Submit Permission</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            );
+          })()}
+        </Modal>
+
         {/* APPLY LEAVE / OD MODAL */}
         <Modal
           isOpen={isApplyLeaveOpen}
@@ -1414,7 +2128,9 @@ const Employees = () => {
           <p className="text-xs text-slate-500">
             {adminTab === 'employees'
               ? 'Manage employee records, search, and export data'
-              : 'Review and manage employee leave and on-duty requests'}
+              : adminTab === 'requests'
+              ? 'Review and manage employee leave and on-duty requests'
+              : 'Review and approve/reject employee permission requests (max 6 hrs/month)'}
           </p>
         </div>
         {adminTab === 'employees' ? (
@@ -1425,7 +2141,7 @@ const Employees = () => {
             <Plus size={16} />
             <span>Add Employee</span>
           </button>
-        ) : (
+        ) : adminTab === 'requests' ? (
           <button
             onClick={fetchLeaveRequests}
             disabled={loadingRequests}
@@ -1434,15 +2150,24 @@ const Employees = () => {
             <RefreshCw size={14} className={loadingRequests ? 'animate-spin text-brand-800' : ''} />
             <span>Refresh Requests</span>
           </button>
+        ) : (
+          <button
+            onClick={fetchAdminPermissionRequests}
+            disabled={loadingAdminPermissions}
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loadingAdminPermissions ? 'animate-spin text-brand-800' : ''} />
+            <span>Refresh Permissions</span>
+          </button>
         )}
       </div>
 
       {/* Admin Tab Switcher */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+      <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
         <button
           type="button"
           onClick={() => setAdminTab('employees')}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
             adminTab === 'employees'
               ? 'bg-brand-800 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -1460,7 +2185,7 @@ const Employees = () => {
         <button
           type="button"
           onClick={() => setAdminTab('requests')}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
             adminTab === 'requests'
               ? 'bg-brand-800 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -1477,6 +2202,30 @@ const Employees = () => {
               adminTab === 'requests' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
             }`}>
               {leaveStats.total || 0}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminTab('permissions')}
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            adminTab === 'permissions'
+              ? 'bg-brand-800 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Clock size={15} />
+          <span>Permission Requests</span>
+          {adminPermissionStats.pending > 0 ? (
+            <span className="px-2 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-extrabold animate-pulse">
+              {adminPermissionStats.pending} Pending
+            </span>
+          ) : (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              adminTab === 'permissions' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {adminPermissionStats.total || 0}
             </span>
           )}
         </button>
@@ -2036,6 +2785,250 @@ const Employees = () => {
         </div>
       )}
 
+      {adminTab === 'permissions' && (
+        <div className="space-y-4">
+          {/* Quick Stats Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Requests</span>
+              <div className="text-xl font-black text-slate-800 mt-0.5">{adminPermissionStats.total || 0}</div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending Review</span>
+              </div>
+              <div className="text-xl font-black text-amber-600 mt-0.5">{adminPermissionStats.pending || 0}</div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Approved</span>
+              </div>
+              <div className="text-xl font-black text-emerald-600 mt-0.5">{adminPermissionStats.approved || 0}</div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected</span>
+              </div>
+              <div className="text-xl font-black text-red-600 mt-0.5">{adminPermissionStats.rejected || 0}</div>
+            </div>
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              {/* Status Pills */}
+              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0">
+                {['All', 'Pending', 'Approved', 'Rejected'].map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setAdminPermissionStatusFilter(status)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                      adminPermissionStatusFilter === status
+                        ? 'bg-brand-800 text-white shadow-xs'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search box */}
+              <div className="relative flex-1 md:max-w-xs">
+                <input
+                  type="text"
+                  value={adminPermissionSearch}
+                  onChange={(e) => setAdminPermissionSearch(e.target.value)}
+                  placeholder="Search by Employee, Code, Type, Reason..."
+                  className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 text-xs"
+                />
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                {adminPermissionSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setAdminPermissionSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Table */}
+            {loadingAdminPermissions ? (
+              <div className="py-20 flex items-center justify-center">
+                <Spinner />
+              </div>
+            ) : adminPermissionRequests.length === 0 ? (
+              <div className="py-20 text-center space-y-2 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                <Clock size={32} className="text-slate-300 mx-auto" />
+                <p className="text-slate-500 text-sm font-semibold">No permission requests found.</p>
+                <p className="text-slate-400 text-xs">
+                  {adminPermissionSearch || adminPermissionStatusFilter !== 'All'
+                    ? 'Try adjusting your search query or filter.'
+                    : 'Employees have not submitted any permission requests yet.'}
+                </p>
+              </div>
+            ) : (
+              <div className="responsive-table-container w-full max-w-full overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="w-max min-w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#07566A] text-white text-[10px] uppercase font-extrabold tracking-wider">
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[180px]">Employee</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Request ID</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Permission Date</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[140px]">Permission Type</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[150px]">Time & Duration</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[180px]">Reason</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Submitted Date</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Approval Status</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[160px]">Admin Remarks</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[160px] text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white text-xs">
+                    {adminPermissionRequests.map((req) => {
+                      const isPending = req.status === 'Pending';
+                      const isApproved = req.status === 'Approved';
+                      const isRejected = req.status === 'Rejected';
+
+                      return (
+                        <tr key={req._id} className="transition-colors hover:bg-[#D9FFF0]/25">
+                          {/* Employee Info */}
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <div className="flex items-center space-x-2.5">
+                              <div className="w-7 h-7 rounded-full bg-brand-50 text-brand-800 font-bold text-xs flex items-center justify-center border border-brand-200">
+                                {req.employeeName ? req.employeeName.charAt(0).toUpperCase() : 'E'}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900">{req.employeeName}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  {req.employeeCode} &bull; {req.employeeEmail}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Request ID */}
+                          <td className="px-5 py-3.5 font-bold font-mono text-brand-800 whitespace-nowrap">
+                            {req.requestId || req._id.slice(-6).toUpperCase()}
+                          </td>
+
+                          {/* Permission Date */}
+                          <td className="px-5 py-3.5 font-semibold text-slate-800 whitespace-nowrap">
+                            {formatDateDDMMYYYY(req.permissionDate)}
+                          </td>
+
+                          {/* Permission Type */}
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                              {req.permissionType}
+                            </span>
+                          </td>
+
+                          {/* Time & Duration */}
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <div className="font-medium text-slate-700">
+                              {formatTimeHHMM(req.fromTime)} - {formatTimeHHMM(req.toTime)}
+                            </div>
+                            <div className="text-[11px] font-extrabold text-brand-800">
+                              {req.totalHours} hrs
+                            </div>
+                          </td>
+
+                          {/* Reason */}
+                          <td className="px-5 py-3.5 text-slate-600 max-w-xs break-words">
+                            {req.reason || '—'}
+                          </td>
+
+                          {/* Submitted Date */}
+                          <td className="px-5 py-3.5 font-medium text-slate-500 whitespace-nowrap">
+                            {formatDateDDMMYYYY(req.createdAt)}
+                          </td>
+
+                          {/* Approval Status */}
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            {isPending && (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                                <Clock size={12} />
+                                <span>Pending Approval</span>
+                              </span>
+                            )}
+                            {isApproved && (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <CheckCircle2 size={12} />
+                                  <span>Approved</span>
+                                </span>
+                                {req.reviewedBy && (
+                                  <span className="text-[9px] text-slate-400">By {req.reviewedBy}</span>
+                                )}
+                              </div>
+                            )}
+                            {isRejected && (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-full text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
+                                  <XCircle size={12} />
+                                  <span>Rejected</span>
+                                </span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Admin Remarks */}
+                          <td className="px-5 py-3.5 text-slate-600 max-w-xs break-words">
+                            {req.adminRemarks ? (
+                              <span className="text-slate-700 italic">{req.adminRemarks}</span>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            {isPending ? (
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  type="button"
+                                  disabled={isReviewingPermission}
+                                  onClick={() => handleReviewPermission(req._id, 'Approved')}
+                                  className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+                                  title="Approve this permission request"
+                                >
+                                  <Check size={13} />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isReviewingPermission}
+                                  onClick={() => handleOpenRejectPermissionModal(req)}
+                                  className="inline-flex items-center space-x-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+                                  title="Reject this permission request"
+                                >
+                                  <X size={13} />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-xs font-medium">Decided</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 1. CREATE / EDIT EMPLOYEE MODAL */}
       <Modal
         isOpen={isAddEditOpen}
@@ -2321,6 +3314,9 @@ const Employees = () => {
                   if (record.status === 'Absent') {
                     rowClass = "bg-red-50/30 transition-colors hover:bg-red-50/60";
                     statusBadgeClass = "bg-red-50 text-red-700 border-red-200 font-bold";
+                  } else if (record.status === 'Loss of Pay' || record.status === 'LOP') {
+                    rowClass = "bg-rose-50/30 transition-colors hover:bg-rose-50/60";
+                    statusBadgeClass = "bg-rose-50 text-rose-700 border-rose-200 font-bold";
                   } else if (record.status === 'Week Off') {
                     rowClass = "bg-slate-50/80 transition-colors hover:bg-slate-100";
                     statusBadgeClass = "bg-slate-100 text-slate-600 border-slate-200 font-medium";
@@ -2356,7 +3352,14 @@ const Employees = () => {
                         )}
                       </td>
                       <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap min-w-[130px]">{record.loggedOut}</td>
-                      <td className="px-4 py-2.5 font-semibold text-slate-800 whitespace-nowrap min-w-[120px]">{record.totalHours}</td>
+                      <td className="px-4 py-2.5 font-semibold text-slate-800 whitespace-nowrap min-w-[120px]">
+                        <div>{record.totalHours}</div>
+                        {record.permissionRequest && (
+                          <div className="text-[10px] text-brand-800 font-semibold mt-0.5">
+                            Perm ({record.permissionRequest.type}): {record.permissionRequest.status === 'Approved' ? `${record.validPermHours}h credited` : record.permissionRequest.status}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap min-w-[120px]">{record.workMode}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap min-w-[120px]">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border ${statusBadgeClass}`}>
@@ -2564,6 +3567,96 @@ const Employees = () => {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 flex items-center space-x-1.5"
               >
                 {isReviewingRequest && <Spinner size="sm" />}
+                <span>Confirm Rejection</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ADMIN REJECT PERMISSION MODAL */}
+      <Modal
+        isOpen={isRejectPermissionModalOpen}
+        onClose={() => {
+          if (!isReviewingPermission) {
+            setIsRejectPermissionModalOpen(false);
+            setSelectedPermissionToReject(null);
+          }
+        }}
+        title="Reject Permission Request"
+        maxWidth="max-w-md"
+      >
+        {selectedPermissionToReject && (
+          <div className="space-y-4 text-xs text-slate-700">
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Employee</span>
+                <span className="font-extrabold text-slate-800">
+                  {selectedPermissionToReject.employeeName} ({selectedPermissionToReject.employeeCode})
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Permission Date</span>
+                <span className="font-bold text-slate-800">
+                  {formatDateDDMMYYYY(selectedPermissionToReject.permissionDate)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Time & Duration</span>
+                <span className="font-bold text-brand-800">
+                  {formatTimeHHMM(selectedPermissionToReject.fromTime)} - {formatTimeHHMM(selectedPermissionToReject.toTime)} ({selectedPermissionToReject.totalHours} hrs)
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Permission Type</span>
+                <span className="font-bold text-slate-800">{selectedPermissionToReject.permissionType}</span>
+              </div>
+              {selectedPermissionToReject.reason && (
+                <div className="pt-1.5 border-t border-slate-200/60">
+                  <span className="text-slate-500 font-bold uppercase text-[10px] block">Reason</span>
+                  <p className="text-slate-600 mt-0.5">{selectedPermissionToReject.reason}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Admin Remarks / Rejection Note (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={adminPermissionRejectionRemarks}
+                onChange={(e) => setAdminPermissionRejectionRemarks(e.target.value)}
+                placeholder="Reason for rejecting this permission request (visible to the employee)..."
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 text-xs"
+              />
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isReviewingPermission}
+                onClick={() => {
+                  setIsRejectPermissionModalOpen(false);
+                  setSelectedPermissionToReject(null);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isReviewingPermission}
+                onClick={() =>
+                  handleReviewPermission(
+                    selectedPermissionToReject._id,
+                    'Rejected',
+                    adminPermissionRejectionRemarks
+                  )
+                }
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 flex items-center space-x-1.5"
+              >
+                {isReviewingPermission && <Spinner size="sm" />}
                 <span>Confirm Rejection</span>
               </button>
             </div>

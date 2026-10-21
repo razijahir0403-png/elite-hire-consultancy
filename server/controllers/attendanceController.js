@@ -1,6 +1,7 @@
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const LeaveRequest = require('../models/LeaveRequest');
+const PermissionRequest = require('../models/PermissionRequest');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const moment = require('moment-timezone');
@@ -180,7 +181,9 @@ const getHistory = asyncHandler(async (req, res) => {
   // Strictly enforce user's own email if not admin
   const queryEmail = isAdmin ? requestedEmail : authUserEmail;
 
-  const [records, leaveRequests] = await Promise.all([
+  const monthKey = `${y}-${String(m).padStart(2, '0')}`;
+
+  const [records, leaveRequests, permissionRequests] = await Promise.all([
     Attendance.find({
       employeeEmail: queryEmail,
       loginDate: { $in: datesToSearch }
@@ -191,7 +194,11 @@ const getHistory = asyncHandler(async (req, res) => {
         { requestDate: { $in: datesToSearch } },
         { datesCovered: { $in: datesToSearch } }
       ]
-    }).sort({ createdAt: -1 }).lean()
+    }).sort({ createdAt: -1 }).lean(),
+    PermissionRequest.find({
+      employeeEmail: queryEmail,
+      monthKey: monthKey
+    }).sort({ permissionDate: 1, createdAt: 1 }).lean()
   ]);
 
   const recordsMap = {};
@@ -216,6 +223,28 @@ const getHistory = asyncHandler(async (req, res) => {
     });
   });
 
+  // Calculate chronological approved permission hours against the 6-hour monthly allowance
+  let cumulativeApprovedHours = 0;
+  const permissionMap = {};
+  permissionRequests.forEach((pr) => {
+    if (pr.status === 'Approved') {
+      const remainingAllowance = Math.max(0, 6 - cumulativeApprovedHours);
+      const validCredited = Math.min(pr.totalHours, remainingAllowance);
+      cumulativeApprovedHours += pr.totalHours;
+      permissionMap[pr.permissionDate] = {
+        request: pr,
+        validApprovedHours: Math.round(validCredited * 100) / 100,
+      };
+    } else {
+      if (!permissionMap[pr.permissionDate]) {
+        permissionMap[pr.permissionDate] = {
+          request: pr,
+          validApprovedHours: 0,
+        };
+      }
+    }
+  });
+
   const generatedHistory = [];
   const formatTime = (dateObj) => dateObj ? moment(dateObj).tz('Asia/Kolkata').format('hh:mm A') : 'N/A';
   const todayKolkata = moment().tz('Asia/Kolkata').startOf('day');
@@ -228,25 +257,52 @@ const getHistory = asyncHandler(async (req, res) => {
     const isWeekend = dayName === 'Saturday' || dayName === 'Sunday';
     const currentDayMoment = current.clone().startOf('day');
     const isUpcoming = currentDayMoment.isSameOrAfter(todayKolkata);
+    const isToday = currentDayMoment.isSame(todayKolkata);
 
     const rec = recordsMap[dateStr];
     const leaveReq = leaveMap[dateStr];
+    const permInfo = permissionMap[dateStr];
 
     const hasActiveRequest = leaveReq && (leaveReq.status === 'Pending' || leaveReq.status === 'Approved');
     const isEligibleForLeave = isUpcoming && !isWeekend && !hasActiveRequest && !rec;
 
     if (rec) {
       const daySessions = rec.sessions || [];
-      
+      const actualWorkingSeconds = rec.totalWorkingSeconds || 0;
+      const actualHours = Math.round((actualWorkingSeconds / 3600) * 100) / 100;
+      const validPermHours = permInfo ? permInfo.validApprovedHours : 0;
+      const creditedHours = Math.round((actualHours + validPermHours) * 100) / 100;
+      const hasActiveSession = daySessions.some(s => !s.logoutTime);
+
+      // Business Rule: Credited Hours >= 9 => Present; Credited Hours < 9 => Loss of Pay
+      let status = 'Present';
+      if (creditedHours >= 9) {
+        status = 'Present';
+      } else {
+        if (!isUpcoming || (isToday && !hasActiveSession)) {
+          status = 'Loss of Pay';
+        } else if (isToday && hasActiveSession) {
+          status = 'Present';
+        }
+      }
+
+      let totalHoursDisplay = rec.totalWorkingHoursDisplay || '00:00:00';
+      if (validPermHours > 0) {
+        totalHoursDisplay = `${rec.totalWorkingHoursDisplay} (+${validPermHours}h Perm = ${creditedHours.toFixed(1)}h)`;
+      }
+
       generatedHistory.push({
         date: displayDate,
         rawDate: dateStr,
         day: dayName,
         loggedIn: formatTime(daySessions[0] ? daySessions[0].loginTime : null),
         loggedOut: formatTime(rec.lastLogout),
-        totalHours: rec.totalWorkingHoursDisplay || '00:00:00',
+        totalHours: totalHoursDisplay,
+        actualHours,
+        validPermHours,
+        creditedHours,
         workMode: rec.workMode,
-        status: rec.status,
+        status: status,
         sessions: daySessions.map(s => ({
           loginTime: formatTime(s.loginTime),
           endTime: formatTime(s.logoutTime),
@@ -265,7 +321,19 @@ const getHistory = asyncHandler(async (req, res) => {
           reviewedBy: leaveReq.reviewedBy,
           reviewedAt: leaveReq.reviewedAt,
           rejectionReason: leaveReq.rejectionReason || '',
-        } : null
+        } : null,
+        permissionRequest: permInfo ? {
+          id: permInfo.request._id,
+          requestId: permInfo.request.requestId,
+          type: permInfo.request.permissionType,
+          fromTime: permInfo.request.fromTime,
+          toTime: permInfo.request.toTime,
+          totalHours: permInfo.request.totalHours,
+          validCreditedHours: permInfo.validApprovedHours,
+          status: permInfo.request.status,
+          reason: permInfo.request.reason || '',
+          adminRemarks: permInfo.request.adminRemarks || '',
+        } : null,
       });
     } else {
       let status = 'Absent';
@@ -273,13 +341,19 @@ const getHistory = asyncHandler(async (req, res) => {
         status = 'Week Off';
       } else if (leaveReq && leaveReq.status === 'Approved') {
         status = leaveReq.requestType; // 'CL', 'SL', or 'OD'
+      } else if (permInfo && permInfo.validApprovedHours >= 9) {
+        status = 'Present';
       } else if (isUpcoming) {
         status = '--';
+      } else {
+        status = 'Loss of Pay';
       }
 
       let totalHoursDisplay = status;
       if (leaveReq && leaveReq.status === 'Approved') {
         totalHoursDisplay = leaveReq.requestType; // 'CL', 'SL', or 'OD'
+      } else if (permInfo && permInfo.validApprovedHours > 0) {
+        totalHoursDisplay = `${permInfo.validApprovedHours}h Perm`;
       }
 
       generatedHistory.push({
@@ -289,6 +363,9 @@ const getHistory = asyncHandler(async (req, res) => {
         loggedIn: 'N/A',
         loggedOut: 'N/A',
         totalHours: totalHoursDisplay,
+        actualHours: 0,
+        validPermHours: permInfo ? permInfo.validApprovedHours : 0,
+        creditedHours: permInfo ? permInfo.validApprovedHours : 0,
         workMode: '--',
         status: status,
         sessions: [],
@@ -304,7 +381,19 @@ const getHistory = asyncHandler(async (req, res) => {
           reviewedBy: leaveReq.reviewedBy,
           reviewedAt: leaveReq.reviewedAt,
           rejectionReason: leaveReq.rejectionReason || '',
-        } : null
+        } : null,
+        permissionRequest: permInfo ? {
+          id: permInfo.request._id,
+          requestId: permInfo.request.requestId,
+          type: permInfo.request.permissionType,
+          fromTime: permInfo.request.fromTime,
+          toTime: permInfo.request.toTime,
+          totalHours: permInfo.request.totalHours,
+          validCreditedHours: permInfo.validApprovedHours,
+          status: permInfo.request.status,
+          reason: permInfo.request.reason || '',
+          adminRemarks: permInfo.request.adminRemarks || '',
+        } : null,
       });
     }
   }

@@ -15,6 +15,7 @@ const Users = React.lazy(() => import('../pages/Users'));
 const ReceivedInfo = React.lazy(() => import('../pages/ReceivedInfo'));
 const Payments = React.lazy(() => import('../pages/Payments'));
 const Employees = React.lazy(() => import('../pages/Employees'));
+const Chat = React.lazy(() => import('../pages/Chat'));
 
 const AppRoutes = () => (
   <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Spinner /></div>}>
@@ -39,6 +40,7 @@ const AppRoutes = () => (
         <Route path="received-info" element={<ReceivedInfo />} />
         <Route path="payments" element={<Payments />} />
         <Route path="employees" element={<Employees />} />
+        <Route path="chat" element={<Chat />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
 

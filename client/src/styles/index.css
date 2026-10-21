@@ -264,3 +264,66 @@
   vertical-align: top;
   min-width: 220px;
 }
+
+/* ========================================================================= */
+/* GLOBAL FOCUS NORMALIZATION: NO UNWANTED BLACK OUTLINES                    */
+/* Removes black border/outline & default focus rings on click, focus, type  */
+/* Preserves intentional application green borders (#00B96B) and layout      */
+/* ========================================================================= */
+
+input,
+textarea,
+select,
+button,
+[contenteditable="true"] {
+  outline: none;
+}
+
+input:focus,
+input:focus-visible,
+input:active,
+textarea:focus,
+textarea:focus-visible,
+textarea:active,
+select:focus,
+select:focus-visible,
+select:active,
+[contenteditable="true"]:focus,
+[contenteditable="true"]:focus-visible,
+[contenteditable="true"]:active {
+  outline: none !important;
+  outline-color: transparent !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  box-shadow: none !important;
+}
+
+/* Preserve the application's existing green border (#00B96B) when bordered inputs are focused */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not(.border-none):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not(.border-none):focus-visible,
+textarea:not(.border-none):focus,
+textarea:not(.border-none):focus-visible,
+select:not(.border-none):focus,
+select:not(.border-none):focus-visible {
+  border-color: #00B96B;
+}
+
+/* Ensure borderless inputs inside search bars/chat message containers remain borderless */
+input.border-none,
+input[class*="border-none"],
+textarea.border-none,
+textarea[class*="border-none"] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Checkbox and radio focus states */
+input[type="checkbox"]:focus,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus,
+input[type="radio"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+

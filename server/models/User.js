@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    chatClearedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

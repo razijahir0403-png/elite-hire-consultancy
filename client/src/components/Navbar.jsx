@@ -24,6 +24,7 @@ const Navbar = ({ onMenuClick }) => {
     if (path === '/dashboard/users') return 'System Users';
     if (path === '/dashboard/payments') return 'Payments Info';
     if (path === '/dashboard/employees') return isAdmin ? 'Employees Info' : 'About';
+    if (path === '/dashboard/chat') return 'Internal Team Chat';
     return 'Recruitix Platform';
   };
 

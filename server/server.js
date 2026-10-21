@@ -1,3 +1,4 @@
+const http = require('http');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -12,6 +13,7 @@ const seedDB = require('./utils/seeder');
 
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const activityLogger = require('./middleware/activityLogger');
+const { initSocket } = require('./socket');
 
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -26,6 +28,8 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const permissionRoutes = require('./routes/permissionRoutes');
 
 const cron = require('node-cron');
 const { autoLogoutCron } = require('./controllers/attendanceController');
@@ -104,6 +108,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/permission', permissionRoutes);
 
 /* -------------------------- SERVE FRONTEND --------------------------- */
 
@@ -145,7 +151,12 @@ const startServer = async () => {
     // Optional Seeder
     await seedDB();
 
-    const server = app.listen(port, () => {
+    const server = http.createServer(app);
+    const io = initSocket(server);
+    app.set('io', io);
+
+    server.listen(port, () => {
+      console.log(`🚀 Server running on port ${port} [${nodeEnv}] with Socket.IO`);
     });
 
     // Initialize Auto-Logout Cron Job to run every midnight (00:00:00) IST
