@@ -16,6 +16,7 @@ const ReceivedInfo = React.lazy(() => import('../pages/ReceivedInfo'));
 const Payments = React.lazy(() => import('../pages/Payments'));
 const Employees = React.lazy(() => import('../pages/Employees'));
 const Chat = React.lazy(() => import('../pages/Chat'));
+const SourcingAuditTrails = React.lazy(() => import('../pages/SourcingAuditTrails'));
 
 const AppRoutes = () => (
   <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Spinner /></div>}>
@@ -35,6 +36,8 @@ const AppRoutes = () => (
         <Route path="naukri" element={<Naukri />} />
         <Route path="indeed" element={<Indeed />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="analytics/:id/audit-trails" element={<SourcingAuditTrails />} />
+        <Route path="sourcing-audit-trails/:id" element={<SourcingAuditTrails />} />
         <Route path="clients" element={<Clients />} />
         <Route path="users" element={<Users />} />
         <Route path="received-info" element={<ReceivedInfo />} />

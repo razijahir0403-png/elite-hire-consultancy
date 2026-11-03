@@ -111,6 +111,20 @@ const requestInfoValidators = {
       .withMessage('Status must be a valid numeric code'),
     body('description').trim().notEmpty().withMessage('Description is required'),
   ],
+  updateCrStatus: [
+    param('id').isMongoId().withMessage('Valid record id is required'),
+    body('crStatus')
+      .optional({ values: 'null' })
+      .custom((val) => {
+        if (val === null || val === undefined || val === '') return true;
+        const num = Number(val);
+        if (isNaN(num) || !Number.isInteger(num) || num < 1 || num > 10) {
+          throw new Error('CR Status must be an integer between 1 and 10');
+        }
+        return true;
+      }),
+    body('remarks').optional().trim(),
+  ],
   idParam: [param('id').isMongoId().withMessage('Valid record id is required')],
   listQuery: [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),

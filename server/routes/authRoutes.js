@@ -8,6 +8,9 @@ const validate = require('../middleware/validate');
 
 router.post('/register', authValidators.register, validate, registerUser);
 router.post('/login', authValidators.login, validate, loginUser);
+router.get('/me', protect, (req, res) => {
+  res.json({ success: true, user: req.user });
+});
 
 router.get('/users', protect, adminOnly, getAllUsers);
 router.put('/users/:id/approve', protect, adminOnly, userValidators.approveUser, validate, approveUser);

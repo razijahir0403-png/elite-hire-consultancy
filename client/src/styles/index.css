@@ -218,35 +218,63 @@
   background: #07566A;
 }
 
-.responsive-table-container table {
+.responsive-table-container table,
+table.border-collapse,
+.overflow-x-auto > table {
   width: max-content;
   min-width: 100%;
-  border-collapse: separate;
+  border-collapse: collapse !important;
   border-spacing: 0;
+  border: 1px solid #D8E9E2 !important;
 }
 
-.responsive-table-container th {
+.responsive-table-container thead tr,
+table.border-collapse thead tr,
+.overflow-x-auto > table thead tr {
+  border-bottom: 2px solid #00B96B !important;
+}
+
+.responsive-table-container th,
+table.border-collapse th,
+.overflow-x-auto > table th {
   background-color: #07566A;
   color: #FFFFFF;
   font-weight: 800;
   white-space: nowrap;
   letter-spacing: 0.05em;
+  border: 1px solid #0A657D !important;
+  border-bottom: 2px solid #00B96B !important;
 }
 
-.responsive-table-container td {
+.responsive-table-container tbody tr,
+table.border-collapse tbody tr,
+.overflow-x-auto > table tbody tr {
+  border-bottom: 1px solid #D8E9E2 !important;
+}
+
+.responsive-table-container td,
+table.border-collapse td,
+.overflow-x-auto > table td {
   background-color: #FFFFFF;
   vertical-align: middle;
+  border: 1px solid #D8E9E2 !important;
 }
 
-.responsive-table-container tbody tr:hover td {
+.responsive-table-container tbody tr:hover td,
+table.border-collapse tbody tr:hover td,
+.overflow-x-auto > table tbody tr:hover td {
   background-color: #D5F5E7 !important;
 }
 
-.responsive-table-container tbody tr.warning-row td {
+.responsive-table-container tbody tr.warning-row td,
+table.border-collapse tbody tr.warning-row td,
+.overflow-x-auto > table tbody tr.warning-row td {
   background-color: #FFFDF0;
 }
 
-.responsive-table-container tbody tr.warning-row:hover td {
+.responsive-table-container tbody tr.warning-row:hover td,
+table.border-collapse tbody tr.warning-row:hover td,
+.overflow-x-auto > table tbody tr.warning-row:hover td {
   background-color: #FFF8D6 !important;
 }
 

@@ -40,6 +40,41 @@ const getStatusHistory = asyncHandler(async (req, res) => {
   res.json(history);
 });
 
+const uploadRequestLetter = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.uploadRequestLetter(req.params.id, req.file, req.user.name);
+  res.json(record);
+});
+
+const uploadUrlLetter = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.uploadUrlLetter(req.params.id, req.file, req.user.name);
+  res.json(record);
+});
+
+const uploadCompanyProfile = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.uploadCompanyProfile(req.params.id, req.file, req.user.name);
+  res.json(record);
+});
+
+const updateConditions = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.updateConditions(req.params.id, req.body, req.user.name);
+  res.json(record);
+});
+
+const updateRemarks = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.updateRemarks(req.params.id, req.body.remarks, req.user.name);
+  res.json(record);
+});
+
+const updateCrStatus = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.updateCrStatus(
+    req.params.id,
+    req.body,
+    req.user.name,
+    req.file
+  );
+  res.json(record);
+});
+
 module.exports = {
   getRequestInfos,
   getRequestInfo,
@@ -48,4 +83,10 @@ module.exports = {
   deleteRequestInfo,
   updateStatus,
   getStatusHistory,
+  uploadRequestLetter,
+  uploadUrlLetter,
+  uploadCompanyProfile,
+  updateConditions,
+  updateRemarks,
+  updateCrStatus,
 };

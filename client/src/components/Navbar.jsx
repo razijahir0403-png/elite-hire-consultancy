@@ -18,6 +18,7 @@ const Navbar = ({ onMenuClick }) => {
     if (path === '/dashboard') return 'Overview Dashboard';
     if (path === '/dashboard/naukri') return 'Naukri Integration';
     if (path === '/dashboard/indeed') return 'Indeed Integration';
+    if (path.includes('audit-trails') || path.includes('sourcing-audit-trails')) return 'Sourcing Audit Trails';
     if (path === '/dashboard/analytics') return 'Analytics Info';
     if (path === '/dashboard/clients') return 'Data Received';
     if (path === '/dashboard/received-info') return 'Received Info';

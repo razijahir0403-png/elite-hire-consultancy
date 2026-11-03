@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   Search,
@@ -6,7 +7,6 @@ import {
   Edit2,
   Trash2,
   History,
-  CheckSquare,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -46,6 +46,7 @@ const Analytics = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   // Sorting state
   const [sortBy, setSortBy] = useState('updatedOn');
@@ -53,14 +54,10 @@ const Analytics = () => {
 
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
-  const [historyList, setHistoryList] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Candidate input form state
   const [formData, setFormData] = useState({
@@ -76,12 +73,6 @@ const Analytics = () => {
     description: '',
   });
   const [formErrors, setFormErrors] = useState({});
-
-  // Status updating form state
-  const [statusForm, setStatusForm] = useState({
-    status: '',
-    description: ''
-  });
 
   // Fetch list of records from backend API
   const fetchRecords = async () => {
@@ -113,6 +104,17 @@ const Analytics = () => {
   useEffect(() => {
     fetchRecords();
   }, [page, limit, statusFilter, ageFilter, locationFilter, sortBy, sortOrder]);
+
+  // Listen for audit trail updates from sidebar Update Status
+  useEffect(() => {
+    const handleAuditTrailUpdate = () => {
+      fetchRecords();
+    };
+    window.addEventListener('audit-trail-updated', handleAuditTrailUpdate);
+    return () => {
+      window.removeEventListener('audit-trail-updated', handleAuditTrailUpdate);
+    };
+  }, []);
 
   // Handle Search submit
   const handleSearchSubmit = (e) => {
@@ -317,46 +319,9 @@ const Analytics = () => {
     }
   };
 
-  // Open Update Status Modal
-  const handleUpdateStatusClick = (record) => {
-    setActiveRecord(record);
-    setStatusForm({
-      status: record.status ?? '',
-      description: ''
-    });
-    setIsStatusOpen(true);
-  };
-
-  // Submit new candidate status
-  const handleStatusSubmit = async (e) => {
-    e.preventDefault();
-    if (!statusForm.description.trim()) {
-      toast.error('Please specify a description or reasoning for status update');
-      return;
-    }
-    try {
-      await api.put(`/analytics/update-status/${activeRecord._id}`, statusForm);
-      toast.success('Status updated!');
-      setIsStatusOpen(false);
-      fetchRecords();
-    } catch (error) {
-      toast.error('Failed to update status.');
-    }
-  };
-
-  // Open Status History audit trail modal
-  const handleHistoryClick = async (record) => {
-    setActiveRecord(record);
-    setHistoryLoading(true);
-    setIsHistoryOpen(true);
-    try {
-      const { data } = await api.get(`/analytics/history/${record._id}`);
-      setHistoryList(data);
-    } catch (error) {
-      toast.error('Could not fetch status history.');
-    } finally {
-      setHistoryLoading(false);
-    }
+  // Navigate to dedicated Sourcing Audit Trails page
+  const handleShowAuditTrails = (record) => {
+    navigate(`/dashboard/analytics/${record._id}/audit-trails`, { state: { record } });
   };
 
   return (
@@ -364,7 +329,7 @@ const Analytics = () => {
       {/* Top action section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Consultancy Sourcing Log</h1>
+          <h1 className="text-xl font-bold text-slate-900"> Sourcing Log</h1>
           <p className="text-xs text-slate-500">Configure parameters, verify candidates, and track action audit trails</p>
         </div>
         <button
@@ -575,17 +540,9 @@ const Analytics = () => {
                             <Trash2 size={13} />
                           </button>
                         )}
-                        {/* Update Status Trigger */}
+                        {/* Audit Trail */}
                         <button
-                          onClick={() => handleUpdateStatusClick(r)}
-                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all text-slate-500"
-                          title="Update Workflow Status"
-                        >
-                          <CheckSquare size={13} />
-                        </button>
-                        {/* Audit Trail Trail */}
-                        <button
-                          onClick={() => handleHistoryClick(r)}
+                          onClick={() => handleShowAuditTrails(r)}
                           className="p-1.5 bg-slate-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all text-slate-500"
                           title="Show Sourcing Audit Trails"
                         >
@@ -787,102 +744,6 @@ const Analytics = () => {
         </form>
       </Modal>
 
-      {/* 2. UPDATE STATUS MODAL */}
-      <Modal
-        isOpen={isStatusOpen}
-        onClose={() => setIsStatusOpen(false)}
-        title={`Update Status: ${activeRecord?.idnumber}`}
-      >
-        <form onSubmit={handleStatusSubmit} className="space-y-4 text-slate-800">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Select Sourcing Status</label>
-            <select
-              value={statusForm.status}
-              onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            >
-              <option value="">Select</option>
-              {recruitmentFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Workflow Notes / Reason *</label>
-            <textarea
-              rows={3}
-              value={statusForm.description}
-              onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
-            />
-          </div>
-
-          <div className="flex items-center space-x-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsStatusOpen(false)}
-              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              className="flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]"
-            >
-              Submit Update
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* 3. SHOW HISTORY AUDIT TRAIL MODAL */}
-      <Modal
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        title={`Audit Trail: ${activeRecord?.idnumber}`}
-        maxWidth="max-w-md"
-      >
-        {historyLoading ? (
-          <div className="py-12 flex items-center justify-center">
-            <Spinner />
-          </div>
-        ) : historyList.length === 0 ? (
-          <p className="text-center text-slate-400 text-xs py-8">No status transition log records found.</p>
-        ) : (
-          <div className="relative border-l-2 border-slate-200 pl-4 py-1.5 ml-3 space-y-6 text-slate-800">
-            {historyList.map((hist, idx) => (
-              <div key={hist._id || idx} className="relative">
-                {/* Node icon circle */}
-                <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full bg-brand-800 border border-white shadow-sm" />
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <StatusBadge status={hist.status} type="recruitment" />
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {formatDateTimeDDMMYYYY(hist.updatedOn)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
-                    {hist.description}
-                  </p>
-                  <div className="text-[10px] text-slate-500 font-medium">
-                    Updated by: <span className="text-slate-700 font-bold">{hist.updatedBy}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="mt-6 pt-3 border-t border-slate-100 flex justify-end">
-          <button
-            onClick={() => setIsHistoryOpen(false)}
-            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all shadow-sm"
-          >
-            Dismiss
-          </button>
-        </div>
-      </Modal>
 
       {/* 4. CONFIRM DELETE MODAL */}
       <Modal

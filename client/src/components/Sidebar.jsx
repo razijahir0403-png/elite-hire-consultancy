@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
 import { useChat } from '../context/ChatContext';
 import {
@@ -12,17 +13,84 @@ import {
   Users as UsersIcon,
   DollarSign,
   Briefcase,
-  MessageSquare
+  MessageSquare,
+  RotateCw,
+  Check
 } from 'lucide-react';
 import rasLogo from '../assets/ras.jpeg';
 import Modal from './Modal';
 import ThreeBarLogo from './ThreeBarLogo';
+import api from '../api';
+import { recruitmentFilterOptions, getStatusLabel } from '../utils/statusMaster';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { logout, endSession, user, isAdmin } = useAuth();
   const { totalUnread } = useChat();
   const location = useLocation();
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // Detect if on the Audit Trail screen and extract the candidate record ID
+  const auditTrailMatch = location.pathname.match(
+    /(?:\/analytics\/|\/sourcing-audit-trails\/)([^\/]+)(?:\/audit-trails)?/
+  );
+  const auditRecordId = auditTrailMatch ? auditTrailMatch[1] : null;
+  const isAuditTrailScreen = Boolean(
+    auditRecordId && (location.pathname.includes('/audit-trails') || location.pathname.includes('/sourcing-audit-trails'))
+  );
+
+  // Update Status form state in sidebar
+  const [statusType, setStatusType] = useState('');
+  const [comment, setComment] = useState('');
+  const [savingStatus, setSavingStatus] = useState(false);
+
+  // Clear update status form when navigating away
+  useEffect(() => {
+    if (!isAuditTrailScreen) {
+      setStatusType('');
+      setComment('');
+      setSavingStatus(false);
+    }
+  }, [isAuditTrailScreen, location.pathname]);
+
+  const handleSaveStatus = async (e) => {
+    if (e) e.preventDefault();
+    if (statusType === '') {
+      toast.error('Please select a valid Status Type');
+      return;
+    }
+    if (!comment.trim()) {
+      toast.error('Please enter a comment before saving');
+      return;
+    }
+    if (!auditRecordId) {
+      toast.error('Audit trail record ID not found');
+      return;
+    }
+
+    setSavingStatus(true);
+    try {
+      const numericStatus = Number(statusType);
+      const { data } = await api.put(`/analytics/update-status/${auditRecordId}`, {
+        status: numericStatus,
+        description: comment.trim(),
+      });
+
+      // Dispatch event to refresh Audit Trail History and details immediately
+      window.dispatchEvent(new CustomEvent('audit-trail-updated', { detail: data }));
+
+      // Clear textarea and reset dropdown after successful save
+      setComment('');
+      setStatusType('');
+
+      const label = getStatusLabel('recruitment', numericStatus);
+      toast.success(`Workflow Status (${label}) and audit trail recorded successfully!`);
+    } catch (err) {
+      console.error('Update status error:', err);
+      toast.error(err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
   const navItems = [
     {
@@ -157,41 +225,133 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           </NavLink>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-3.5 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+        {/* Navigation Menu / Update Status Section */}
+        <nav className="flex-1 px-3.5 py-4 overflow-y-auto">
+          {isAuditTrailScreen ? (
+            <div className="bg-white p-3.5 rounded-2xl border border-[#D8E9E2] shadow-2xs space-y-3.5 text-[#07566A]">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-[#00B96B]" />
+                  <span className="text-xs font-black uppercase tracking-wider text-[#07566A]">
+                    Update Status
+                  </span>
+                </div>
+                {statusType !== '' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00B96B] animate-pulse" />
+                )}
+              </div>
 
-            return (
-              <NavLink
-                key={item.name}
-                to={item.path}
-                onClick={() => {
-                  if (window.innerWidth < 1024) toggleSidebar();
-                }}
-                className={({ isActive }) =>
-                  `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 group ${
-                    isActive
-                      ? 'bg-[#D5F5E7] text-[#07566A] border-l-4 border-[#00B96B] shadow-xs'
-                      : 'text-[#526B70] hover:bg-[#D5F5E7]/70 hover:text-[#07566A]'
-                  }`
-                }
-                end={item.exact}
-              >
-                <Icon
-                  size={17}
-                  className={`transition-colors ${
-                    isActive ? 'text-[#00B96B]' : 'text-[#526B70] group-hover:text-[#07566A]'
+              {/* Status Type Dropdown */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Status Type
+                </label>
+                <select
+                  value={statusType}
+                  onChange={(e) => setStatusType(e.target.value)}
+                  className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-[#00B96B] focus:ring-1 focus:ring-[#00B96B]"
+                >
+                  <option value="">Select Workflow Status</option>
+                  {recruitmentFilterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {statusType !== '' && (
+                  <div className="pt-0.5">
+                    <span className="text-[10px] text-emerald-700 bg-[#D9FFF0] px-2 py-0.5 rounded-md border border-[#00D98B]/30 font-bold inline-block truncate max-w-full">
+                      {getStatusLabel('recruitment', Number(statusType))}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Comment Session Textarea */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Comment Session
+                </label>
+                <textarea
+                  rows={4}
+                  disabled={statusType === '' || savingStatus}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder={
+                    statusType !== ''
+                      ? `Enter remarks for ${getStatusLabel('recruitment', Number(statusType))}...`
+                      : 'Select a Status Type to enable comments...'
+                  }
+                  className={`w-full px-2.5 py-2 rounded-xl text-xs transition-all border leading-relaxed ${
+                    statusType !== ''
+                      ? 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00B96B] focus:ring-1 focus:ring-[#00B96B]'
+                      : 'bg-slate-100/70 border-slate-200 text-slate-400 placeholder-slate-400 cursor-not-allowed resize-none'
                   }`}
                 />
-                <span className="truncate">{item.name}</span>
-                {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#00B96B]" />
+              </div>
+
+              {/* Save Button */}
+              <button
+                type="button"
+                disabled={statusType === '' || !comment.trim() || savingStatus}
+                onClick={handleSaveStatus}
+                className={`w-full py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-2 transition-all shadow-xs ${
+                  statusType !== '' && comment.trim() && !savingStatus
+                    ? 'bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] shadow-[0_4px_14px_rgba(0,217,139,0.3)] hover:shadow-[0_6px_18px_rgba(0,217,139,0.4)] active:scale-[0.98] cursor-pointer'
+                    : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {savingStatus ? (
+                  <>
+                    <RotateCw size={14} className="animate-spin text-[#00B96B]" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} />
+                    <span>Save</span>
+                  </>
                 )}
-              </NavLink>
-            );
-          })}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+
+                return (
+                  <NavLink
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => {
+                      if (window.innerWidth < 1024) toggleSidebar();
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 group ${
+                        isActive
+                          ? 'bg-[#D5F5E7] text-[#07566A] border-l-4 border-[#00B96B] shadow-xs'
+                          : 'text-[#526B70] hover:bg-[#D5F5E7]/70 hover:text-[#07566A]'
+                      }`
+                    }
+                    end={item.exact}
+                  >
+                    <Icon
+                      size={17}
+                      className={`transition-colors ${
+                        isActive ? 'text-[#00B96B]' : 'text-[#526B70] group-hover:text-[#07566A]'
+                      }`}
+                    />
+                    <span className="truncate">{item.name}</span>
+                    {isActive && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#00B96B]" />
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         {/* Brand Mini Animated Mascot Footer */}

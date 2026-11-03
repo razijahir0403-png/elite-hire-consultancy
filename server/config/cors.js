@@ -1,24 +1,26 @@
 const getAllowedOrigins = () => {
   const fromEnv = process.env.CLIENT_URL || process.env.CORS_ORIGIN;
+  const origins = fromEnv
+    ? fromEnv.split(',').map((origin) => origin.trim()).filter(Boolean)
+    : [];
 
-  if (fromEnv) {
-    return fromEnv
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean);
-  }
+  // Always permit local development origins
+  const localOrigins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:5000',
+  ];
 
-  // Development fallback
-  if (process.env.NODE_ENV !== 'production') {
-    return [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-    ];
-  }
+  localOrigins.forEach((orig) => {
+    if (!origins.includes(orig)) {
+      origins.push(orig);
+    }
+  });
 
-  return [];
+  return origins;
 };
 
 const allowedOrigins = getAllowedOrigins();

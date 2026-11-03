@@ -152,11 +152,10 @@ const recordLogout = asyncHandler(async (req, res) => {
 // 4. Get History
 const getHistory = asyncHandler(async (req, res) => {
   const { email } = req.params;
-  const { month, year } = req.query;
-
-  if (!month || !year) {
-    throw new AppError('Month and Year are required', 400);
-  }
+  const { month, year } = req.query || {};
+  const now = moment().tz('Asia/Kolkata');
+  const m = month ? parseInt(month, 10) : (now.month() + 1);
+  const y = year ? parseInt(year, 10) : now.year();
 
   const isAdmin = isUserAdmin(req.user);
   const requestedEmail = (email || '').trim().toLowerCase();
@@ -166,9 +165,6 @@ const getHistory = asyncHandler(async (req, res) => {
   if (!isAdmin && requestedEmail !== authUserEmail) {
     throw new AppError('Access denied. You can only view your own attendance history.', 403);
   }
-
-  const m = parseInt(month, 10);
-  const y = parseInt(year, 10);
 
   const startDate = moment.tz(`${y}-${m}-01`, 'YYYY-M-DD', 'Asia/Kolkata');
   const daysInMonth = startDate.daysInMonth();

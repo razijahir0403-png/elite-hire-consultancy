@@ -177,9 +177,13 @@ const startServer = async () => {
       process.exit(1);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, startServer };
