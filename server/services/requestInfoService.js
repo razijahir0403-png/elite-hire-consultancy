@@ -1,4 +1,11 @@
+const fs = require('fs');
+const path = require('path');
 const RequestInfo = require('../models/RequestInfo');
+const {
+  resolveAnalyticsDocumentPath,
+  buildContentDisposition,
+  getMimeType,
+} = require('../utils/analyticsDocumentPaths');
 const AppError = require('../utils/AppError');
 const {
   RECRUITMENT_STATUS,
@@ -637,6 +644,75 @@ const updateCrStatus = async (id, payload, editorName, file) => {
   return normalizeRequestRecord(saved);
 };
 
+const streamAnalyticsDocument = async (id, docType, res, { download = false } = {}) => {
+  const record = await RequestInfo.findById(id).lean();
+  if (!record) {
+    throw new AppError('Analytics record not found', 404);
+  }
+
+  const type = String(docType || '').toLowerCase().replace(/[-_]/g, '');
+  let docObj = null;
+  let defaultName = 'document';
+
+  if (type === 'requestletter') {
+    docObj = record.requestLetter;
+    defaultName = 'request-letter';
+  } else if (type === 'urlletter') {
+    docObj = record.urlLetter;
+    defaultName = 'url-letter';
+  } else if (type === 'companyprofile') {
+    docObj = record.companyProfile;
+    defaultName = 'company-profile';
+  } else {
+    throw new AppError('Invalid document type requested', 400);
+  }
+
+  if (!docObj || (!docObj.path && !docObj.fileUrl)) {
+    throw new AppError(`No ${docType} document found for this record`, 404);
+  }
+
+  const storedPath = docObj.path || docObj.fileUrl;
+  const absolutePath = await resolveAnalyticsDocumentPath(storedPath, {
+    id: record._id?.toString(),
+    docType,
+  });
+
+  if (!absolutePath) {
+    throw new AppError('Document file not found on server', 404);
+  }
+
+  const ext = path.extname(absolutePath);
+  const filename = docObj.fileName || docObj.originalName || docObj.name || `${defaultName}${ext}`;
+  const mimeType = getMimeType(filename, docObj.fileType || 'application/octet-stream');
+
+  const stat = fs.statSync(absolutePath);
+
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Content-Disposition', buildContentDisposition(filename, download));
+  res.setHeader('Content-Length', stat.size);
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  return new Promise((resolve, reject) => {
+    const fileStream = fs.createReadStream(absolutePath);
+    fileStream.on('error', (streamError) => {
+      console.error(`[AnalyticsDocument] Failed to read ${docType} document`, {
+        id: record._id?.toString(),
+        storedPath,
+        absolutePath,
+        error: streamError.message,
+      });
+      if (!res.headersSent) {
+        reject(new AppError('Failed to read document', 500));
+      }
+    });
+    res.on('finish', resolve);
+    res.on('error', reject);
+    fileStream.pipe(res);
+  });
+};
+
 module.exports = {
   getRequestInfos,
   getRequestInfoById,
@@ -651,4 +727,5 @@ module.exports = {
   updateConditions,
   updateRemarks,
   updateCrStatus,
+  streamAnalyticsDocument,
 };

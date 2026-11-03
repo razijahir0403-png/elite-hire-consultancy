@@ -45,6 +45,11 @@ import {
   getCrStatusKey,
 } from '../utils/crStatusMaster';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY, formatDeadlineDate } from '../utils/dateFormatter';
+import {
+  viewAnalyticsDocument,
+  downloadAnalyticsDocument,
+  getAnalyticsDocumentUrl,
+} from '../utils/analyticsDocument';
 
 const CONDITIONS_LIST = CR_STATUS_OPTIONS;
 
@@ -1120,7 +1125,15 @@ const SourcingAuditTrails = () => {
 
                 <div className="flex items-center space-x-1.5 flex-shrink-0">
                   <a
-                    href={record.requestLetter.fileUrl || record.requestLetter.path}
+                    href={getAnalyticsDocumentUrl(record?._id, 'request-letter')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      viewAnalyticsDocument(
+                        record?._id,
+                        'request-letter',
+                        record.requestLetter.fileName || record.requestLetter.name
+                      );
+                    }}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 bg-white border border-slate-200 hover:bg-[#D5F5E7] text-[#07566A] rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
@@ -1129,15 +1142,21 @@ const SourcingAuditTrails = () => {
                     <Eye size={14} />
                     <span className="hidden sm:inline">View</span>
                   </a>
-                  <a
-                    href={record.requestLetter.fileUrl || record.requestLetter.path}
-                    download={record.requestLetter.fileName || record.requestLetter.name || 'Request-Letter'}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadAnalyticsDocument(
+                        record?._id,
+                        'request-letter',
+                        record.requestLetter.fileName || record.requestLetter.name || 'Request-Letter'
+                      )
+                    }
                     className="p-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
                     title="Download Document"
                   >
                     <Download size={14} />
                     <span className="hidden sm:inline">Download</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1251,7 +1270,15 @@ const SourcingAuditTrails = () => {
 
                 <div className="flex items-center space-x-1.5 flex-shrink-0">
                   <a
-                    href={record.urlLetter.fileUrl || record.urlLetter.path}
+                    href={getAnalyticsDocumentUrl(record?._id, 'url-letter')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      viewAnalyticsDocument(
+                        record?._id,
+                        'url-letter',
+                        record.urlLetter.fileName || record.urlLetter.name
+                      );
+                    }}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 bg-white border border-slate-200 hover:bg-[#D5F5E7] text-[#07566A] rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
@@ -1260,15 +1287,21 @@ const SourcingAuditTrails = () => {
                     <Eye size={14} />
                     <span className="hidden sm:inline">View</span>
                   </a>
-                  <a
-                    href={record.urlLetter.fileUrl || record.urlLetter.path}
-                    download={record.urlLetter.fileName || record.urlLetter.name || 'URL-Letter'}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadAnalyticsDocument(
+                        record?._id,
+                        'url-letter',
+                        record.urlLetter.fileName || record.urlLetter.name || 'URL-Letter'
+                      )
+                    }
                     className="p-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
                     title="Download Document"
                   >
                     <Download size={14} />
                     <span className="hidden sm:inline">Download</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1382,7 +1415,15 @@ const SourcingAuditTrails = () => {
 
                 <div className="flex items-center space-x-1.5 flex-shrink-0">
                   <a
-                    href={record.companyProfile.fileUrl || record.companyProfile.path}
+                    href={getAnalyticsDocumentUrl(record?._id, 'company-profile')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      viewAnalyticsDocument(
+                        record?._id,
+                        'company-profile',
+                        record.companyProfile.fileName || record.companyProfile.name
+                      );
+                    }}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 bg-white border border-slate-200 hover:bg-[#D5F5E7] text-[#07566A] rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
@@ -1391,15 +1432,21 @@ const SourcingAuditTrails = () => {
                     <Eye size={14} />
                     <span className="hidden sm:inline">View</span>
                   </a>
-                  <a
-                    href={record.companyProfile.fileUrl || record.companyProfile.path}
-                    download={record.companyProfile.fileName || record.companyProfile.name || 'Company-Profile'}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadAnalyticsDocument(
+                        record?._id,
+                        'company-profile',
+                        record.companyProfile.fileName || record.companyProfile.name || 'Company-Profile'
+                      )
+                    }
                     className="p-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
                     title="Download Document"
                   >
                     <Download size={14} />
                     <span className="hidden sm:inline">Download</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             ) : (

@@ -14,4 +14,5 @@ module.exports = {
   updateConditions: requestInfoController.updateConditions,
   updateRemarks: requestInfoController.updateRemarks,
   updateCrStatus: requestInfoController.updateCrStatus,
+  streamAnalyticsDocument: requestInfoController.streamAnalyticsDocument,
 };

@@ -75,6 +75,12 @@ const updateCrStatus = asyncHandler(async (req, res) => {
   res.json(record);
 });
 
+const streamAnalyticsDocument = asyncHandler(async (req, res) => {
+  const download = req.query.download === '1' || req.query.download === 'true';
+  const docType = req.params.docType;
+  await requestInfoService.streamAnalyticsDocument(req.params.id, docType, res, { download });
+});
+
 module.exports = {
   getRequestInfos,
   getRequestInfo,
@@ -89,4 +95,5 @@ module.exports = {
   updateConditions,
   updateRemarks,
   updateCrStatus,
+  streamAnalyticsDocument,
 };

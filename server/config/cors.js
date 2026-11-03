@@ -64,6 +64,7 @@ const corsOptions = {
   exposedHeaders: [
     'Content-Length',
     'Content-Type',
+    'Content-Disposition',
   ],
 
   optionsSuccessStatus: 200,

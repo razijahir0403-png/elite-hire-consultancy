@@ -15,6 +15,7 @@ const {
   updateConditions,
   updateRemarks,
   updateCrStatus,
+  streamAnalyticsDocument,
 } = require('../controllers/analyticsController');
 const { requestInfoValidators } = require('../utils/validators');
 const validate = require('../middleware/validate');
@@ -51,6 +52,44 @@ router.post(
   requestInfoValidators.idParam,
   validate,
   uploadCompanyProfile
+);
+
+// Authenticated Document Streaming (View and Download)
+router.get(
+  '/:id/document/:docType',
+  requestInfoValidators.idParam,
+  validate,
+  streamAnalyticsDocument
+);
+
+router.get(
+  '/:id/request-letter/document',
+  requestInfoValidators.idParam,
+  validate,
+  (req, res, next) => {
+    req.params.docType = 'request-letter';
+    streamAnalyticsDocument(req, res, next);
+  }
+);
+
+router.get(
+  '/:id/url-letter/document',
+  requestInfoValidators.idParam,
+  validate,
+  (req, res, next) => {
+    req.params.docType = 'url-letter';
+    streamAnalyticsDocument(req, res, next);
+  }
+);
+
+router.get(
+  '/:id/company-profile/document',
+  requestInfoValidators.idParam,
+  validate,
+  (req, res, next) => {
+    req.params.docType = 'company-profile';
+    streamAnalyticsDocument(req, res, next);
+  }
 );
 
 router.put(

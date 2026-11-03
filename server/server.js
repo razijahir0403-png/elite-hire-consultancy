@@ -66,9 +66,23 @@ app.use(
   },
   express.static(uploadsRoot, {
     setHeaders(res, filePath) {
-      if (filePath.endsWith('.pdf')) {
-        res.setHeader('Content-Type', 'application/pdf');
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeMap = {
+        '.pdf': 'application/pdf',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.txt': 'text/plain; charset=utf-8',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+      if (mimeMap[ext]) {
+        res.setHeader('Content-Type', mimeMap[ext]);
       }
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     },
   })
 );
@@ -129,7 +143,7 @@ if (nodeEnv === 'production' && serveClient) {
   );
 
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }
 
