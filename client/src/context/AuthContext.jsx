@@ -39,16 +39,20 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login handler
-  const login = async (email, password, workMode) => {
+  const login = async (email, password) => {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', { email, password });
       
       // We set the token in axios immediately if possible, or wait until reload.
       // But we can just pass the auth header directly for this call:
-      await api.post('/attendance/login', { workMode }, {
-        headers: { Authorization: `Bearer ${data.token}` }
-      });
+      try {
+        await api.post('/attendance/login', {}, {
+          headers: { Authorization: `Bearer ${data.token}` }
+        });
+      } catch (attErr) {
+        console.warn('Attendance tracking notice:', attErr?.message);
+      }
 
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));

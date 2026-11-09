@@ -1033,7 +1033,6 @@ const Employees = () => {
                       <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Logged In</th>
                       <th className="px-5 py-3.5 whitespace-nowrap min-w-[130px]">Logged Out</th>
                       <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Total Hours</th>
-                      <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Work Mode</th>
                       <th className="px-5 py-3.5 whitespace-nowrap min-w-[120px]">Status</th>
                     </tr>
                   </thead>
@@ -1091,7 +1090,6 @@ const Employees = () => {
                               </div>
                             )}
                           </td>
-                          <td className="px-5 py-3 font-bold text-slate-600">{record.workMode}</td>
                           <td className="px-5 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border ${statusBadgeClass}`}>
                               {record.status}
@@ -3302,7 +3300,6 @@ const Employees = () => {
                   <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">Logged In</th>
                   <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">Logged Out</th>
                   <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Total Hours</th>
-                  <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Work Mode</th>
                   <th className="px-4 py-3 whitespace-nowrap min-w-[120px]">Status</th>
                 </tr>
               </thead>
@@ -3360,7 +3357,6 @@ const Employees = () => {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap min-w-[120px]">{record.workMode}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap min-w-[120px]">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border ${statusBadgeClass}`}>
                           {record.status}

@@ -1,3 +1,8 @@
+const dns = require('dns');
+
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+
 const http = require('http');
 const path = require('path');
 const express = require('express');
@@ -6,9 +11,10 @@ const compression = require('compression');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
 
-const connectDB = require('./config/db');
-const { corsOptions } = require('./config/cors');
 const { port, nodeEnv, serveClient, validateEnv, uploadsRoot } = require('./config/env');
+const { corsOptions } = require('./config/cors');
+const connectDB = require('./config/db');
+const { closeDB } = connectDB;
 const seedDB = require('./utils/seeder');
 
 const { notFound, errorHandler } = require('./middleware/errorHandler');
@@ -23,6 +29,7 @@ const activityLogRoutes = require('./routes/activityLogRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const receivedInfoRoutes = require('./routes/receivedInfoRoutes');
+const receivedInfoAuditRoutes = require('./routes/receivedInfoAuditRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
@@ -117,6 +124,7 @@ app.use('/api/activitylogs', activityLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/received-info', receivedInfoRoutes);
+app.use('/api/received-info-audit', receivedInfoAuditRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -169,6 +177,38 @@ const startServer = async () => {
     const io = initSocket(server);
     app.set('io', io);
 
+    let shuttingDown = false;
+
+    const shutdown = async (signal) => {
+      if (shuttingDown) {
+        return;
+      }
+      shuttingDown = true;
+      console.log(`${signal} received. Shutting down gracefully...`);
+
+      const forceExit = setTimeout(() => {
+        console.error('Graceful shutdown timed out. Forcing exit.');
+        process.exit(1);
+      }, 10000);
+      forceExit.unref();
+
+      server.close(async () => {
+        try {
+          if (io && typeof io.close === 'function') {
+            io.close();
+          }
+          await closeDB();
+          process.exit(0);
+        } catch (error) {
+          console.error('Error during shutdown:', error.message);
+          process.exit(1);
+        }
+      });
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+
     server.listen(port, () => {
       console.log(`🚀 Server running on port ${port} [${nodeEnv}] with Socket.IO`);
     });
@@ -191,7 +231,7 @@ const startServer = async () => {
       process.exit(1);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ Failed to start server:', error.message || error);
     process.exit(1);
   }
 };
@@ -200,4 +240,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, startServer };
+module.exports = { app, startServer };

@@ -5,10 +5,11 @@ export const CR_STATUS = {
   SENT_FOLLOWUP_MESSAGE: 4,
   VFP_COMPLETED: 5,
   DOC_VERIFIED: 6,
-  REQ_DOC_SUBMITTED: 7,
+  REQ_DOC_RECEIVED: 7,
   UR_REQUEST: 8,
   CANCELLED: 9,
   COMPLETED: 10,
+  PAYMENT_COMPLETED: 11,
 };
 
 export const CR_STATUS_MAP = {
@@ -18,10 +19,11 @@ export const CR_STATUS_MAP = {
   4: 'Sent Followup Message',
   5: 'VFP Completed',
   6: 'Doc Verified',
-  7: 'Req Doc Submitted',
+  7: 'Req Doc Received',
   8: 'UR-Request',
   9: 'Cancelled',
   10: 'Completed',
+  11: 'Payment Completed',
 };
 
 export const CR_KEY_TO_CODE = {
@@ -31,10 +33,11 @@ export const CR_KEY_TO_CODE = {
   sentFollowupMessage: 4,
   vfpCompleted: 5,
   docVerified: 6,
-  reqDocSubmitted: 7,
+  reqDocReceived: 7,
   urRequest: 8,
   cancelled: 9,
   completed: 10,
+  paymentCompleted: 11,
 };
 
 export const CR_CODE_TO_KEY = {
@@ -44,10 +47,11 @@ export const CR_CODE_TO_KEY = {
   4: 'sentFollowupMessage',
   5: 'vfpCompleted',
   6: 'docVerified',
-  7: 'reqDocSubmitted',
+  7: 'reqDocReceived',
   8: 'urRequest',
   9: 'cancelled',
   10: 'completed',
+  11: 'paymentCompleted',
 };
 
 export const CR_LABEL_TO_CODE = {
@@ -58,11 +62,13 @@ export const CR_LABEL_TO_CODE = {
   'sent followup message': 4,
   'vfp completed': 5,
   'doc verified': 6,
+  'req doc received': 7,
   'req doc submitted': 7,
   'ur-request': 8,
   'urrequest': 8,
   'cancelled': 9,
   'completed': 10,
+  'payment completed': 11,
 };
 
 export const CR_STATUS_OPTIONS = [
@@ -72,14 +78,15 @@ export const CR_STATUS_OPTIONS = [
   { value: 4, label: 'Sent Followup Message', key: 'sentFollowupMessage', desc: 'Follow-up notification forwarded' },
   { value: 5, label: 'VFP Completed', key: 'vfpCompleted', desc: 'Verification form process completed' },
   { value: 6, label: 'Doc Verified', key: 'docVerified', desc: 'Credentials verified' },
-  { value: 7, label: 'Req Doc Submitted', key: 'reqDocSubmitted', desc: 'Required documentation submitted' },
+  { value: 7, label: 'Req Doc Received', key: 'reqDocReceived', desc: 'Required documentation received' },
   { value: 8, label: 'UR-Request', key: 'urRequest', desc: 'Under review or university request initiated' },
   { value: 9, label: 'Cancelled', key: 'cancelled', desc: 'Sourcing action or pipeline status cancelled' },
   { value: 10, label: 'Completed', key: 'completed', desc: 'All requirements verified and fulfilled' },
+  { value: 11, label: 'Payment Completed', key: 'paymentCompleted', desc: 'Payment has been completed successfully' },
 ];
 
 /**
- * Safely convert any status input (number, string, label, condition key) to numeric code (1-10)
+ * Safely convert any status input (number, string, label, condition key) to numeric code (1-11)
  * Returns null if not mapped or invalid
  */
 export const toCrStatusCode = (input) => {
@@ -87,14 +94,14 @@ export const toCrStatusCode = (input) => {
     return null;
   }
 
-  // If already a valid number 1-10
-  if (typeof input === 'number' && Number.isInteger(input) && input >= 1 && input <= 10) {
+  // If already a valid number 1-11
+  if (typeof input === 'number' && Number.isInteger(input) && input >= 1 && input <= 11) {
     return input;
   }
 
   const str = String(input).trim();
   const num = parseInt(str, 10);
-  if (!isNaN(num) && Number.isInteger(num) && num >= 1 && num <= 10 && String(num) === str) {
+  if (!isNaN(num) && Number.isInteger(num) && num >= 1 && num <= 11 && String(num) === str) {
     return num;
   }
 

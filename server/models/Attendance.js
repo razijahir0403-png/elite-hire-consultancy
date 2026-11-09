@@ -20,8 +20,7 @@ const attendanceSchema = new mongoose.Schema(
     },
     workMode: {
       type: String,
-      enum: ['WFH', 'WFO'],
-      required: true
+      default: '--'
     },
     status: {
       type: String,

@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Recruitix Analytica Solution Brand Tokens
+        // Eleventis Brand Tokens
         ras: {
           teal: '#07566A',       // Deep Teal (headings, navigation, primary branding)
           'teal-dark': '#043845',
@@ -23,7 +23,7 @@ export default {
           sidebar: '#F4FBF8',    // Sidebar Background
           navbar: '#F4FBF8',     // Header/Navbar Background
           hover: '#D5F5E7',      // Hover Background
-          border: '#D8E9E2',     // Divider and Card Outlines
+          border: '#000000',     // Divider and Card Outlines
           sub: '#526B70',        // Secondary Text
           // Supporting accents (~5-10% visual weight)
           sky: '#38BDF8',
@@ -63,6 +63,12 @@ export default {
           900: '#07566A',        // Deep Teal primary headings & text
           950: '#043845',
         }
+      },
+      borderColor: {
+        DEFAULT: '#000000',
+      },
+      borderWidth: {
+        DEFAULT: '2px',
       },
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'Inter', 'Outfit', 'system-ui', 'sans-serif'],

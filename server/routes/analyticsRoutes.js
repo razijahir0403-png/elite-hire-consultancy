@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { param } = require('express-validator');
 const {
   getAnalytics,
   getAnalyticsById,
@@ -16,6 +17,7 @@ const {
   updateRemarks,
   updateCrStatus,
   streamAnalyticsDocument,
+  deleteAnalyticsDocument,
 } = require('../controllers/analyticsController');
 const { requestInfoValidators } = require('../utils/validators');
 const validate = require('../middleware/validate');
@@ -60,6 +62,20 @@ router.get(
   requestInfoValidators.idParam,
   validate,
   streamAnalyticsDocument
+);
+
+// Permanent Document Deletion (Admin only)
+router.delete(
+  '/:id/document/:docType',
+  adminOnly,
+  [
+    ...requestInfoValidators.idParam,
+    param('docType')
+      .isIn(['request-letter', 'url-letter', 'company-profile'])
+      .withMessage('docType must be one of: request-letter, url-letter, company-profile'),
+  ],
+  validate,
+  deleteAnalyticsDocument
 );
 
 router.get(

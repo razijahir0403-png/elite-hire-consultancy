@@ -91,7 +91,7 @@ const seedDB = async () => {
       roleMap[roleData.name] = role._id;
     }
 
-    const adminEmails = ['admin@recruitixanalytica.com', 'admin@elitehire.com'];
+    const adminEmails = ['admin@eleventis.com', 'admin@recruitixanalytica.com', 'admin@elitehire.com'];
     for (const adminEmail of adminEmails) {
       let admin = await User.findOne({ email: adminEmail });
       if (admin) {

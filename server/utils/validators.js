@@ -1,5 +1,5 @@
 const { body, param, query } = require('express-validator');
-const { RECRUITMENT_STATUS_MAX } = require('./statusMaster');
+const { RECRUITMENT_STATUS_MAX, RECEIVED_INFO_STATUS_MAX } = require('./statusMaster');
 
 const authValidators = {
   register: [
@@ -156,8 +156,16 @@ const receivedInfoValidators = {
       .withMessage('Vendor is required')
       .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'])
       .withMessage('Invalid vendor selection'),
-    body('status').optional().trim(),
-    body('initialStatus').optional().trim(),
+    body('status')
+      .optional()
+      .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
+      .toInt()
+      .withMessage('Status must be an integer between 1 and 15'),
+    body('initialStatus')
+      .optional()
+      .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
+      .toInt()
+      .withMessage('Initial status must be an integer between 1 and 15'),
     body('logDescription').optional().trim(),
   ],
   update: [
@@ -174,13 +182,23 @@ const receivedInfoValidators = {
       .trim()
       .isIn(['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'])
       .withMessage('Invalid vendor selection'),
-    body('status').optional().trim(),
-    body('initialStatus').optional().trim(),
+    body('status')
+      .optional()
+      .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
+      .toInt()
+      .withMessage('Status must be an integer between 1 and 15'),
+    body('initialStatus')
+      .optional()
+      .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
+      .toInt()
+      .withMessage('Initial status must be an integer between 1 and 15'),
     body('logDescription').optional().trim(),
   ],
   updateStatus: [
     param('id').isMongoId().withMessage('Valid record id is required'),
-    body('status').trim().notEmpty().withMessage('Status is required'),
+    body('status')
+      .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
+      .withMessage('Status must be an integer between 1 and 15'),
     body('description').optional().trim(),
   ],
   idParam: [param('id').isMongoId().withMessage('Valid record id is required')],

@@ -17,10 +17,6 @@ const recordLogin = asyncHandler(async (req, res) => {
 
   console.log(`[Attendance API] Login attempt for email: ${rawEmail}`);
 
-  if (!workMode) {
-    throw new AppError('Work mode is required', 400);
-  }
-
   const employees = await Employee.find({ deletedAt: null });
   const employee = employees.find(
     emp => emp.email && emp.email.trim().toLowerCase() === normalizedEmail
@@ -48,7 +44,7 @@ const recordLogin = asyncHandler(async (req, res) => {
       employeeName: employee.employeeName,
       employeeEmail: normalizedEmail,
       loginDate: todayStr,
-      workMode,
+      workMode: workMode || '--',
       status: 'Present',
       sessions: [{
         loginTime: now

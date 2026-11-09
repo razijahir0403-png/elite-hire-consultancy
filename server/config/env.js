@@ -4,14 +4,16 @@ const { getUploadsRoot } = require('../utils/clientDocumentPaths');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const requiredInProduction = ['MONGO_URI', 'JWT_SECRET'];
+const requiredAlways = ['MONGO_URI'];
+const requiredInProduction = ['JWT_SECRET'];
 
 const validateEnv = () => {
-  if (process.env.NODE_ENV !== 'production') {
-    return;
+  const required = [...requiredAlways];
+  if (process.env.NODE_ENV === 'production') {
+    required.push(...requiredInProduction);
   }
 
-  const missing = requiredInProduction.filter((key) => !process.env[key]);
+  const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }

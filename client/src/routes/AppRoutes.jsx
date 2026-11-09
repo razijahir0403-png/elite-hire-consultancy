@@ -13,10 +13,12 @@ const Analytics = React.lazy(() => import('../pages/Analytics'));
 const Clients = React.lazy(() => import('../pages/Clients'));
 const Users = React.lazy(() => import('../pages/Users'));
 const ReceivedInfo = React.lazy(() => import('../pages/ReceivedInfo'));
+const ReceivedInfoAuditTrail = React.lazy(() => import('../pages/ReceivedInfoAuditTrail'));
 const Payments = React.lazy(() => import('../pages/Payments'));
 const Employees = React.lazy(() => import('../pages/Employees'));
 const Chat = React.lazy(() => import('../pages/Chat'));
 const SourcingAuditTrails = React.lazy(() => import('../pages/SourcingAuditTrails'));
+const ClientsAuditTrail = React.lazy(() => import('../pages/ClientsAuditTrail'));
 
 const AppRoutes = () => (
   <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Spinner /></div>}>
@@ -39,8 +41,10 @@ const AppRoutes = () => (
         <Route path="analytics/:id/audit-trails" element={<SourcingAuditTrails />} />
         <Route path="sourcing-audit-trails/:id" element={<SourcingAuditTrails />} />
         <Route path="clients" element={<Clients />} />
+        <Route path="clients/:id/audit-trail" element={<ClientsAuditTrail />} />
         <Route path="users" element={<Users />} />
         <Route path="received-info" element={<ReceivedInfo />} />
+        <Route path="received-info/:id/audit-trail" element={<ReceivedInfoAuditTrail />} />
         <Route path="payments" element={<Payments />} />
         <Route path="employees" element={<Employees />} />
         <Route path="chat" element={<Chat />} />

@@ -1,89 +1,117 @@
+const path = require('path');
 const dns = require('dns');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Node's DNS resolver (c-ares) often fails SRV lookups on Windows even when
+// OS DNS works. Prefer public IPv4 resolvers before loading Mongoose.
+dns.setDefaultResultOrder('ipv4first');
+const configuredDns = dns.getServers();
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', ...configuredDns.filter((server) => !server.includes(':'))]);
+
 const mongoose = require('mongoose');
 
-dns.setDefaultResultOrder('ipv4first');
-
-const toStandardMongoUri = (uri) => {
-  if (!uri || !uri.startsWith('mongodb+srv://')) {
-    return uri;
-  }
-
-  const withoutProto = uri.slice('mongodb+srv://'.length);
-  const atIdx = withoutProto.indexOf('@');
-  const creds = atIdx >= 0 ? withoutProto.slice(0, atIdx + 1) : '';
-  const rest = atIdx >= 0 ? withoutProto.slice(atIdx + 1) : withoutProto;
-  const slashIdx = rest.indexOf('/');
-  const host = slashIdx >= 0 ? rest.slice(0, slashIdx) : rest.split('?')[0];
-  const pathAndQuery = slashIdx >= 0 ? rest.slice(slashIdx) : '/';
-
-  let standard = `mongodb://${creds}${host}:27017${pathAndQuery}`;
-  if (!standard.includes('retryWrites')) {
-    standard += standard.includes('?') ? '&' : '?';
-    standard += 'retryWrites=true&w=majority';
-  }
-  return standard;
+const MONGOOSE_OPTIONS = {
+  serverSelectionTimeoutMS: 20000,
+  connectTimeoutMS: 20000,
+  socketTimeoutMS: 45000,
+  family: 4,
+  maxPoolSize: 10,
 };
 
-const tryConnect = async (uri) => {
-  await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 10000,
-  });
+const redactMongoUri = (uri = '') =>
+  String(uri).replace(/\/\/([^:/@]+):([^@]+)@/g, '//$1:***@');
+
+const sanitizeErrorText = (value = '') =>
+  redactMongoUri(String(value)).replace(/mongodb(\+srv)?:\/\/[^\s'"]+/gi, '[redacted-mongo-uri]');
+
+const formatMongoError = (error) => {
+  const code = error?.code || error?.cause?.code || '';
+  const message = sanitizeErrorText(error?.message || String(error));
+  const combined = `${code} ${message}`;
+
+  if (/querySrv|EREFUSED|ENOTFOUND|ENODATA|ETIMEOUT|EAI_AGAIN/i.test(combined)) {
+    return (
+      'Could not connect to MongoDB Atlas: DNS/SRV lookup failed. ' +
+      'Confirm internet access and that local DNS can resolve `_mongodb._tcp.<cluster>.mongodb.net`. ' +
+      'If this persists, set the machine DNS to 8.8.8.8 or 1.1.1.1. ' +
+      `Details: ${message}`
+    );
+  }
+
+  if (/Authentication failed|bad auth|auth failed/i.test(combined)) {
+    return 'Could not connect to MongoDB Atlas: authentication failed. Verify the username and password in MONGO_URI.';
+  }
+
+  if (/whitelist|IP that isn't|not allowed to connect|SslHandshakeFailed/i.test(combined)) {
+    return (
+      'Could not connect to MongoDB Atlas: this client IP is not allowed (or TLS failed). ' +
+      'In Atlas, open Network Access and whitelist your current public IP (or 0.0.0.0/0 for development). ' +
+      `Details: ${message}`
+    );
+  }
+
+  if (/ECONNREFUSED/i.test(combined)) {
+    return (
+      'Could not connect to MongoDB Atlas: connection refused. ' +
+      'This is not a local MongoDB fallback. Check Atlas host reachability, firewall, and Network Access. ' +
+      `Details: ${message}`
+    );
+  }
+
+  return `Could not connect to MongoDB Atlas. ${message}`;
 };
 
-const connectWithMemoryServer = async () => {
-  const { MongoMemoryServer } = require('mongodb-memory-server');
-  const mongod = await MongoMemoryServer.create();
-  const uri = mongod.getUri();
-  await tryConnect(uri);
-  process.env.MONGO_URI = uri;
-  return uri;
+const assertMongoUri = () => {
+  const mongoUri = (process.env.MONGO_URI || process.env.MONGODB_URI || '').trim();
+
+  if (!mongoUri) {
+    throw new Error(
+      'MONGO_URI is not defined. Set it in server/.env before starting the server. ' +
+        'Do not use a localhost MongoDB URI unless that is the intended database.'
+    );
+  }
+
+  if (!/^mongodb(\+srv)?:\/\//i.test(mongoUri)) {
+    throw new Error('MONGO_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://).');
+  }
+
+  return mongoUri;
 };
 
 const connectDB = async () => {
-  const primaryUri = process.env.MONGO_URI || process.env.MONGODB_URI;
-  const fallbackUri =
-    process.env.MONGO_URI_FALLBACK || 'mongodb://127.0.0.1:27017/elite-hire';
+  const mongoUri = assertMongoUri();
 
-  if (!primaryUri) {
-    throw new Error('MONGO_URI is not defined in environment variables.');
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
   }
 
-  const candidates = [
-    primaryUri,
-    toStandardMongoUri(primaryUri),
-    fallbackUri,
-  ].filter((uri, index, list) => uri && list.indexOf(uri) === index);
-
-  const errors = [];
-
-  for (const uri of candidates) {
-    try {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await tryConnect(uri);
-      return mongoose.connection;
-    } catch (error) {
-      errors.push(error.message);
-    }
+  try {
+    await mongoose.connect(mongoUri, MONGOOSE_OPTIONS);
+  } catch (error) {
+    throw new Error(formatMongoError(error));
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await connectWithMemoryServer();
-      return mongoose.connection;
-    } catch (error) {
-      errors.push(error.message);
-    }
-  }
+  const { host, name, port } = mongoose.connection;
+  console.log(`MongoDB connected (${host}${port ? `:${port}` : ''} / ${name})`);
 
-  throw new Error(
-    `MongoDB connection failed. ${errors.join(' | ')}. ` +
-      'For Atlas: whitelist your IP in Network Access and verify MONGO_URI credentials.'
-  );
+  mongoose.connection.on('error', (error) => {
+    console.error('MongoDB connection error:', sanitizeErrorText(error.message));
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    console.error('MongoDB disconnected.');
+  });
+
+  return mongoose.connection;
+};
+
+const closeDB = async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
 };
 
 module.exports = connectDB;
+module.exports.closeDB = closeDB;

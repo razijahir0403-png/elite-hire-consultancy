@@ -15,4 +15,5 @@ module.exports = {
   updateRemarks: requestInfoController.updateRemarks,
   updateCrStatus: requestInfoController.updateCrStatus,
   streamAnalyticsDocument: requestInfoController.streamAnalyticsDocument,
+  deleteAnalyticsDocument: requestInfoController.deleteAnalyticsDocumentHandler,
 };

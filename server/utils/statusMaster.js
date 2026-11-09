@@ -58,6 +58,44 @@ const RECRUITMENT_STATUS = {
 
 const RECRUITMENT_STATUS_MAX = 24;
 
+const RECEIVED_INFO_STATUS = {
+  NEW_INFO: 1,
+  REQUEST_PROPOSAL_SUBMITTED: 2,
+  DOCUMENTS_SUBMITTED: 3,
+  CONTACT_MADE: 4,
+  SENT_FOLLOW_UP_MESSAGE: 5,
+  RECEIVED_CALL: 6,
+  ISSUE_WITH_MANAGEMENT: 7,
+  INTERNAL_NOTE: 8,
+  RECEIVED_A_MESSAGE: 9,
+  RE_OPEN: 10,
+  CONTRACT_CANCELLED: 11,
+  CONTRACT_REJECTED: 12,
+  CONTRACT_SIGNED: 13,
+  FOLLOW_UP_MEET: 14,
+  ISSUE_WITH_CALL: 15,
+};
+
+const RECEIVED_INFO_STATUS_MAX = 15;
+
+const ReceivedInfoStatusLabel = {
+  1: 'New Info',
+  2: 'Request Proposal submitted',
+  3: 'Documents Submitted',
+  4: 'Contact Made',
+  5: 'Sent Follow up Message',
+  6: 'Received Call',
+  7: 'Issue with Management',
+  8: 'Internal Note',
+  9: 'Received a Message',
+  10: 'Re-Open',
+  11: 'Contract Cancelled',
+  12: 'Contract Rejected',
+  13: 'Contract Signed',
+  14: 'Follow up Meet',
+  15: 'Issue with Call',
+};
+
 const CommonStatusLabel = {
   0: 'Inactive',
   1: 'Active',
@@ -117,6 +155,11 @@ const RECRUITMENT_TEXT_TO_CODE = Object.entries(RecruitmentStatusLabel).reduce((
   return acc;
 }, {});
 
+const RECEIVED_INFO_TEXT_TO_CODE = Object.entries(ReceivedInfoStatusLabel).reduce((acc, [code, label]) => {
+  acc[label] = Number(code);
+  return acc;
+}, {});
+
 const toNumber = (value, fallback = 0) => {
   if (value === '' || value === null || value === undefined) return fallback;
   const num = Number(value);
@@ -137,6 +180,15 @@ const toRecruitmentStatusCode = (value, fallback = RECRUITMENT_STATUS.VERIFIED) 
   return toNumber(value, fallback);
 };
 
+const toReceivedInfoStatusCode = (value, fallback = RECEIVED_INFO_STATUS.NEW_INFO) => {
+  if (typeof value === 'string') {
+    if (RECEIVED_INFO_TEXT_TO_CODE[value] !== undefined) return RECEIVED_INFO_TEXT_TO_CODE[value];
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? fallback : parsed;
+  }
+  return toNumber(value, fallback);
+};
+
 const recruitmentFilterOptions = () =>
   Object.entries(RecruitmentStatusLabel).map(([value, label]) => ({
     label,
@@ -150,14 +202,19 @@ module.exports = {
   ASSET_STATUS,
   RECRUITMENT_STATUS,
   RECRUITMENT_STATUS_MAX,
+  RECEIVED_INFO_STATUS,
+  RECEIVED_INFO_STATUS_MAX,
   CommonStatusLabel,
   ApprovalStatusLabel,
   TicketStatusLabel,
   AssetStatusLabel,
   RecruitmentStatusLabel,
+  ReceivedInfoStatusLabel,
   RECRUITMENT_TEXT_TO_CODE,
+  RECEIVED_INFO_TEXT_TO_CODE,
   toNumber,
   getLabel,
   toRecruitmentStatusCode,
+  toReceivedInfoStatusCode,
   recruitmentFilterOptions,
 };

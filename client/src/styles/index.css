@@ -155,7 +155,7 @@
   }
 }
 
-/* React Toastify Recruitix theme overrides */
+/* React Toastify Eleventis theme overrides */
 .Toastify__toast {
   background-color: #FFFFFF !important;
   color: #07566A !important;
@@ -354,4 +354,3 @@ input[type="radio"]:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
-

@@ -713,6 +713,107 @@ const streamAnalyticsDocument = async (id, docType, res, { download = false } = 
   });
 };
 
+const deleteAnalyticsDocument = async (id, docType, editorName) => {
+  const record = await RequestInfo.findById(id);
+  if (!record) {
+    throw new AppError('Record not found', 404);
+  }
+
+  // Normalise docType → field key
+  const type = String(docType || '').toLowerCase().replace(/[-_]/g, '');
+  let fieldKey = null;
+  let docLabel = '';
+
+  if (type === 'requestletter') {
+    fieldKey = 'requestLetter';
+    docLabel = 'Request Letter';
+  } else if (type === 'urlletter') {
+    fieldKey = 'urlLetter';
+    docLabel = 'URL Letter';
+  } else if (type === 'companyprofile') {
+    fieldKey = 'companyProfile';
+    docLabel = 'Company Profile';
+  } else {
+    throw new AppError('Invalid document type. Must be request-letter, url-letter, or company-profile.', 400);
+  }
+
+  const docObj = record[fieldKey];
+  const storedPath = docObj?.path || docObj?.fileUrl || '';
+  const originalName = docObj?.fileName || docObj?.originalName || docObj?.name || '';
+
+  if (!storedPath) {
+    throw new AppError(`No ${docLabel} document found on this record.`, 404);
+  }
+
+  // Resolve the absolute path and delete the physical file (best-effort)
+  try {
+    const absolutePath = await resolveAnalyticsDocumentPath(storedPath, {
+      id: record._id?.toString(),
+      docType,
+    });
+    if (absolutePath) {
+      await fs.promises.unlink(absolutePath);
+    } else {
+      console.warn(`[deleteAnalyticsDocument] File not found on disk — clearing DB record only`, {
+        id,
+        docType,
+        storedPath,
+      });
+    }
+  } catch (unlinkErr) {
+    // Log but do not block DB cleanup — avoids leaving orphan DB references
+    console.warn(`[deleteAnalyticsDocument] File unlink failed (${unlinkErr.code}), clearing DB record anyway`, {
+      id,
+      docType,
+      storedPath,
+      error: unlinkErr.message,
+    });
+  }
+
+  // Clear the sub-document fields in MongoDB
+  if (fieldKey === 'companyProfile') {
+    record.companyProfile = {
+      fileName: '',
+      originalName: '',
+      name: '',
+      fileType: '',
+      fileUrl: '',
+      path: '',
+      fileSize: 0,
+      size: 0,
+      uploadedAt: null,
+      uploadedBy: '',
+      recordId: null,
+    };
+  } else {
+    record[fieldKey] = {
+      fileName: '',
+      name: '',
+      fileUrl: '',
+      path: '',
+      fileSize: 0,
+      size: 0,
+      uploadedAt: null,
+      uploadedBy: '',
+    };
+  }
+
+  record.updatedBy = editorName;
+  record.updatedOn = new Date();
+
+  // Record deletion in audit history
+  record.statusHistory = record.statusHistory || [];
+  record.statusHistory.push({
+    status: record.status || 0,
+    description: `${docLabel} document deleted${originalName ? `: ${originalName}` : ''}`,
+    updatedBy: editorName,
+    updatedOn: new Date(),
+  });
+
+  const saved = await record.save();
+  return normalizeRequestRecord(saved);
+};
+
 module.exports = {
   getRequestInfos,
   getRequestInfoById,
@@ -728,4 +829,5 @@ module.exports = {
   updateRemarks,
   updateCrStatus,
   streamAnalyticsDocument,
+  deleteAnalyticsDocument,
 };

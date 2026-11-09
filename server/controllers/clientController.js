@@ -1,4 +1,4 @@
-const clientService = require('../services/clientService');
+﻿const clientService = require('../services/clientService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getClients = asyncHandler(async (req, res) => {
@@ -51,6 +51,42 @@ const getClientProofDocument = asyncHandler(async (req, res) => {
   await clientService.streamClientProofDocument(req.params.id, res, { download });
 });
 
+
+const uploadClientAuditDocumentHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const record = await clientService.uploadClientAuditDocument(req.params.id, req.params.docType, req.file, req.user.name);
+    res.json(record);
+  } catch (error) { next(error); }
+});
+
+const streamClientAuditDocumentHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const download = req.query.download === '1';
+    await clientService.streamClientAuditDocument(req.params.id, req.params.docType, res, { download });
+  } catch (error) { next(error); }
+});
+
+const deleteClientAuditDocumentHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const record = await clientService.deleteClientAuditDocument(req.params.id, req.params.docType, req.user.name);
+    res.json(record);
+  } catch (error) { next(error); }
+});
+
+const updateClientConditionsHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const record = await clientService.updateClientConditions(req.params.id, req.body, req.user.name);
+    res.json(record);
+  } catch (error) { next(error); }
+});
+
+const updateClientRemarksHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const record = await clientService.updateClientRemarks(req.params.id, req.body.remarks, req.user.name);
+    res.json(record);
+  } catch (error) { next(error); }
+});
+
 module.exports = {
   getClients,
   getClient,
@@ -62,4 +98,10 @@ module.exports = {
   exportClients,
   getClientDocument,
   getClientProofDocument,
+  uploadClientAuditDocumentHandler,
+  streamClientAuditDocumentHandler,
+  deleteClientAuditDocumentHandler,
+  updateClientConditionsHandler,
+  updateClientRemarksHandler,
 };
+

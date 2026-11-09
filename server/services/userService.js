@@ -13,7 +13,7 @@ const getUserById = async (id) => {
   return user;
 };
 
-const MASTER_ADMIN_EMAILS = ['admin@elitehire.com', 'dev@elitehire.com', 'admin@recruitixanalytica.com'];
+const MASTER_ADMIN_EMAILS = ['admin@elitehire.com', 'dev@elitehire.com', 'admin@eleventis.com', 'admin@recruitixanalytica.com'];
 
 const updateUser = async (id, data, requesterEmail) => {
   const user = await User.findById(id);

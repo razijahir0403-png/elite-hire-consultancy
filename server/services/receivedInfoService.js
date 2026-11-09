@@ -6,6 +6,7 @@ const {
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/receivedIdGenerator');
 const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
+const { toReceivedInfoStatusCode, ReceivedInfoStatusLabel } = require('../utils/statusMaster');
 
 const normalizeReceivedRecord = (doc) => {
   if (!doc) return doc;
@@ -13,16 +14,31 @@ const normalizeReceivedRecord = (doc) => {
   const obj = { ...data };
   obj.id = obj._id;
 
-  const resolvedStatus = obj.status || obj.currentStatus || obj.initialStatus || 'NA';
+  // Convert status fields to integer (handles both new integer and legacy string values)
+  const convertStatus = (val) => {
+    if (val === undefined || val === null || val === '') return null;
+    if (typeof val === 'number' && Number.isInteger(val)) return val;
+    if (typeof val === 'string') {
+      const parsed = Number(val);
+      if (Number.isInteger(parsed)) return parsed;
+      // Convert legacy string label to integer
+      return toReceivedInfoStatusCode(val, null);
+    }
+    return null;
+  };
+
+  const resolvedStatus = convertStatus(obj.status) || convertStatus(obj.currentStatus) || convertStatus(obj.initialStatus);
   obj.status = resolvedStatus;
   obj.currentStatus = resolvedStatus;
-  obj.initialStatus = obj.initialStatus || (Array.isArray(obj.statusHistory) && obj.statusHistory[0]?.status) || resolvedStatus;
+  obj.initialStatus = convertStatus(obj.initialStatus) || (Array.isArray(obj.statusHistory) && obj.statusHistory[0]?.status ? convertStatus(obj.statusHistory[0].status) : null) || resolvedStatus;
   obj.ageInDays = calculateAgeInDays(obj.createdAt);
 
   if (Array.isArray(obj.statusHistory)) {
-    obj.statusHistory = obj.statusHistory.map((item) => ({
-      ...(item.toObject ? item.toObject() : item),
-    }));
+    obj.statusHistory = obj.statusHistory.map((item) => {
+      const itemObj = item.toObject ? item.toObject() : { ...item };
+      itemObj.status = convertStatus(itemObj.status);
+      return itemObj;
+    });
   } else {
     obj.statusHistory = [];
   }
@@ -115,7 +131,9 @@ const createReceivedInfo = async (body, editorName) => {
     initialStatus,
   } = body;
 
-  const selectedStatus = status || initialStatus || 'New Info';
+  // Convert status to integer (handles both integer and legacy string label)
+  const selectedStatusRaw = status || initialStatus || 'New Info';
+  const selectedStatus = toReceivedInfoStatusCode(selectedStatusRaw);
   const descriptionText = logDescription ? String(logDescription).trim() : 'Initial status';
 
   const historyItem = {
@@ -204,9 +222,10 @@ const updateReceivedInfo = async (id, body, editorName) => {
   if (vendor !== undefined) record.vendor = vendor;
   if (logDescription !== undefined) record.logDescription = logDescription ? String(logDescription).trim() : '';
 
-  const newStatus = status !== undefined ? status : initialStatus;
-  if (newStatus !== undefined && newStatus !== record.status) {
-    const oldStatus = record.status || record.currentStatus || 'NA';
+  const newStatusRaw = status !== undefined ? status : initialStatus;
+  if (newStatusRaw !== undefined && newStatusRaw !== record.status) {
+    const newStatus = toReceivedInfoStatusCode(newStatusRaw);
+    const oldStatus = record.status || record.currentStatus;
     record.status = newStatus;
     record.currentStatus = newStatus;
 
@@ -214,7 +233,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
       record.statusHistory = [];
     }
 
-    if (record.statusHistory.length === 0 && oldStatus !== 'NA') {
+    if (record.statusHistory.length === 0 && oldStatus !== null && oldStatus !== undefined) {
       record.statusHistory.push({
         status: oldStatus,
         description: 'Initial status',
@@ -225,7 +244,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
 
     record.statusHistory.push({
       status: newStatus,
-      description: logDescription ? String(logDescription).trim() : `Status updated from ${oldStatus} to ${newStatus}`,
+      description: logDescription ? String(logDescription).trim() : `Status updated to ${ReceivedInfoStatusLabel[newStatus] || newStatus}`,
       updatedBy: editorName,
       updatedOn: new Date(),
     });
@@ -255,19 +274,25 @@ const updateReceivedStatus = async (id, body, editorName) => {
 
   const { status, description } = body;
 
-  if (!status) {
+  if (status === undefined || status === null || status === '') {
     throw new AppError('Please provide a status', 400);
   }
 
-  const oldStatus = record.status || record.currentStatus || 'NA';
-  record.status = status;
-  record.currentStatus = status;
+  // Convert to integer using centralized helper (handles both integer and legacy string)
+  const statusInt = toReceivedInfoStatusCode(status);
+  if (!Number.isInteger(statusInt) || statusInt < 1 || statusInt > 15) {
+    throw new AppError('Invalid status. Must be an integer between 1 and 15.', 400);
+  }
+
+  const oldStatus = record.status || record.currentStatus;
+  record.status = statusInt;
+  record.currentStatus = statusInt;
 
   if (!Array.isArray(record.statusHistory)) {
     record.statusHistory = [];
   }
 
-  if (record.statusHistory.length === 0 && oldStatus !== 'NA') {
+  if (record.statusHistory.length === 0 && oldStatus !== null && oldStatus !== undefined) {
     record.statusHistory.push({
       status: oldStatus,
       description: 'Initial status',
@@ -277,8 +302,8 @@ const updateReceivedStatus = async (id, body, editorName) => {
   }
 
   record.statusHistory.push({
-    status,
-    description: description ? String(description).trim() : `Status updated to ${status}`,
+    status: statusInt,
+    description: description ? String(description).trim() : `Status updated to ${ReceivedInfoStatusLabel[statusInt] || statusInt}`,
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -299,13 +324,17 @@ const getStatusHistory = async (id) => {
   if (history.length === 0 && (record.status || record.currentStatus || record.initialStatus)) {
     const currentSt = record.status || record.currentStatus || record.initialStatus;
     return [{
-      status: currentSt,
+      status: toReceivedInfoStatusCode(currentSt),
       description: record.logDescription || 'Initial status',
       updatedBy: record.updatedBy || 'System',
       updatedOn: record.createdAt || record.updatedOn || new Date(),
     }];
   }
-  return history;
+  // Normalize history statuses to integers
+  return history.map((item) => ({
+    ...item,
+    status: toReceivedInfoStatusCode(item.status),
+  }));
 };
 
 module.exports = {

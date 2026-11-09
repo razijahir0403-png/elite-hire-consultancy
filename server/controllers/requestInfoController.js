@@ -81,6 +81,15 @@ const streamAnalyticsDocument = asyncHandler(async (req, res) => {
   await requestInfoService.streamAnalyticsDocument(req.params.id, docType, res, { download });
 });
 
+const deleteAnalyticsDocumentHandler = asyncHandler(async (req, res) => {
+  const record = await requestInfoService.deleteAnalyticsDocument(
+    req.params.id,
+    req.params.docType,
+    req.user.name
+  );
+  res.json(record);
+});
+
 module.exports = {
   getRequestInfos,
   getRequestInfo,
@@ -96,4 +105,5 @@ module.exports = {
   updateRemarks,
   updateCrStatus,
   streamAnalyticsDocument,
+  deleteAnalyticsDocumentHandler,
 };

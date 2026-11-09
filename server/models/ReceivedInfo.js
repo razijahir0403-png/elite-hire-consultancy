@@ -4,11 +4,12 @@ const softDeletePlugin = require('./plugins/softDeletePlugin');
 const receivedInfoStatusHistorySchema = new mongoose.Schema(
   {
     status: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
       required: true,
     },
     description: {
       type: String,
+      required: true,
     },
     updatedBy: {
       type: String,
@@ -89,14 +90,16 @@ const receivedInfoSchema = new mongoose.Schema(
       trim: true,
     },
     status: {
-      type: String,
-      default: 'NA',
+      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      default: null,
     },
     initialStatus: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      default: null,
     },
     currentStatus: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      default: null,
     },
     updatedBy: {
       type: String,
@@ -107,6 +110,81 @@ const receivedInfoSchema = new mongoose.Schema(
       default: Date.now,
     },
     statusHistory: [receivedInfoStatusHistorySchema],
+
+    // Document fields for audit trail
+    proposalRequest: {
+      fileName: { type: String, default: '', trim: true },
+      name: { type: String, default: '', trim: true },
+      fileUrl: { type: String, default: '', trim: true },
+      path: { type: String, default: '', trim: true },
+      fileSize: { type: Number, default: 0 },
+      size: { type: Number, default: 0 },
+      uploadedAt: { type: Date },
+      uploadedBy: { type: String, default: '', trim: true },
+    },
+    contractAgreement: {
+      fileName: { type: String, default: '', trim: true },
+      name: { type: String, default: '', trim: true },
+      fileUrl: { type: String, default: '', trim: true },
+      path: { type: String, default: '', trim: true },
+      fileSize: { type: Number, default: 0 },
+      size: { type: Number, default: 0 },
+      uploadedAt: { type: Date },
+      uploadedBy: { type: String, default: '', trim: true },
+    },
+    mouFile: {
+      fileName: { type: String, default: '', trim: true },
+      originalName: { type: String, default: '', trim: true },
+      name: { type: String, default: '', trim: true },
+      fileType: { type: String, default: '', trim: true },
+      fileUrl: { type: String, default: '', trim: true },
+      path: { type: String, default: '', trim: true },
+      fileSize: { type: Number, default: 0 },
+      size: { type: Number, default: 0 },
+      uploadedAt: { type: Date },
+      uploadedBy: { type: String, default: '', trim: true },
+      recordId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReceivedInfo' },
+    },
+    // Conditions Required fields
+    riStatus: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    conditionsRequired: {
+      dataUploaded: { type: Boolean, default: false },
+      onHold: { type: Boolean, default: false },
+      emailSent: { type: Boolean, default: false },
+      sentFollowupMessage: { type: Boolean, default: false },
+      proposalReqSub: { type: Boolean, default: false },
+      docSub: { type: Boolean, default: false },
+      acceptCgp: { type: Boolean, default: false },
+      placementRecruitment: { type: Boolean, default: false },
+      cancelled: { type: Boolean, default: false },
+      completed: { type: Boolean, default: false },
+      contractCancelled: { type: Boolean, default: false },
+    },
+    activeCondition: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    onHoldDeadline: {
+      type: Date,
+      default: null,
+    },
+    remarks: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    remarksHistory: [
+      {
+        remark: { type: String, required: true },
+        riStatus: { type: Number, default: null },
+        updatedBy: { type: String, required: true },
+        updatedOn: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

@@ -3,11 +3,10 @@ import { getStatusBadgeClass, getStatusLabel } from '../utils/statusMaster';
 import { getClientStatusBadgeClass, getClientStatusLabel } from '../utils/clientStatusMaster';
 
 const StatusBadge = ({ status, type = 'recruitment', className = '' }) => {
-  const code = Number(status);
   const label =
-    type === 'client' ? getClientStatusLabel(code) : getStatusLabel(type, code);
+    type === 'client' ? getClientStatusLabel(status) : getStatusLabel(type, status);
   const colorClass =
-    type === 'client' ? getClientStatusBadgeClass(code) : getStatusBadgeClass(type, code);
+    type === 'client' ? getClientStatusBadgeClass(status) : getStatusBadgeClass(type, status);
 
   return (
     <span

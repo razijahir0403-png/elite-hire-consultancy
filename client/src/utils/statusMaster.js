@@ -36,6 +36,59 @@ export const RECRUITMENT_STATUS = {
 
 export const RECRUITMENT_STATUS_MAX = 24;
 
+// ============================================================
+// RECEIVED INFO WORKFLOW STATUS - INTEGER MAPPING (1-based)
+// ============================================================
+// Single source of truth for frontend and backend
+// Stored as BSON Integer in MongoDB
+export const RECEIVED_INFO_STATUS_MAP = {
+  1: 'New Info',
+  2: 'Request Proposal submitted',
+  3: 'Documents Submitted',
+  4: 'Contact Made',
+  5: 'Sent Follow up Message',
+  6: 'Received Call',
+  7: 'Issue with Management',
+  8: 'Internal Note',
+  9: 'Received a Message',
+  10: 'Re-Open',
+  11: 'Contract Cancelled',
+  12: 'Contract Rejected',
+  13: 'Contract Signed',
+  14: 'Follow up Meet',
+  15: 'Issue with Call',
+};
+
+// Reverse mapping for validation
+export const RECEIVED_INFO_STATUS_REVERSE_MAP = Object.fromEntries(
+  Object.entries(RECEIVED_INFO_STATUS_MAP).map(([k, v]) => [v, Number(k)])
+);
+
+// Dropdown options for UI
+export const RECEIVED_INFO_STATUS_OPTIONS = Object.entries(RECEIVED_INFO_STATUS_MAP).map(([value, label]) => ({
+  value: Number(value),
+  label,
+}));
+
+// Color mapping by integer key
+export const RECEIVED_INFO_STATUS_COLORS = {
+  1: 'bg-brand-50 text-brand-800 border-brand-200',
+  2: 'bg-purple-50 text-purple-700 border-purple-200',
+  3: 'bg-teal-50 text-teal-700 border-teal-200',
+  4: 'bg-blue-50 text-blue-700 border-blue-200',
+  5: 'bg-sky-50 text-sky-700 border-sky-200',
+  6: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  7: 'bg-orange-50 text-orange-700 border-orange-200',
+  8: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  9: 'bg-violet-50 text-violet-700 border-violet-200',
+  10: 'bg-violet-50 text-violet-700 border-violet-200',
+  11: 'bg-slate-100 text-slate-700 border-slate-300',
+  12: 'bg-red-50 text-red-700 border-red-200',
+  13: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  14: 'bg-amber-50 text-amber-700 border-amber-200',
+  15: 'bg-orange-50 text-orange-700 border-orange-200',
+};
+
 export const CommonStatus = { 0: 'Inactive', 1: 'Active' };
 
 export const ApprovalStatus = { 0: 'Pending', 1: 'Approved', 2: 'Rejected', 3: 'Hold' };
@@ -123,6 +176,7 @@ export const StatusColors = {
     0: 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]',     // Inactive
     1: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Active
   },
+  'received-info': RECEIVED_INFO_STATUS_COLORS,
 };
 
 export const getStatusLabel = (type, code) => {
@@ -133,12 +187,43 @@ export const getStatusLabel = (type, code) => {
     asset: AssetStatus,
     common: CommonStatus,
   };
+  
+  // For received-info type, status is an integer (1-15)
+  if (type === 'received-info') {
+    const num = Number(code);
+    if (Number.isInteger(num) && RECEIVED_INFO_STATUS_MAP[num]) {
+      return RECEIVED_INFO_STATUS_MAP[num];
+    }
+    // Backward compatibility: if a string label is stored, try reverse lookup
+    const str = String(code || '').trim();
+    const mappedNum = RECEIVED_INFO_STATUS_REVERSE_MAP[str];
+    if (mappedNum) {
+      return RECEIVED_INFO_STATUS_MAP[mappedNum];
+    }
+    return str || 'Unknown';
+  }
+  
   const map = maps[type] || RecruitmentStatus;
   const key = Number(code);
   return map[key] ?? 'Unknown';
 };
 
 export const getStatusBadgeClass = (type, code) => {
+  // For received-info type, use integer-based color mapping
+  if (type === 'received-info') {
+    const num = Number(code);
+    if (Number.isInteger(num) && RECEIVED_INFO_STATUS_COLORS[num]) {
+      return RECEIVED_INFO_STATUS_COLORS[num];
+    }
+    // Backward compatibility: if a string label is stored, try reverse lookup
+    const str = String(code || '').trim();
+    const mappedNum = RECEIVED_INFO_STATUS_REVERSE_MAP[str];
+    if (mappedNum && RECEIVED_INFO_STATUS_COLORS[mappedNum]) {
+      return RECEIVED_INFO_STATUS_COLORS[mappedNum];
+    }
+    return 'bg-slate-50 text-slate-600 border-slate-200';
+  }
+  
   const key = Number(code);
   const typeMap = StatusColors[type] || StatusColors.recruitment;
   return typeMap[key] || 'bg-slate-50 text-slate-600 border-slate-200';

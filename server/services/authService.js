@@ -24,7 +24,7 @@ const loginUser = async ({ email, password }) => {
     throw new AppError('Invalid email or password', 401);
   }
 
-  const roleName = user.role?.name || (['admin@elitehire.com', 'dev@elitehire.com', 'admin@recruitixanalytica.com'].includes(user.email) ? 'admin' : null);
+  const roleName = user.role?.name || (['admin@elitehire.com', 'dev@elitehire.com', 'admin@eleventis.com', 'admin@recruitixanalytica.com'].includes(user.email) ? 'admin' : null);
 
   if (!user.isApproved && roleName !== 'admin') {
     throw new AppError(

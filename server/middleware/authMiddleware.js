@@ -74,7 +74,7 @@ const isUserAdmin = (user) => {
   if (!user) return false;
   const roleName = typeof user.role === 'object' ? user.role?.name : user.role;
   if (roleName === 'admin') return true;
-  const masterAdmins = ['admin@elitehire.com', 'dev@elitehire.com', 'admin@recruitixanalytica.com'];
+  const masterAdmins = ['admin@elitehire.com', 'dev@elitehire.com', 'admin@eleventis.com', 'admin@recruitixanalytica.com'];
   return masterAdmins.includes(user.email?.toLowerCase());
 };
 

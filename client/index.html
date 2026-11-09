@@ -1,17 +1,41 @@
 <!doctype html>
-<html lang="en" class="h-full bg-[#EAF8F3] text-[#07566A]">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/jpeg" href="/src/assets/ras.jpeg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Recruitix Analytica Solution — Data • Talent • Solutions</title>
-    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  </head>
-  <body class="h-full antialiased selection:bg-[#D5F5E7] selection:text-[#07566A] overflow-x-hidden bg-[#EAF8F3] text-[#07566A]">
-    <div id="root" class="h-full"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="en"
+  class="h-full bg-[#F8FAFC] dark:bg-[#121212] text-[#1F2937] dark:text-[#F1F5F9] transition-colors duration-200">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/jpeg" href="/src/assets/ras.jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eleventis — Data • Talent • Solutions</title>
+  <!-- Script to immediately restore user theme preference and prevent theme flicker -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('eleventis_theme') || localStorage.getItem('recruitix_theme') || localStorage.getItem('theme');
+        if (saved === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      } catch (e) { }
+    })();
+  </script>
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+</head>
+
+<body
+  class="h-full antialiased selection:bg-[#D5F5E7] selection:text-[#07566A] dark:selection:bg-[#00B96B] dark:selection:text-white overflow-x-hidden bg-[#F8FAFC] dark:bg-[#121212] text-[#1F2937] dark:text-[#F1F5F9] transition-colors duration-200">
+  <div id="root" class="h-full"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

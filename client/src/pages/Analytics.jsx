@@ -6,7 +6,7 @@ import {
   Plus,
   Edit2,
   Trash2,
-  History,
+  Home,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -546,7 +546,7 @@ const Analytics = () => {
                           className="p-1.5 bg-slate-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all text-slate-500"
                           title="Show Sourcing Audit Trails"
                         >
-                          <History size={13} />
+                          <Home size={13} />
                         </button>
                       </div>
                     </td>

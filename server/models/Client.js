@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const softDeletePlugin = require('./plugins/softDeletePlugin');
 const { CLIENT_STATUS_MAX } = require('../utils/clientStatusMaster');
 
@@ -26,6 +26,17 @@ const statusHistorySchema = new mongoose.Schema(
   { _id: true }
 );
 
+const documentSubSchema = new mongoose.Schema(
+  {
+    fileName: { type: String, default: '' },
+    fileUrl: { type: String, default: '' },
+    path: { type: String, default: '' },
+    fileSize: { type: Number, default: 0 },
+    uploadedAt: { type: Date, default: null },
+    uploadedBy: { type: String, default: '' },
+  },
+  { _id: false }
+);
 const clientSchema = new mongoose.Schema(
   {
     clientId: {
@@ -90,6 +101,20 @@ const clientSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    clProofDoc: { type: documentSubSchema, default: null },
+    coverLetter: { type: documentSubSchema, default: null },
+    clProfileDoc: { type: documentSubSchema, default: null },
+    crStatus: { type: Number, default: null },
+    activeCondition: { type: String, default: null },
+    onHoldDeadline: { type: Date, default: null },
+    remarks: { type: String, default: '' },
+    remarksHistory: [
+      {
+        remark: String,
+        updatedBy: String,
+        updatedOn: { type: Date, default: Date.now },
+      },
+    ],
     status: {
       type: Number,
       required: [true, 'Please choose a status'],
@@ -129,3 +154,4 @@ clientSchema.index({ isDeleted: 1, status: 1, updatedOn: -1 });
 clientSchema.index({ isDeleted: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Client', clientSchema);
+

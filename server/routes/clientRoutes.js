@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { handleClientUpload } = require('../middleware/clientUpload');
+const { handleClientAuditUpload } = require('../middleware/clientAuditUpload');
 const validate = require('../middleware/validate');
 const clientValidators = require('../utils/clientValidators');
 const {
@@ -15,6 +16,11 @@ const {
   exportClients,
   getClientDocument,
   getClientProofDocument,
+  uploadClientAuditDocumentHandler,
+  streamClientAuditDocumentHandler,
+  deleteClientAuditDocumentHandler,
+  updateClientConditionsHandler,
+  updateClientRemarksHandler,
 } = require('../controllers/clientController');
 
 router.use(protect);
@@ -36,5 +42,14 @@ router
   .get(clientValidators.idParam, validate, getClient)
   .put(handleClientUpload, clientValidators.update, validate, updateClient)
   .delete(clientValidators.idParam, validate, adminOnly, deleteClient);
+
+// Audit document routes
+router.post('/:id/audit-document/:docType', adminOnly, handleClientAuditUpload('document'), uploadClientAuditDocumentHandler);
+router.get('/:id/audit-document/:docType', streamClientAuditDocumentHandler);
+router.delete('/:id/audit-document/:docType', adminOnly, deleteClientAuditDocumentHandler);
+
+// Conditions and Remarks routes
+router.put('/:id/conditions', updateClientConditionsHandler);
+router.put('/:id/remarks', updateClientRemarksHandler);
 
 module.exports = router;

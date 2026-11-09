@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * ThreeBarLogo — Interactive animated three ascending bars inspired by
- * the Recruitix Analytica Solution logo.
+ * the Eleventis logo.
  *
  * Gradients:
  *   linear-gradient(180deg, #00E99A 0%, #00B96B 100%)
@@ -39,7 +39,7 @@ const ThreeBarLogo = ({
           className={`${config.barW} rounded-full bg-gradient-to-b from-[#00E99A] to-[#00B96B] shadow-[0_2px_8px_rgba(0,217,139,0.35)] origin-bottom transition-transform duration-300 ${
             animated ? 'animate-bar-1' : ''
           }`}
-          title="Recruitix Analytics Bar 1"
+          title="Eleventis Analytics Bar 1"
         />
 
         {/* Bar 2 (Medium - Middle) */}
@@ -48,7 +48,7 @@ const ThreeBarLogo = ({
           className={`${config.barW} rounded-full bg-gradient-to-b from-[#00E99A] to-[#00B96B] shadow-[0_2px_10px_rgba(0,217,139,0.4)] origin-bottom transition-transform duration-300 ${
             animated ? 'animate-bar-2' : ''
           }`}
-          title="Recruitix Analytics Bar 2"
+          title="Eleventis Analytics Bar 2"
         />
 
         {/* Bar 3 (Tallest - Right) */}
@@ -57,7 +57,7 @@ const ThreeBarLogo = ({
           className={`${config.barW} rounded-full bg-gradient-to-b from-[#00E99A] to-[#00B96B] shadow-[0_2px_12px_rgba(0,217,139,0.45)] origin-bottom transition-transform duration-300 ${
             animated ? 'animate-bar-3' : ''
           }`}
-          title="Recruitix Analytics Bar 3"
+          title="Eleventis Analytics Bar 3"
         />
       </div>
 
@@ -65,10 +65,7 @@ const ThreeBarLogo = ({
       {showText && (
         <div className="flex flex-col">
           <span className={`font-black tracking-tight leading-none ${textColor} ${config.text}`}>
-            Recruitix
-          </span>
-          <span className={`font-bold tracking-tight text-ras-teal/90 leading-tight ${config.text}`}>
-            Analytica Solution
+            Eleventis
           </span>
           {subtitle && (
             <span className={`font-extrabold uppercase tracking-widest text-[#00B96B] mt-0.5 ${config.sub}`}>

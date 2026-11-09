@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   Search,
   Plus,
   Edit2,
   Trash2,
-  History,
-  CheckSquare,
+  Home,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -26,44 +26,34 @@ import {
   sanitizeContactNumberInput,
 } from '../utils/contactNumber';
 import { isValidEmail, normalizeEmail } from '../utils/email';
-import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
+import { formatDateDDMMYYYY } from '../utils/dateFormatter';
+import { RECEIVED_INFO_STATUS_OPTIONS, RECEIVED_INFO_STATUS_COLORS } from '../utils/statusMaster';
 
-const statusOptions = [
-  'New Info',
-  'Request Proposal submitted',
-  'Documents Submitted',
-  'Contact Made',
-  'Sent Follow up Message',
-  'Received Call',
-  'Issue with Management',
-  'Internal Note',
-  'Received a Message',
-  'Re-Open',
-  'Contract Cancelled',
-  'Contract Rejected',
-  'Contract Signed',
-  'Follow up Meet',
-  'Issue with Call'
-];
+// Status options for Received Info (from centralized integer mapping)
+const statusOptions = RECEIVED_INFO_STATUS_OPTIONS;
 
-const getReceivedStatusBadge = (statusStr) => {
-  const label = statusStr || 'NA';
-  const statusMap = {
-    'New Info': 'bg-brand-50 text-brand-800 border-brand-200',
-    'Contract Signed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'Contract Rejected': 'bg-red-50 text-red-700 border-red-200',
-    'Contract Cancelled': 'bg-slate-100 text-slate-700 border-slate-300',
-    'Contact Made': 'bg-blue-50 text-blue-700 border-blue-200',
-    'Received Call': 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    'Issue with Management': 'bg-orange-50 text-orange-700 border-orange-200',
-    'Issue with Call': 'bg-orange-50 text-orange-700 border-orange-200',
-    'Re-Open': 'bg-violet-50 text-violet-700 border-violet-200',
-    'Internal Note': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    'Documents Submitted': 'bg-teal-50 text-teal-700 border-teal-200',
-    'Sent Follow up Message': 'bg-sky-50 text-sky-700 border-sky-200',
-    'Request Proposal submitted': 'bg-purple-50 text-purple-700 border-purple-200',
-  };
-  const colorClass = statusMap[label] || 'bg-slate-50 text-slate-600 border-slate-200';
+const getReceivedStatusBadge = (status) => {
+  // Handle both integer (new) and string (legacy) status values
+  let statusInt = status;
+  let label = 'NA';
+  
+  if (status !== undefined && status !== null && status !== '') {
+    if (typeof status === 'number' || (typeof status === 'string' && !isNaN(Number(status)))) {
+      statusInt = Number(status);
+      if (Number.isInteger(statusInt) && statusInt >= 1 && statusInt <= 15) {
+        // Find label from centralized mapping
+        const opt = RECEIVED_INFO_STATUS_OPTIONS.find((o) => o.value === statusInt);
+        label = opt ? opt.label : String(statusInt);
+      } else {
+        label = String(status);
+      }
+    } else {
+      label = String(status);
+    }
+  }
+  
+  // Use centralized color mapping
+  const colorClass = RECEIVED_INFO_STATUS_COLORS[statusInt] || 'bg-slate-50 text-slate-600 border-slate-200';
 
   return (
     <span className={`px-2 py-0.5 border text-[10px] rounded-lg font-bold inline-block ${colorClass}`}>
@@ -88,6 +78,7 @@ const ReceivedInfo = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   // Sorting state
   const [sortBy, setSortBy] = useState('createdAt');
@@ -95,16 +86,10 @@ const ReceivedInfo = () => {
 
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
-  const [historyList, setHistoryList] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-  // Received input form state
   const [formData, setFormData] = useState({
     requestId: '',
     companyName: '',
@@ -119,11 +104,6 @@ const ReceivedInfo = () => {
     initialStatus: '',
   });
   const [formErrors, setFormErrors] = useState({});
-
-  const [statusForm, setStatusForm] = useState({
-    status: '',
-    description: ''
-  });
 
   const vendorOptions = ['HR Circle', 'Talvixa', 'Job Updates', 'MagicBus', 'Other Vendor'];
 
@@ -258,8 +238,8 @@ const ReceivedInfo = () => {
       resourceName: '',
       vendor: '',
       logDescription: '',
-      status: 'New Info',
-      initialStatus: 'New Info',
+      status: 1,
+      initialStatus: 1,
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -268,7 +248,7 @@ const ReceivedInfo = () => {
   // Open Edit Form modal
   const handleEditClick = (record) => {
     setActiveRecord(record);
-    const currentSt = record.status || record.initialStatus || record.currentStatus || 'New Info';
+    const currentSt = record.status || record.initialStatus || record.currentStatus || 1;
     setFormData({
       requestId: record.requestId || '',
       companyName: record.companyName || '',
@@ -279,8 +259,8 @@ const ReceivedInfo = () => {
       resourceName: record.resourceName || '',
       vendor: record.vendor || '',
       logDescription: record.logDescription || '',
-      status: currentSt,
-      initialStatus: currentSt,
+      status: Number(currentSt),
+      initialStatus: Number(currentSt),
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -324,7 +304,9 @@ const ReceivedInfo = () => {
       return;
     }
 
-    const currentSt = formData.status || formData.initialStatus || 'New Info';
+    // Convert status to integer (formData stores number from dropdown, fallback to 1 for 'New Info')
+    const currentSt = formData.status || formData.initialStatus || 1;
+    const statusInt = Number(currentSt);
     const payload = {
       ...formData,
       companyName: formData.companyName.trim(),
@@ -335,8 +317,8 @@ const ReceivedInfo = () => {
       resourceName: formData.resourceName.trim(),
       vendor: formData.vendor,
       logDescription: formData.logDescription.trim(),
-      status: currentSt,
-      initialStatus: currentSt,
+      status: statusInt,
+      initialStatus: statusInt,
     };
 
     try {
@@ -376,47 +358,14 @@ const ReceivedInfo = () => {
     }
   };
 
-  // Open Update Status Modal
-  const handleUpdateStatusClick = (record) => {
-    setActiveRecord(record);
-    setStatusForm({
-      status: record.status || record.currentStatus || record.initialStatus || '',
-      description: ''
-    });
-    setIsStatusOpen(true);
-  };
-
-  // Submit new status
-  const handleStatusSubmit = async (e) => {
-    e.preventDefault();
-    if (!statusForm.description.trim()) {
-      toast.error('Please specify a description or reasoning for status update');
+  // Open Audit Trail page (separate full page)
+  const handleAuditTrailClick = (e, record) => {
+    if (e) e.stopPropagation();
+    if (!record || !record._id) {
+      toast.error('Invalid record. Cannot open audit trail.');
       return;
     }
-    try {
-      await api.put(`/received-info/${activeRecord._id}/status`, statusForm);
-      toast.success('Status updated!');
-      setIsStatusOpen(false);
-      fetchRecords();
-    } catch (error) {
-      toast.error('Failed to update status.');
-    }
-  };
-
-  // Open Status History modal
-  const handleHistoryClick = async (record) => {
-    setActiveRecord(record);
-    setHistoryList([]);
-    setIsHistoryOpen(true);
-    setHistoryLoading(true);
-    try {
-      const { data } = await api.get(`/received-info/${record._id}/status-history`);
-      setHistoryList(data);
-    } catch (error) {
-      toast.error('Failed to load history.');
-    } finally {
-      setHistoryLoading(false);
-    }
+    navigate(`/dashboard/received-info/${record._id}/audit-trail`, { state: { record } });
   };
 
   return (
@@ -644,21 +593,13 @@ const ReceivedInfo = () => {
                             <Trash2 size={13} />
                           </button>
                         )}
-                        {/* Update Status Trigger */}
+                        {/* Audit Trail */}
                         <button
-                          onClick={() => handleUpdateStatusClick(r)}
-                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all text-slate-500"
-                          title="Update Workflow Status"
-                        >
-                          <CheckSquare size={13} />
-                        </button>
-                        {/* Audit Trail Trail */}
-                        <button
-                          onClick={() => handleHistoryClick(r)}
+                          onClick={(e) => handleAuditTrailClick(e, r)}
                           className="p-1.5 bg-slate-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all text-slate-500"
-                          title="Show Status Audit Trails"
+                          title="Open Sourcing Audit Trail"
                         >
-                          <History size={13} />
+                          <Home size={13} />
                         </button>
                       </div>
                     </td>
@@ -822,12 +763,12 @@ const ReceivedInfo = () => {
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status *</label>
               <select
                 value={formData.status || formData.initialStatus || ''}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value, initialStatus: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, status: Number(e.target.value), initialStatus: Number(e.target.value) })}
                 className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
               >
                 <option value="">Select</option>
                 {statusOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
               {(formErrors.status || formErrors.initialStatus) && (
@@ -864,104 +805,7 @@ const ReceivedInfo = () => {
         </form>
       </Modal>
 
-      {/* 2. UPDATE STATUS MODAL */}
-      <Modal
-        isOpen={isStatusOpen}
-        onClose={() => setIsStatusOpen(false)}
-        title={`Update Status: ${activeRecord?.requestId}`}
-      >
-        <form onSubmit={handleStatusSubmit} className="space-y-4 text-slate-800">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Select Sourcing Status</label>
-            <select
-              value={statusForm.status}
-              onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            >
-              <option value="">Select</option>
-              {statusOptions.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Workflow Notes / Reason *</label>
-            <textarea
-              rows={3}
-              value={statusForm.description}
-              onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
-            />
-          </div>
-
-          <div className="flex items-center space-x-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsStatusOpen(false)}
-              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-sm"
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              className="flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] active:scale-[0.98] transition-all"
-            >
-              Submit Update
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* 3. SHOW HISTORY AUDIT TRAIL MODAL */}
-      <Modal
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        title={`Audit Trail: ${activeRecord?.requestId}`}
-        maxWidth="max-w-md"
-      >
-        {historyLoading ? (
-          <div className="py-12 flex items-center justify-center">
-            <Spinner />
-          </div>
-        ) : historyList.length === 0 ? (
-          <p className="text-center text-slate-400 text-xs py-8">No status transition log records found.</p>
-        ) : (
-          <div className="relative border-l-2 border-slate-200 pl-4 py-1.5 ml-3 space-y-6 text-slate-800">
-            {historyList.map((hist, idx) => (
-              <div key={hist._id || idx} className="relative">
-                {/* Node icon circle */}
-                <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full bg-brand-800 border border-white shadow-sm" />
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    {getReceivedStatusBadge(hist.status)}
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {formatDateTimeDDMMYYYY(hist.updatedOn)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
-                    {hist.description}
-                  </p>
-                  <div className="text-[10px] text-slate-500 font-medium">
-                    Updated by: <span className="text-slate-700 font-bold">{hist.updatedBy}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="mt-6 pt-3 border-t border-slate-100 flex justify-end">
-          <button
-            onClick={() => setIsHistoryOpen(false)}
-            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all shadow-sm"
-          >
-            Dismiss
-          </button>
-        </div>
-      </Modal>
-
-      {/* 4. CONFIRM DELETE MODAL */}
+      {/* 2. CONFIRM DELETE MODAL */}
       <Modal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}

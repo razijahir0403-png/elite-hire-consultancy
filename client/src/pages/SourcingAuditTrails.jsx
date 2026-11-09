@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+﻿import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -29,7 +29,8 @@ import {
   Edit2,
   Check,
   AlertTriangle,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../hooks/useAuth';
@@ -93,6 +94,12 @@ const SourcingAuditTrails = () => {
   const [isEmailPackOpen, setIsEmailPackOpen] = useState(false);
   const [isConditionsOpen, setIsConditionsOpen] = useState(false);
   const [isRemarksOpen, setIsRemarksOpen] = useState(false);
+
+  // Document Delete Confirmation State
+  const [isDeleteDocumentOpen, setIsDeleteDocumentOpen] = useState(false);
+  const [deletingDocType, setDeletingDocType] = useState(null); // 'request-letter' | 'url-letter' | 'company-profile'
+  const [deletingDocumentName, setDeletingDocumentName] = useState('');
+  const [confirmingDocumentDelete, setConfirmingDocumentDelete] = useState(false);
 
   // Action Section Upload & Form States
   const [requestLetterFile, setRequestLetterFile] = useState(null);
@@ -365,6 +372,32 @@ const SourcingAuditTrails = () => {
     }
   };
 
+  // Open Document Delete Confirmation
+  const handleDeleteDocument = (docType, docName) => {
+    setDeletingDocType(docType);
+    setDeletingDocumentName(docName || docType);
+    setIsDeleteDocumentOpen(true);
+  };
+
+  // Permanently delete document from both DB and file storage
+  const confirmDeleteDocument = async () => {
+    if (!deletingDocType) return;
+    setConfirmingDocumentDelete(true);
+    try {
+      const { data } = await api.delete(`/analytics/${id}/document/${deletingDocType}`);
+      setRecord(data);
+      setIsDeleteDocumentOpen(false);
+      setDeletingDocType(null);
+      setDeletingDocumentName('');
+      toast.success(`Document deleted successfully.`);
+    } catch (err) {
+      console.error('Document delete error:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete document.');
+    } finally {
+      setConfirmingDocumentDelete(false);
+    }
+  };
+
   // Open Conditions Modal with current saved state (numeric 1-10)
   const handleOpenConditionsModal = () => {
     const code = toCrStatusCode(record?.crStatusCode || record?.crStatus || record?.activeCondition);
@@ -493,11 +526,10 @@ const SourcingAuditTrails = () => {
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setViewMode('timeline')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'timeline'
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'timeline'
                   ? 'bg-white text-[#07566A] shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
               title="Timeline View"
             >
               <GitCommit size={14} />
@@ -505,11 +537,10 @@ const SourcingAuditTrails = () => {
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'table'
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'table'
                   ? 'bg-white text-[#07566A] shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
               title="Table View"
             >
               <List size={14} />
@@ -599,15 +630,15 @@ const SourcingAuditTrails = () => {
 
           {/* On-Hold Active Warning Banner */}
           {isOnHoldWarningVisible && (
-            <div className="mt-4 p-3.5 bg-gradient-to-r from-amber-50 via-amber-50/90 to-amber-100/60 border border-amber-300 rounded-xl flex items-center space-x-3 text-amber-900 shadow-2xs animate-fade-in">
+            <div className="mt-4 p-3.5  from-amber-50 via-amber-50/90 to-amber-100/60 border border-amber-300 rounded-xl flex items-center space-x-3 text-amber-900 shadow-2xs animate-fade-in">
               <div className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 flex-shrink-0">
                 <AlertTriangle size={18} className="animate-pulse" />
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-black tracking-tight text-amber-950">
+                <p className="text-xs font-black tracking-tight text-amber-950 text-red-600">
                   Current item is on-hold until {formatDeadlineDate(record.onHoldDeadline)}.
                 </p>
-                <p className="text-[11px] text-amber-800 font-medium mt-0.5">
+                <p className="text-[11px] text-amber-800 font-medium mt-0.5 text-red-600">
                   Active deadline registered in Conditions Required. Sourcing actions are temporarily paused.
                 </p>
               </div>
@@ -925,11 +956,10 @@ const SourcingAuditTrails = () => {
                   <div key={hist._id || idx} className="relative group">
                     {/* Node Circle on Timeline */}
                     <div
-                      className={`absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center transition-transform group-hover:scale-125 ${
-                        isLatest
+                      className={`absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center transition-transform group-hover:scale-125 ${isLatest
                           ? 'bg-[#00B96B] ring-4 ring-[#00B96B]/20 animate-pulse'
                           : 'bg-[#07566A]'
-                      }`}
+                        }`}
                     />
 
                     {/* Timeline Item Content Card */}
@@ -985,11 +1015,11 @@ const SourcingAuditTrails = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">#</th>
-                  <th className="py-3 px-4">Date & Time</th>
+                  {/* <th className="py-3 px-4">#</th> */}
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Description / Action Note</th>
                   <th className="py-3 px-4">Updated By</th>
+                  <th className="py-3 px-4">Date & Time</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1001,15 +1031,13 @@ const SourcingAuditTrails = () => {
 
                   return (
                     <tr key={hist._id || idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-500">
+                      {/* <td className="py-3.5 px-4 font-bold text-slate-500">
                         {globalIndex}
                         {isLatest && (
                           <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-[#00B96B]" title="Latest" />
                         )}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">
-                        {formatDateTimeDDMMYYYY(hist.updatedOn)}
-                      </td>
+                      </td> */}
+
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <StatusBadge status={hist.status} type="recruitment" />
                       </td>
@@ -1020,6 +1048,9 @@ const SourcingAuditTrails = () => {
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-800">
                         {hist.updatedBy || 'System'}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">
+                        {formatDateTimeDDMMYYYY(hist.updatedOn)}
                       </td>
                     </tr>
                   );
@@ -1157,6 +1188,22 @@ const SourcingAuditTrails = () => {
                     <Download size={14} />
                     <span className="hidden sm:inline">Download</span>
                   </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDeleteDocument(
+                          'request-letter',
+                          record.requestLetter.fileName || record.requestLetter.name || 'Request-Letter'
+                        )
+                      }
+                      className="p-2 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-300 text-slate-500 hover:text-red-600 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
+                      title="Delete Document"
+                    >
+                      <Trash2 size={14} />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1302,6 +1349,22 @@ const SourcingAuditTrails = () => {
                     <Download size={14} />
                     <span className="hidden sm:inline">Download</span>
                   </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDeleteDocument(
+                          'url-letter',
+                          record.urlLetter.fileName || record.urlLetter.name || 'URL-Letter'
+                        )
+                      }
+                      className="p-2 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-300 text-slate-500 hover:text-red-600 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
+                      title="Delete Document"
+                    >
+                      <Trash2 size={14} />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1447,6 +1510,22 @@ const SourcingAuditTrails = () => {
                     <Download size={14} />
                     <span className="hidden sm:inline">Download</span>
                   </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDeleteDocument(
+                          'company-profile',
+                          record.companyProfile.fileName || record.companyProfile.name || 'Company-Profile'
+                        )
+                      }
+                      className="p-2 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-300 text-slate-500 hover:text-red-600 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
+                      title="Delete Document"
+                    >
+                      <Trash2 size={14} />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1598,11 +1677,10 @@ const SourcingAuditTrails = () => {
                 <div
                   key={cond.value}
                   onClick={() => handleToggleCondition(cond.value)}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    isSelected
+                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
                       ? 'bg-[#EAF8F3] border-[#00B96B] shadow-2xs'
                       : 'bg-slate-50/70 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <div className="overflow-hidden min-w-0">
                     <span className={`text-xs font-bold block truncate ${isSelected ? 'text-[#07566A]' : 'text-slate-800'}`}>
@@ -1622,15 +1700,13 @@ const SourcingAuditTrails = () => {
                       e.stopPropagation();
                       handleToggleCondition(cond.value);
                     }}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      isSelected ? 'bg-[#00B96B]' : 'bg-slate-300'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isSelected ? 'bg-[#00B96B]' : 'bg-slate-300'
+                      }`}
                   >
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                        isSelected ? 'translate-x-5' : 'translate-x-0'
-                      }`}
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isSelected ? 'translate-x-5' : 'translate-x-0'
+                        }`}
                     />
                   </button>
                 </div>
@@ -1809,6 +1885,69 @@ const SourcingAuditTrails = () => {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* DOCUMENT DELETE CONFIRMATION MODAL */}
+      <Modal
+        isOpen={isDeleteDocumentOpen}
+        onClose={() => {
+          if (!confirmingDocumentDelete) {
+            setIsDeleteDocumentOpen(false);
+            setDeletingDocType(null);
+            setDeletingDocumentName('');
+          }
+        }}
+        title="Delete Document"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-5 text-slate-800">
+          {/* Warning Icon + Message */}
+          <div className="flex items-start space-x-4 p-4 bg-red-50 border border-red-200 rounded-2xl">
+            <div className="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center text-red-600 flex-shrink-0">
+              <Trash2 size={20} />
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-red-800 mb-1">Permanent Deletion Warning</p>
+              <p className="text-xs text-red-700 leading-relaxed">
+                Are you sure you want to permanently delete this document?
+              </p>
+              {deletingDocumentName && (
+                <p className="mt-2 text-[11px] font-semibold text-slate-600 bg-white border border-red-200 px-2.5 py-1.5 rounded-lg truncate">
+                  {deletingDocumentName}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            This action is <strong className="text-slate-700">irreversible</strong>. The document will be permanently removed from both the database and file storage. It cannot be recovered after deletion.
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex items-center space-x-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeleteDocumentOpen(false);
+                setDeletingDocType(null);
+                setDeletingDocumentName('');
+              }}
+              disabled={confirmingDocumentDelete}
+              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteDocument}
+              disabled={confirmingDocumentDelete}
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1.5"
+            >
+              <Trash2 size={13} className={confirmingDocumentDelete ? 'animate-bounce' : ''} />
+              <span>{confirmingDocumentDelete ? 'Deleting...' : 'Delete Document'}</span>
+            </button>
           </div>
         </div>
       </Modal>

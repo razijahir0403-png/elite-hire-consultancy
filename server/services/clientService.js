@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const fsp = require('fs').promises;
 const Client = require('../models/Client');
 const AppError = require('../utils/AppError');
@@ -373,6 +373,138 @@ const streamClientProofDocument = async (id, res, { download = false } = {}) => 
   return streamDocumentFile(record, 'proof', res, { download });
 };
 
+
+// ============================================================
+// CLIENT AUDIT DOCUMENT METHODS (CL Proof Doc / Cover Letter / CL Profile Doc)
+// ============================================================
+const { resolveClientAuditDocumentPath, buildContentDisposition: buildAuditContentDisposition, getMimeType, toStoredClientAuditPath } = require('../utils/clientAuditDocumentPaths');
+
+const DOC_FIELD_MAP = {
+  'cl-proof-doc': 'clProofDoc',
+  'cover-letter': 'coverLetter',
+  'cl-profile-doc': 'clProfileDoc',
+};
+
+const uploadClientAuditDocument = async (id, docType, file, editorName) => {
+  const fieldName = DOC_FIELD_MAP[docType];
+  if (!fieldName) throw new AppError('Invalid document type', 400);
+  const record = await Client.findById(id);
+  if (!record) throw new AppError('Client not found', 404);
+  if (!file) throw new AppError('No file uploaded', 400);
+  // Delete old file if exists
+  const oldDoc = record[fieldName];
+  if (oldDoc && (oldDoc.path || oldDoc.fileUrl)) {
+    const resolved = await resolveClientAuditDocumentPath(oldDoc.path || oldDoc.fileUrl);
+    if (resolved) { try { fs.unlinkSync(resolved); } catch (e) { console.warn('[ClientAudit] could not delete old file:', e.message); } }
+  }
+  const storedPath = toStoredClientAuditPath(file.filename);
+  record[fieldName] = {
+    fileName: file.originalname,
+    fileUrl: storedPath,
+    path: storedPath,
+    fileSize: file.size,
+    uploadedAt: new Date(),
+    uploadedBy: editorName,
+  };
+  if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
+  record.statusHistory.push({
+    status: record.status,
+    description: `${docType} document uploaded: ${file.originalname}`,
+    updatedBy: editorName,
+    updatedOn: new Date(),
+  });
+  record.updatedBy = editorName;
+  record.updatedOn = new Date();
+  const saved = await record.save();
+  return normalizeClientRecord(saved);
+};
+
+const streamClientAuditDocument = async (id, docType, res, options = {}) => {
+  const fieldName = DOC_FIELD_MAP[docType];
+  if (!fieldName) throw new AppError('Invalid document type', 400);
+  const record = await Client.findById(id).lean();
+  if (!record) throw new AppError('Client not found', 404);
+  const doc = record[fieldName];
+  if (!doc || (!doc.path && !doc.fileUrl)) throw new AppError('No document uploaded for this type', 404);
+  const storedPath = doc.path || doc.fileUrl;
+  const resolved = await resolveClientAuditDocumentPath(storedPath, { id, docType });
+  if (!resolved) throw new AppError('Document file not found on server', 404);
+  const filename = doc.fileName || path.basename(storedPath);
+  const download = options.download === true;
+  res.set('Content-Disposition', buildAuditContentDisposition(filename, download));
+  res.set('Content-Type', getMimeType(filename));
+  res.set('Cache-Control', 'no-cache');
+  const stream = fs.createReadStream(resolved);
+  stream.on('error', (err) => {
+    console.error('[ClientAudit] stream error', err);
+    if (!res.headersSent) res.status(500).json({ message: 'Failed to stream document' });
+  });
+  stream.pipe(res);
+};
+
+const deleteClientAuditDocument = async (id, docType, editorName) => {
+  const fieldName = DOC_FIELD_MAP[docType];
+  if (!fieldName) throw new AppError('Invalid document type', 400);
+  const record = await Client.findById(id);
+  if (!record) throw new AppError('Client not found', 404);
+  const doc = record[fieldName];
+  if (!doc || (!doc.path && !doc.fileUrl)) throw new AppError('No document found for this type', 404);
+  const storedPath = doc.path || doc.fileUrl;
+  const resolved = await resolveClientAuditDocumentPath(storedPath, { id, docType });
+  if (resolved) { try { fs.unlinkSync(resolved); } catch (e) { console.warn('[ClientAudit] could not delete file:', e.message); } }
+  const docName = doc.fileName || docType;
+  record[fieldName] = null;
+  if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
+  record.statusHistory.push({
+    status: record.status,
+    description: `${docType} document deleted: ${docName}`,
+    updatedBy: editorName,
+    updatedOn: new Date(),
+  });
+  record.updatedBy = editorName;
+  record.updatedOn = new Date();
+  const saved = await record.save();
+  return normalizeClientRecord(saved);
+};
+
+const updateClientConditions = async (id, body, editorName) => {
+  const record = await Client.findById(id);
+  if (!record) throw new AppError('Client not found', 404);
+  const { crStatus, activeCondition, onHoldDeadline } = body;
+  const code = crStatus != null ? Number(crStatus) : null;
+  record.crStatus = code;
+  record.activeCondition = activeCondition || null;
+  record.onHoldDeadline = onHoldDeadline ? new Date(onHoldDeadline) : null;
+  if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
+  const condLabel = activeCondition || (code ? 'Condition #' + code : 'None');
+  record.statusHistory.push({
+    status: record.status,
+    description: 'Conditions Required updated: ' + condLabel,
+    updatedBy: editorName,
+    updatedOn: new Date(),
+  });
+  record.updatedBy = editorName;
+  record.updatedOn = new Date();
+  const saved = await record.save();
+  return normalizeClientRecord(saved);
+};
+
+const updateClientRemarks = async (id, remarks, editorName) => {
+  const record = await Client.findById(id);
+  if (!record) throw new AppError('Client not found', 404);
+  if (!Array.isArray(record.remarksHistory)) record.remarksHistory = [];
+  if (record.remarks) {
+    record.remarksHistory.push({ remark: record.remarks, updatedBy: record.updatedBy || editorName, updatedOn: record.updatedOn || new Date() });
+  }
+  record.remarks = remarks || '';
+  if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
+  record.statusHistory.push({ status: record.status, description: 'Remarks updated', updatedBy: editorName, updatedOn: new Date() });
+  record.updatedBy = editorName;
+  record.updatedOn = new Date();
+  const saved = await record.save();
+  return normalizeClientRecord(saved);
+};
+
 module.exports = {
   getClients,
   getClientById,
@@ -384,4 +516,10 @@ module.exports = {
   exportClients,
   streamClientDocument,
   streamClientProofDocument,
+  uploadClientAuditDocument,
+  streamClientAuditDocument,
+  deleteClientAuditDocument,
+  updateClientConditions,
+  updateClientRemarks,
 };
+

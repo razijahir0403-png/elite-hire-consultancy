@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
   Edit2,
   Trash2,
-  History,
-  CheckSquare,
+  Home,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -16,7 +16,6 @@ import {
   FileText,
   Download,
   Eye,
-  File,
 } from 'lucide-react';
 import api from '../api';
 import Modal from '../components/Modal';
@@ -30,20 +29,9 @@ import {
 } from '../utils/contactNumber';
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import { clientFilterOptions, CLIENT_STATUS } from '../utils/clientStatusMaster';
-import { validateProfilePdf } from '../utils/profileDocument';
-import { fetchClientPdfBlobUrl, fetchClientProofPdfBlobUrl, revokeBlobUrl } from '../utils/clientDocument';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
 
 const TEXT_FIELD_MAX_LENGTH = 200;
-
-const emptyPdfPreview = () => ({
-  name: '',
-  clientId: null,
-  blobUrl: null,
-  docType: 'profile',
-  loading: false,
-  error: false,
-});
 
 const emptyForm = () => ({
   clientName: '',
@@ -55,6 +43,7 @@ const emptyForm = () => ({
 });
 
 const Clients = () => {
+  const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -72,27 +61,12 @@ const Clients = () => {
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isPdfOpen, setIsPdfOpen] = useState(false);
 
   const [activeRecord, setActiveRecord] = useState(null);
-  const [historyList, setHistoryList] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [pdfPreview, setPdfPreview] = useState(emptyPdfPreview());
 
   const [formData, setFormData] = useState(emptyForm());
   const [formErrors, setFormErrors] = useState({});
-  const [profileFile, setProfileFile] = useState(null);
-  const [existingDocumentName, setExistingDocumentName] = useState('');
-  const [proofFile, setProofFile] = useState(null);
-  const [existingProofName, setExistingProofName] = useState('');
-
-  const [statusForm, setStatusForm] = useState({
-    status: '',
-    description: '',
-  });
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -180,10 +154,6 @@ const Clients = () => {
     setActiveRecord(null);
     setFormData(emptyForm());
     setFormErrors({});
-    setProfileFile(null);
-    setExistingDocumentName('');
-    setProofFile(null);
-    setExistingProofName('');
     setIsAddEditOpen(true);
   };
 
@@ -198,10 +168,6 @@ const Clients = () => {
       description: record.description || '',
     });
     setFormErrors({});
-    setProfileFile(null);
-    setExistingDocumentName(record.profileDocumentName || '');
-    setProofFile(null);
-    setExistingProofName(record.proofDocumentName || '');
     setIsAddEditOpen(true);
   };
 
@@ -229,14 +195,6 @@ const Clients = () => {
     if (!activeRecord && formData.status === '') {
       errors.status = 'Status is required';
     }
-    const pdfError = validateProfilePdf(profileFile);
-    if (pdfError) {
-      errors.profileDocument = pdfError;
-    }
-    const proofPdfError = validateProfilePdf(proofFile);
-    if (proofPdfError) {
-      errors.proofDocument = proofPdfError;
-    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -251,12 +209,6 @@ const Clients = () => {
       fd.append('status', String(formData.status));
       fd.append('description', formData.description.trim() || 'Initial client record creation');
     }
-    if (profileFile) {
-      fd.append('profileDocument', profileFile);
-    }
-    if (proofFile) {
-      fd.append('proofDocument', proofFile);
-    }
     return fd;
   };
 
@@ -266,7 +218,6 @@ const Clients = () => {
       toast.error('Please fix the highlighted form errors.');
       return;
     }
-
     try {
       const fd = buildSubmitFormData();
       if (activeRecord) {
@@ -281,40 +232,6 @@ const Clients = () => {
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error processing record.');
     }
-  };
-
-  const handleProfileFileChange = (e) => {
-    const file = e.target.files?.[0] || null;
-    const pdfError = validateProfilePdf(file);
-    if (pdfError) {
-      setFormErrors((prev) => ({ ...prev, profileDocument: pdfError }));
-      setProfileFile(null);
-      e.target.value = '';
-      return;
-    }
-    setFormErrors((prev) => {
-      const next = { ...prev };
-      delete next.profileDocument;
-      return next;
-    });
-    setProfileFile(file);
-  };
-
-  const handleProofFileChange = (e) => {
-    const file = e.target.files?.[0] || null;
-    const pdfError = validateProfilePdf(file);
-    if (pdfError) {
-      setFormErrors((prev) => ({ ...prev, proofDocument: pdfError }));
-      setProofFile(null);
-      e.target.value = '';
-      return;
-    }
-    setFormErrors((prev) => {
-      const next = { ...prev };
-      delete next.proofDocument;
-      return next;
-    });
-    setProofFile(file);
   };
 
   const handleDeleteClick = (record) => {
@@ -332,123 +249,6 @@ const Clients = () => {
       toast.error('Failed to remove record.');
     }
   };
-
-  const handleUpdateStatusClick = (record) => {
-    setActiveRecord(record);
-    setStatusForm({
-      status: record.status ?? '',
-      description: '',
-    });
-    setIsStatusOpen(true);
-  };
-
-  const handleStatusSubmit = async (e) => {
-    e.preventDefault();
-    if (!statusForm.description.trim()) {
-      toast.error('Please specify a description for the status update');
-      return;
-    }
-    try {
-      await api.put(`/clients/update-status/${activeRecord._id}`, statusForm);
-      toast.success('Status updated!');
-      setIsStatusOpen(false);
-      fetchRecords();
-    } catch {
-      toast.error('Failed to update status.');
-    }
-  };
-
-  const handleHistoryClick = async (record) => {
-    setActiveRecord(record);
-    setHistoryLoading(true);
-    setIsHistoryOpen(true);
-    try {
-      const { data } = await api.get(`/clients/history/${record._id}`);
-      setHistoryList(data);
-    } catch {
-      toast.error('Could not fetch status history.');
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const closePdfModal = () => {
-    setPdfPreview((prev) => {
-      revokeBlobUrl(prev.blobUrl);
-      return emptyPdfPreview();
-    });
-    setIsPdfOpen(false);
-  };
-
-  const openPdfModal = async (record, type = 'profile') => {
-    const hasDoc = type === 'profile' ? record.profileDocumentPath : record.proofDocumentPath;
-    if (!hasDoc || !record._id) return;
-
-    setPdfPreview({
-      name: type === 'profile' ? (record.profileDocumentName || 'profile-document.pdf') : (record.proofDocumentName || 'proof-document.pdf'),
-      clientId: record._id,
-      docType: type,
-      blobUrl: null,
-      loading: true,
-      error: false,
-    });
-    setIsPdfOpen(true);
-
-    try {
-      const blobUrl = type === 'profile'
-        ? await fetchClientPdfBlobUrl(record._id)
-        : await fetchClientProofPdfBlobUrl(record._id);
-      setPdfPreview((prev) => ({
-        ...prev,
-        blobUrl,
-        loading: false,
-        error: false,
-      }));
-    } catch (error) {
-      console.error('PDF preview load failed:', error);
-      setPdfPreview((prev) => ({
-        ...prev,
-        loading: false,
-        error: true,
-      }));
-    }
-  };
-
-  const handlePdfDownload = async () => {
-    if (pdfPreview.blobUrl) {
-      const link = document.createElement('a');
-      link.href = pdfPreview.blobUrl;
-      link.download = pdfPreview.name || (pdfPreview.docType === 'profile' ? 'profile-document.pdf' : 'proof-document.pdf');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
-    }
-
-    if (!pdfPreview.clientId) return;
-
-    try {
-      const fetchBlob =
-        pdfPreview.docType === 'profile' ? fetchClientPdfBlobUrl : fetchClientProofPdfBlobUrl;
-      const blobUrl = await fetchBlob(pdfPreview.clientId, { download: true });
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = pdfPreview.name || (pdfPreview.docType === 'profile' ? 'profile-document.pdf' : 'proof-document.pdf');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      revokeBlobUrl(blobUrl);
-    } catch {
-      toast.error('Unable to download document.');
-    }
-  };
-
-  useEffect(
-    () => () => {
-      revokeBlobUrl(pdfPreview.blobUrl);
-    },
-    [pdfPreview.blobUrl]
-  );
 
   return (
     <div className="space-y-6">
@@ -594,8 +394,6 @@ const Clients = () => {
                   <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Mobile</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[160px]">Email</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[120px]">Category</th>
-                  <th className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">Profile Docs</th>
-                  <th className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">Proof Docs</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Status</th>
                   <th onClick={() => handleSort('updatedOn')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
@@ -603,7 +401,7 @@ const Clients = () => {
                       {sortBy === 'updatedOn' && (sortOrder === 'asc' ? <ChevronUp size={12} className="text-[#00D98B]" /> : <ChevronDown size={12} className="text-[#00D98B]" />)}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">Actions</th>
+                  <th className="px-6 py-4 text-right whitespace-nowrap min-w-[130px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-xs">
@@ -614,34 +412,6 @@ const Clients = () => {
                     <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[130px]">{normalizeContactNumber(r.mobile) || '—'}</td>
                     <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[160px]">{r.email || '—'}</td>
                     <td className="px-6 py-4 text-slate-600 whitespace-nowrap min-w-[120px]">{r.category || '—'}</td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">
-                      {r.profileDocumentPath ? (
-                        <button
-                          type="button"
-                          onClick={() => openPdfModal(r, 'profile')}
-                          className="inline-flex p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition-all"
-                          title="View profile document"
-                        >
-                          <File size={14} />
-                        </button>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap min-w-[110px]">
-                      {r.proofDocumentPath ? (
-                        <button
-                          type="button"
-                          onClick={() => openPdfModal(r, 'proof')}
-                          className="inline-flex p-2 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 hover:bg-orange-100 transition-all"
-                          title="View proof document"
-                        >
-                          <File size={14} />
-                        </button>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap min-w-[130px]">
                       <StatusBadge status={r.status} type="client" />
                     </td>
@@ -649,7 +419,7 @@ const Clients = () => {
                       <div className="text-[10px] text-slate-700 font-medium">{formatDateDDMMYYYY(r.updatedDate || r.updatedOn || r.createdDate || r.createdAt)}</div>
                       <div className="text-[9px] text-slate-400">By {r.updatedBy || r.createdBy || 'System'}</div>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">
+                    <td className="px-6 py-4 text-right whitespace-nowrap min-w-[130px]">
                       <div className="flex items-center justify-end space-x-1.5">
                         <button type="button" onClick={() => handleViewClick(r)} className="p-1.5 bg-slate-50 border border-slate-200 hover:border-slate-400 rounded-lg text-slate-500" title="View">
                           <Eye size={13} />
@@ -662,11 +432,13 @@ const Clients = () => {
                             <Trash2 size={13} />
                           </button>
                         )}
-                        <button type="button" onClick={() => handleUpdateStatusClick(r)} className="p-1.5 bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-slate-500" title="Update Status">
-                          <CheckSquare size={13} />
-                        </button>
-                        <button type="button" onClick={() => handleHistoryClick(r)} className="p-1.5 bg-slate-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700 rounded-lg text-slate-500" title="History">
-                          <History size={13} />
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/dashboard/clients/${r._id}/audit-trail`)}
+                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-[#00B96B] hover:text-[#07566A] hover:bg-[#D5F5E7] rounded-lg transition-all text-slate-500"
+                          title="Open Sourcing Audit Trail"
+                        >
+                          <Home size={13} />
                         </button>
                       </div>
                     </td>
@@ -695,7 +467,6 @@ const Clients = () => {
         )}
       </div>
 
-      {/* Add / Edit */}
       {/* Add / Edit */}
       <Modal
         isOpen={isAddEditOpen}
@@ -757,47 +528,7 @@ const Clients = () => {
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
             />
-            {formErrors.category && (
-              <p className="text-[10px] text-red-600 mt-1">{formErrors.category}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Profile Document (PDF, max 200 KB)</label>
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={handleProfileFileChange}
-              className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-800 file:font-semibold"
-            />
-            {existingDocumentName && !profileFile && (
-              <p className="text-[10px] text-slate-500 mt-1">Current file: {existingDocumentName}</p>
-            )}
-            {profileFile && (
-              <p className="text-[10px] text-emerald-600 mt-1">New file selected: {profileFile.name}</p>
-            )}
-            {formErrors.profileDocument && (
-              <p className="text-[10px] text-red-600 mt-1">{formErrors.profileDocument}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Proof Document (PDF, max 200 KB)</label>
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={handleProofFileChange}
-              className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-800 file:font-semibold"
-            />
-            {existingProofName && !proofFile && (
-              <p className="text-[10px] text-slate-500 mt-1">Current file: {existingProofName}</p>
-            )}
-            {proofFile && (
-              <p className="text-[10px] text-emerald-600 mt-1">New file selected: {proofFile.name}</p>
-            )}
-            {formErrors.proofDocument && (
-              <p className="text-[10px] text-red-600 mt-1">{formErrors.proofDocument}</p>
-            )}
+            {formErrors.category && <p className="text-[10px] text-red-600 mt-1">{formErrors.category}</p>}
           </div>
 
           {!activeRecord && (
@@ -814,9 +545,7 @@ const Clients = () => {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-                {formErrors.status && (
-                  <p className="text-[10px] text-red-600 mt-1">{formErrors.status}</p>
-                )}
+                {formErrors.status && <p className="text-[10px] text-red-600 mt-1">{formErrors.status}</p>}
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Log Description</label>
@@ -855,130 +584,6 @@ const Clients = () => {
             </p>
             <p><span className="font-bold text-slate-500">Created:</span> {formatDateTimeDDMMYYYY(activeRecord.createdDate || activeRecord.createdAt)}</p>
             <p><span className="font-bold text-slate-500">Updated by:</span> {activeRecord.updatedBy}</p>
-            {activeRecord.profileDocumentPath && (
-              <button
-                type="button"
-                onClick={() => openPdfModal(activeRecord, 'profile')}
-                className="flex items-center gap-2 text-brand-800 font-bold hover:underline"
-              >
-                <File size={14} /> View Profile Document
-              </button>
-            )}
-            {activeRecord.proofDocumentPath && (
-              <button
-                type="button"
-                onClick={() => openPdfModal(activeRecord, 'proof')}
-                className="flex items-center gap-2 text-orange-600 font-bold hover:underline mt-1"
-              >
-                <File size={14} /> View Proof Document
-              </button>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {/* PDF Preview */}
-      <Modal
-        isOpen={isPdfOpen}
-        onClose={closePdfModal}
-        title={pdfPreview.name || 'Profile Document'}
-        maxWidth="max-w-3xl"
-      >
-        <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 min-h-[50vh] flex flex-col overflow-hidden">
-            {pdfPreview.loading && (
-              <div className="flex-1 flex items-center justify-center py-16">
-                <Spinner />
-              </div>
-            )}
-
-            {!pdfPreview.loading && pdfPreview.blobUrl && (
-              <iframe
-                title="PDF Preview"
-                src={`${pdfPreview.blobUrl}#toolbar=1&navpanes=0`}
-                className="w-full flex-1 min-h-[50vh] bg-white"
-              />
-            )}
-
-            {!pdfPreview.loading && pdfPreview.error && (
-              <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 text-center space-y-3">
-                <FileText size={40} className="text-slate-300" />
-                <p className="text-sm text-slate-600 font-medium">
-                  Preview unavailable. Click Download to view the document.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={closePdfModal}
-              className="w-full sm:flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold"
-            >
-              Close
-            </button>
-            <button
-              type="button"
-              onClick={handlePdfDownload}
-              disabled={pdfPreview.loading || (!pdfPreview.blobUrl && !pdfPreview.clientId)}
-              className="w-full sm:flex-1 py-2.5 bg-brand-800 hover:bg-brand-900 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
-            >
-              <Download size={14} />
-              Download
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Status */}
-      <Modal isOpen={isStatusOpen} onClose={() => setIsStatusOpen(false)} title={`Update Status: ${activeRecord?.clientId}`}>
-        <form onSubmit={handleStatusSubmit} className="space-y-4 text-slate-800">
-          <select
-            value={statusForm.status}
-            onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value === '' ? '' : Number(e.target.value) })}
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-          >
-            <option value="">Select</option>
-            {clientFilterOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <textarea
-            required
-            rows={3}
-            value={statusForm.description}
-            onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-          />
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button type="button" onClick={() => setIsStatusOpen(false)} className="w-full sm:flex-1 py-2.5 border border-slate-200 rounded-xl text-xs font-bold">Close</button>
-            <button type="submit" className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]">Submit</button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* History */}
-      <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title={`Audit Trail: ${activeRecord?.clientId}`} maxWidth="max-w-md">
-        {historyLoading ? (
-          <div className="py-12 flex justify-center"><Spinner /></div>
-        ) : historyList.length === 0 ? (
-          <p className="text-center text-slate-400 text-xs py-8">No status history found.</p>
-        ) : (
-          <div className="relative border-l-2 border-slate-200 pl-4 ml-3 space-y-6">
-            {historyList.map((hist, idx) => (
-              <div key={hist._id || idx} className="relative">
-                <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full bg-brand-800 border border-white" />
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <StatusBadge status={hist.status} type="client" />
-                    <span className="text-[10px] text-slate-400">{formatDateTimeDDMMYYYY(hist.updatedOn)}</span>
-                  </div>
-                  <p className="text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">{hist.description}</p>
-                  <p className="text-[10px] text-slate-500">Updated by: <span className="font-bold">{hist.updatedBy}</span></p>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </Modal>
