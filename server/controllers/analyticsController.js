@@ -16,4 +16,5 @@ module.exports = {
   updateCrStatus: requestInfoController.updateCrStatus,
   streamAnalyticsDocument: requestInfoController.streamAnalyticsDocument,
   deleteAnalyticsDocument: requestInfoController.deleteAnalyticsDocumentHandler,
+  deleteStatusHistory: requestInfoController.deleteStatusHistory,
 };

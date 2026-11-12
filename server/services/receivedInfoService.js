@@ -6,7 +6,12 @@ const {
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/receivedIdGenerator');
 const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
-const { toReceivedInfoStatusCode, ReceivedInfoStatusLabel } = require('../utils/statusMaster');
+const { toReceivedInfoStatusCode, ReceivedInfoStatusLabel, isWorkflowStatusHistory } = require('../utils/statusMaster');
+const {
+  toRiConditionCode,
+  getRiConditionLabel,
+  RI_CONDITION_KEY_TO_CODE,
+} = require('../utils/riStatusMaster');
 
 const normalizeReceivedRecord = (doc) => {
   if (!doc) return doc;
@@ -42,6 +47,55 @@ const normalizeReceivedRecord = (doc) => {
   } else {
     obj.statusHistory = [];
   }
+
+  // Resolve CR Status for ReceivedInfo
+  let crStatusCode = toRiConditionCode(obj.crStatus || obj.riStatus || obj.activeCondition);
+
+  if (Array.isArray(obj.statusHistory) && obj.statusHistory.length > 0) {
+    const sortedHistory = [...obj.statusHistory].sort(
+      (a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0)
+    );
+    for (const h of sortedHistory) {
+      if (h.description) {
+        const match = h.description.match(/(?:CR|RI)\s*(?:Condition|Status)\s*set\s*to\s*([^:]+)/i);
+        if (match && match[1]) {
+          const codeFromDesc = toRiConditionCode(match[1].trim());
+          if (codeFromDesc) {
+            crStatusCode = codeFromDesc;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!crStatusCode && Array.isArray(obj.remarksHistory) && obj.remarksHistory.length > 0) {
+    const sortedRemarks = [...obj.remarksHistory].sort(
+      (a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0)
+    );
+    for (const r of sortedRemarks) {
+      const codeFromRemark = toRiConditionCode(r.crStatus || r.riStatus);
+      if (codeFromRemark) {
+        crStatusCode = codeFromRemark;
+        break;
+      }
+    }
+  }
+
+  if (!crStatusCode && obj.conditionsRequired && typeof obj.conditionsRequired === 'object') {
+    const activeKey = Object.keys(obj.conditionsRequired).find(
+      (k) => Boolean(obj.conditionsRequired[k]) && RI_CONDITION_KEY_TO_CODE[k]
+    );
+    if (activeKey) {
+      crStatusCode = RI_CONDITION_KEY_TO_CODE[activeKey];
+    }
+  }
+
+  obj.crStatusCode = crStatusCode || null;
+  obj.crStatus = crStatusCode ? getRiConditionLabel(crStatusCode) : '-';
+  obj.riStatusCode = obj.crStatusCode;
+  obj.riStatus = obj.crStatus;
+
   return obj;
 };
 
@@ -280,8 +334,8 @@ const updateReceivedStatus = async (id, body, editorName) => {
 
   // Convert to integer using centralized helper (handles both integer and legacy string)
   const statusInt = toReceivedInfoStatusCode(status);
-  if (!Number.isInteger(statusInt) || statusInt < 1 || statusInt > 15) {
-    throw new AppError('Invalid status. Must be an integer between 1 and 15.', 400);
+  if (!Number.isInteger(statusInt) || statusInt < 1 || statusInt > 16) {
+    throw new AppError('Invalid status. Must be an integer between 1 and 16.', 400);
   }
 
   const oldStatus = record.status || record.currentStatus;
@@ -315,13 +369,14 @@ const updateReceivedStatus = async (id, body, editorName) => {
   return normalizeReceivedRecord(saved);
 };
 
-const getStatusHistory = async (id) => {
+const getStatusHistory = async (id, { all = false } = {}) => {
   const record = await ReceivedInfo.findById(id).lean();
   if (!record) {
     throw new AppError('Record not found', 404);
   }
   const history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
-  if (history.length === 0 && (record.status || record.currentStatus || record.initialStatus)) {
+  const filtered = all ? history : history.filter(isWorkflowStatusHistory);
+  if (filtered.length === 0 && (record.status || record.currentStatus || record.initialStatus)) {
     const currentSt = record.status || record.currentStatus || record.initialStatus;
     return [{
       status: toReceivedInfoStatusCode(currentSt),
@@ -330,14 +385,44 @@ const getStatusHistory = async (id) => {
       updatedOn: record.createdAt || record.updatedOn || new Date(),
     }];
   }
-  // Normalize history statuses to integers
-  return history.map((item) => ({
+  // Sort status history by latest update timestamp descending
+  const sorted = [...filtered].sort(
+    (a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0)
+  );
+  return sorted.map((item) => ({
     ...item,
+    _id: item._id ? String(item._id) : undefined,
+    id: item._id ? String(item._id) : item.id,
     status: toReceivedInfoStatusCode(item.status),
   }));
 };
 
+
+const deleteStatusHistory = async (id, historyId) => {
+  if (!id || !historyId) {
+    throw new AppError('Record ID and History ID are required', 400);
+  }
+  const record = await ReceivedInfo.findById(id);
+  if (!record) {
+    throw new AppError('Record not found', 404);
+  }
+  const historyIndex = (record.statusHistory || []).findIndex(
+    (item, idx) =>
+      (item._id && String(item._id) === String(historyId)) ||
+      (item.id && String(item.id) === String(historyId)) ||
+      (item.updatedOn && String(new Date(item.updatedOn).getTime()) === String(historyId)) ||
+      String(idx) === String(historyId)
+  );
+  if (historyIndex === -1) {
+    throw new AppError('Audit history record not found', 404);
+  }
+  record.statusHistory.splice(historyIndex, 1);
+  await record.save();
+  return { success: true, message: 'Audit history record deleted successfully.' };
+};
+
 module.exports = {
+  normalizeReceivedRecord,
   getReceivedInfos,
   getReceivedInfoById,
   createReceivedInfo,
@@ -345,4 +430,5 @@ module.exports = {
   softDeleteReceivedInfo,
   updateReceivedStatus,
   getStatusHistory,
+  deleteStatusHistory,
 };

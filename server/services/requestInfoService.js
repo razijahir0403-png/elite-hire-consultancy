@@ -10,6 +10,8 @@ const AppError = require('../utils/AppError');
 const {
   RECRUITMENT_STATUS,
   toRecruitmentStatusCode,
+  RecruitmentStatusLabel,
+  isWorkflowStatusHistory,
 } = require('../utils/statusMaster');
 const {
   CR_STATUS,
@@ -206,6 +208,7 @@ const createRequestInfo = async (body, editorName) => {
     description,
     updatedBy: editorName,
     updatedOn: new Date(),
+    eventType: 'workflow_status',
   };
 
   const duplicate = await RequestInfo.findOne({
@@ -346,15 +349,26 @@ const updateRequestStatus = async (id, { status, description }, editorName) => {
   return normalizeRequestRecord(saved);
 };
 
-const getStatusHistory = async (id) => {
+const getStatusHistory = async (id, { all = false } = {}) => {
   const record = await RequestInfo.findById(id).select('statusHistory').lean();
   if (!record) {
     throw new AppError('Record not found', 404);
   }
-  return (record.statusHistory || []).map((item) => ({
-    ...(item.toObject ? item.toObject() : item),
-    status: toRecruitmentStatusCode(item.status),
-  }));
+  const history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+  const filtered = all ? history : history.filter(isWorkflowStatusHistory);
+  const mapped = filtered.map((item) => {
+    const raw = item.toObject ? item.toObject() : { ...item };
+    const statusCode = toRecruitmentStatusCode(raw.status);
+    return {
+      ...raw,
+      _id: raw._id ? String(raw._id) : undefined,
+      id: raw._id ? String(raw._id) : raw.id,
+      status: statusCode,
+      statusLabel: RecruitmentStatusLabel[statusCode] || 'Unknown',
+    };
+  });
+  mapped.sort((a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0));
+  return mapped;
 };
 
 const uploadRequestLetter = async (id, file, editorName) => {
@@ -365,8 +379,24 @@ const uploadRequestLetter = async (id, file, editorName) => {
   if (!file) {
     throw new AppError('Please select a file to upload', 400);
   }
-  if (file.size > 100 * 1024) {
-    throw new AppError('File size must not exceed 100 KB', 400);
+  if (file.size > 150 * 1024) {
+    throw new AppError('File size must not exceed 150 KB.', 400);
+  }
+
+  // Delete previous physical file if it exists to avoid stale files
+  const previousReqPath = record.requestLetter?.path || record.requestLetter?.fileUrl;
+  if (previousReqPath) {
+    try {
+      const absolutePath = await resolveAnalyticsDocumentPath(previousReqPath, {
+        id: record._id?.toString(),
+        docType: 'request-letter',
+      });
+      if (absolutePath && fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    } catch (e) {
+      console.warn('[uploadRequestLetter] Could not unlink previous file:', e.message);
+    }
   }
 
   const filePath = `/uploads/analytics/${file.filename}`;
@@ -389,6 +419,7 @@ const uploadRequestLetter = async (id, file, editorName) => {
   record.statusHistory.push({
     status: record.status || 0,
     description: `Request Letter uploaded: ${file.originalname}`,
+    eventType: 'document_upload',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -405,8 +436,24 @@ const uploadUrlLetter = async (id, file, editorName) => {
   if (!file) {
     throw new AppError('Please select a file to upload', 400);
   }
-  if (file.size > 100 * 1024) {
-    throw new AppError('File size must not exceed 100 KB', 400);
+  if (file.size > 150 * 1024) {
+    throw new AppError('File size must not exceed 150 KB.', 400);
+  }
+
+  // Delete previous physical file if it exists to avoid stale files
+  const previousUrlPath = record.urlLetter?.path || record.urlLetter?.fileUrl;
+  if (previousUrlPath) {
+    try {
+      const absolutePath = await resolveAnalyticsDocumentPath(previousUrlPath, {
+        id: record._id?.toString(),
+        docType: 'url-letter',
+      });
+      if (absolutePath && fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    } catch (e) {
+      console.warn('[uploadUrlLetter] Could not unlink previous file:', e.message);
+    }
   }
 
   const filePath = `/uploads/analytics/${file.filename}`;
@@ -429,6 +476,7 @@ const uploadUrlLetter = async (id, file, editorName) => {
   record.statusHistory.push({
     status: record.status || 0,
     description: `URL Letter uploaded: ${file.originalname}`,
+    eventType: 'document_upload',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -445,8 +493,24 @@ const uploadCompanyProfile = async (id, file, editorName) => {
   if (!file) {
     throw new AppError('Please select a file to upload', 400);
   }
-  if (file.size > 100 * 1024) {
-    throw new AppError('File size must not exceed 100 KB', 400);
+  if (file.size > 150 * 1024) {
+    throw new AppError('File size must not exceed 150 KB.', 400);
+  }
+
+  // Delete previous physical file if it exists to avoid stale files
+  const previousCompPath = record.companyProfile?.path || record.companyProfile?.fileUrl;
+  if (previousCompPath) {
+    try {
+      const absolutePath = await resolveAnalyticsDocumentPath(previousCompPath, {
+        id: record._id?.toString(),
+        docType: 'company-profile',
+      });
+      if (absolutePath && fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    } catch (e) {
+      console.warn('[uploadCompanyProfile] Could not unlink previous file:', e.message);
+    }
   }
 
   const filePath = `/uploads/analytics/${file.filename}`;
@@ -475,6 +539,7 @@ const uploadCompanyProfile = async (id, file, editorName) => {
   record.statusHistory.push({
     status: record.status || 0,
     description: `Company Profile document uploaded: ${file.originalname}`,
+    eventType: 'document_upload',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -632,6 +697,7 @@ const updateCrStatus = async (id, payload, editorName, file) => {
     record.statusHistory.push({
       status: record.status || 0,
       description: `CR Status set to ${activeLabel}${remarkText ? ': ' + String(remarkText).trim() : ''}`,
+      eventType: 'cr_status_update',
       updatedBy: editorName,
       updatedOn: new Date(),
     });
@@ -690,7 +756,9 @@ const streamAnalyticsDocument = async (id, docType, res, { download = false } = 
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Content-Disposition', buildContentDisposition(filename, download));
   res.setHeader('Content-Length', stat.size);
-  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
@@ -806,12 +874,37 @@ const deleteAnalyticsDocument = async (id, docType, editorName) => {
   record.statusHistory.push({
     status: record.status || 0,
     description: `${docLabel} document deleted${originalName ? `: ${originalName}` : ''}`,
+    eventType: 'document_delete',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
 
   const saved = await record.save();
   return normalizeRequestRecord(saved);
+};
+
+
+const deleteStatusHistory = async (id, historyId) => {
+  if (!id || !historyId) {
+    throw new AppError('Record ID and History ID are required', 400);
+  }
+  const record = await RequestInfo.findById(id);
+  if (!record) {
+    throw new AppError('Record not found', 404);
+  }
+  const historyIndex = (record.statusHistory || []).findIndex(
+    (item, idx) =>
+      (item._id && String(item._id) === String(historyId)) ||
+      (item.id && String(item.id) === String(historyId)) ||
+      (item.updatedOn && String(new Date(item.updatedOn).getTime()) === String(historyId)) ||
+      String(idx) === String(historyId)
+  );
+  if (historyIndex === -1) {
+    throw new AppError('Audit history record not found', 404);
+  }
+  record.statusHistory.splice(historyIndex, 1);
+  await record.save();
+  return { success: true, message: 'Audit history record deleted successfully.' };
 };
 
 module.exports = {
@@ -830,4 +923,5 @@ module.exports = {
   updateCrStatus,
   streamAnalyticsDocument,
   deleteAnalyticsDocument,
+  deleteStatusHistory,
 };

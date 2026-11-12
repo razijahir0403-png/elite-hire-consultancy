@@ -12,6 +12,7 @@ const {
   updateRemarks,
   streamReceivedInfoAuditDocument,
   deleteReceivedInfoAuditDocument,
+  deleteStatusHistory,
 } = require('../controllers/receivedInfoAuditController');
 const { receivedInfoValidators } = require('../utils/validators');
 const validate = require('../middleware/validate');
@@ -21,6 +22,8 @@ router.use(protect);
 
 // History endpoint
 router.get('/history/:id', receivedInfoValidators.idParam, validate, getStatusHistory);
+router.delete('/history/:id/:historyId', adminOnly, deleteStatusHistory);
+router.delete('/:id/history/:historyId', adminOnly, deleteStatusHistory);
 
 // Action Section Endpoints - Document Uploads (Admin only)
 router.post(

@@ -753,7 +753,7 @@ const Analytics = () => {
       >
         <div className="space-y-4 text-slate-800">
           <p className="text-xs text-slate-600 leading-relaxed">
-            Are you sure you want to delete candidate <span className="font-extrabold text-brand-850">{activeRecord?.idnumber}</span>? This action is permanent and will clear all associated status history metrics.
+            Are you sure you want to delete candidate <span className="font-extrabold text-brand-850">{activeRecord?.idnumber}</span>? 
           </p>
           <div className="flex items-center space-x-3 pt-2">
             <button

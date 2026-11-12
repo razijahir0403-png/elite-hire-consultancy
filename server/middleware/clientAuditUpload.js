@@ -5,7 +5,7 @@ const AppError = require('../utils/AppError');
 const { getUploadsRoot } = require('../utils/clientDocumentPaths');
 
 const UPLOAD_DIR = path.join(getUploadsRoot(), 'clients-audit');
-const MAX_FILE_SIZE = 100 * 1024; // 100 KB
+const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -55,7 +55,7 @@ const handleClientAuditUpload = (fieldName = 'document') => (req, res, next) => 
     if (!err) return next();
     if (err instanceof AppError) return next(err);
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return next(new AppError('File size must not exceed 100 KB.', 400));
+      return next(new AppError('File size must not exceed 150 KB.', 400));
     }
     if (err.code === 'LIMIT_UNEXPECTED_FILE') {
       return next(new AppError('Unexpected file field.', 400));

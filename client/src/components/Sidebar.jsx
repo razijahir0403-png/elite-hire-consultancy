@@ -148,7 +148,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       const matchedOpt = clientFilterOptions.find((o) => o.value === numericStatus);
       const label = matchedOpt ? matchedOpt.label : String(numericStatus);
-      toast.success(`CR Status (${label}) and audit log recorded successfully!`);
+      toast.success(`Workflow Status (${label}) and audit log recorded successfully!`);
     } catch (err) {
       console.error('Client update status error:', err);
       toast.error(err.response?.data?.message || 'Failed to update status');
@@ -192,7 +192,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       const matchedOpt = receivedInfoStatusOptions.find((o) => o.value === statusInt);
       const label = matchedOpt ? matchedOpt.label : statusInt;
-      toast.success(`RI Status (${label}) and audit trail recorded successfully!`);
+      toast.success(`Workflow Status (${label}) and audit trail recorded successfully!`);
     } catch (err) {
       console.error('Received Info update status error:', err);
       toast.error(err.response?.data?.message || 'Failed to update status');
@@ -258,11 +258,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     if (isClient) {
       options = clientFilterOptions;
       handleSave = handleSaveClientStatus;
-      selectedLabelPrefix = 'CR Status';
+      selectedLabelPrefix = 'Workflow Status';
     } else if (isReceivedInfo) {
       options = receivedInfoStatusOptions;
       handleSave = handleSaveReceivedInfoStatus;
-      selectedLabelPrefix = 'RI Status';
+      selectedLabelPrefix = 'Workflow Status';
     } else {
       options = recruitmentFilterOptions;
       handleSave = handleSaveStatus;

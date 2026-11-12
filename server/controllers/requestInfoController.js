@@ -36,7 +36,8 @@ const updateStatus = asyncHandler(async (req, res) => {
 });
 
 const getStatusHistory = asyncHandler(async (req, res) => {
-  const history = await requestInfoService.getStatusHistory(req.params.id);
+  const includeAll = req.query.all === 'true' || req.query.all === '1';
+  const history = await requestInfoService.getStatusHistory(req.params.id, { all: includeAll });
   res.json(history);
 });
 
@@ -90,6 +91,12 @@ const deleteAnalyticsDocumentHandler = asyncHandler(async (req, res) => {
   res.json(record);
 });
 
+
+const deleteStatusHistory = asyncHandler(async (req, res) => {
+  const result = await requestInfoService.deleteStatusHistory(req.params.id, req.params.historyId);
+  res.json(result);
+});
+
 module.exports = {
   getRequestInfos,
   getRequestInfo,
@@ -106,4 +113,5 @@ module.exports = {
   updateCrStatus,
   streamAnalyticsDocument,
   deleteAnalyticsDocumentHandler,
+  deleteStatusHistory,
 };

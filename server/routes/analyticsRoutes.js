@@ -18,6 +18,7 @@ const {
   updateCrStatus,
   streamAnalyticsDocument,
   deleteAnalyticsDocument,
+  deleteStatusHistory,
 } = require('../controllers/analyticsController');
 const { requestInfoValidators } = require('../utils/validators');
 const validate = require('../middleware/validate');
@@ -27,6 +28,8 @@ router.use(protect);
 
 router.put('/update-status/:id', requestInfoValidators.updateStatus, validate, updateStatus);
 router.get('/history/:id', requestInfoValidators.idParam, validate, getStatusHistory);
+router.delete('/history/:id/:historyId', adminOnly, deleteStatusHistory);
+router.delete('/:id/history/:historyId', adminOnly, deleteStatusHistory);
 
 // Action Section Endpoints
 router.post(

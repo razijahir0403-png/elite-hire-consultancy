@@ -32,7 +32,8 @@ const updateStatus = asyncHandler(async (req, res) => {
 });
 
 const getStatusHistory = asyncHandler(async (req, res) => {
-  const history = await clientService.getStatusHistory(req.params.id);
+  const includeAll = req.query.all === 'true' || req.query.all === '1';
+  const history = await clientService.getStatusHistory(req.params.id, { all: includeAll });
   res.json(history);
 });
 
@@ -87,6 +88,12 @@ const updateClientRemarksHandler = asyncHandler(async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+const deleteStatusHistoryHandler = asyncHandler(async (req, res) => {
+  const result = await clientService.deleteStatusHistory(req.params.id, req.params.historyId);
+  res.json(result);
+});
+
 module.exports = {
   getClients,
   getClient,
@@ -103,5 +110,6 @@ module.exports = {
   deleteClientAuditDocumentHandler,
   updateClientConditionsHandler,
   updateClientRemarksHandler,
+  deleteStatusHistoryHandler,
 };
 

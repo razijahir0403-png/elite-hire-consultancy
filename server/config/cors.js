@@ -59,12 +59,19 @@ const corsOptions = {
   allowedHeaders: [
     'Content-Type',
     'Authorization',
+    'Cache-Control',
+    'Pragma',
+    'Expires',
+    'X-Requested-With',
   ],
 
   exposedHeaders: [
     'Content-Length',
     'Content-Type',
     'Content-Disposition',
+    'Cache-Control',
+    'Pragma',
+    'Expires',
   ],
 
   optionsSuccessStatus: 200,

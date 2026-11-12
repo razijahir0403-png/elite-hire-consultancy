@@ -80,7 +80,10 @@ const clientFilterOptions = () =>
     value: Number(value),
   }));
 
+const { isWorkflowStatusHistory } = require('./statusMaster');
+
 module.exports = {
+  isWorkflowStatusHistory,
   CLIENT_STATUS,
   CLIENT_STATUS_MAX,
   ClientStatusLabel,

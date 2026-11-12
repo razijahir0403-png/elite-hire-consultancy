@@ -5,22 +5,24 @@ const { CLIENT_STATUS_MAX } = require('../utils/clientStatusMaster');
 const statusHistorySchema = new mongoose.Schema(
   {
     status: {
-      type: Number,
+      type: mongoose.Schema.Types.Mixed,
       required: true,
-      min: 0,
-      max: CLIENT_STATUS_MAX,
     },
     description: {
       type: String,
-      required: true,
+      default: '',
     },
     updatedBy: {
       type: String,
-      required: true,
+      default: 'System',
     },
     updatedOn: {
       type: Date,
       default: Date.now,
+    },
+    eventType: {
+      type: String,
+      default: 'workflow_status',
     },
   },
   { _id: true }

@@ -16,7 +16,7 @@ const {
   getRiConditionLabel,
   getRiConditionKey,
 } = require('../utils/riStatusMaster');
-const { toReceivedInfoStatusCode, ReceivedInfoStatusLabel } = require('../utils/statusMaster');
+const { toReceivedInfoStatusCode, ReceivedInfoStatusLabel, isWorkflowStatusHistory } = require('../utils/statusMaster');
 
 // Helper to ensure record's workflow status is integer
 const ensureIntegerStatus = (record) => {
@@ -85,16 +85,50 @@ const normalizeReceivedInfoRecord = (doc) => {
   obj.contractAgreement = normDoc(obj.contractAgreement, 'contract-agreement');
   obj.mouFile = normDoc(obj.mouFile, 'mou-file');
 
-  // Normalize conditionsRequired
-  const riStatusCode = toRiConditionCode(obj.riStatus);
+  // Normalize conditionsRequired and latest CR Status
+  let crStatusCode = toRiConditionCode(obj.crStatus || obj.riStatus || obj.activeCondition);
+
+  if (!crStatusCode && Array.isArray(obj.statusHistory) && obj.statusHistory.length > 0) {
+    const sortedHistory = [...obj.statusHistory].sort(
+      (a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0)
+    );
+    for (const h of sortedHistory) {
+      if (h.description) {
+        const match = h.description.match(/(?:CR|RI)\s*(?:Condition|Status)\s*set\s*to\s*([^:]+)/i);
+        if (match && match[1]) {
+          const codeFromDesc = toRiConditionCode(match[1].trim());
+          if (codeFromDesc) {
+            crStatusCode = codeFromDesc;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!crStatusCode && Array.isArray(obj.remarksHistory) && obj.remarksHistory.length > 0) {
+    const sortedRemarks = [...obj.remarksHistory].sort(
+      (a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0)
+    );
+    for (const r of sortedRemarks) {
+      const codeFromRemark = toRiConditionCode(r.crStatus || r.riStatus);
+      if (codeFromRemark) {
+        crStatusCode = codeFromRemark;
+        break;
+      }
+    }
+  }
+
   const conditionsRequired = {};
   Object.keys(RI_CONDITION_KEY_TO_CODE).forEach((k) => {
-    conditionsRequired[k] = riStatusCode ? RI_CONDITION_KEY_TO_CODE[k] === riStatusCode : false;
+    conditionsRequired[k] = crStatusCode ? RI_CONDITION_KEY_TO_CODE[k] === crStatusCode : false;
   });
   obj.conditionsRequired = conditionsRequired;
-  obj.riStatusCode = riStatusCode;
-  obj.riStatus = riStatusCode ? getRiConditionLabel(riStatusCode) : 'NA';
-  obj.activeCondition = riStatusCode ? getRiConditionLabel(riStatusCode) : '';
+  obj.crStatusCode = crStatusCode || null;
+  obj.crStatus = crStatusCode ? getRiConditionLabel(crStatusCode) : '-';
+  obj.riStatusCode = obj.crStatusCode;
+  obj.riStatus = obj.crStatus;
+  obj.activeCondition = crStatusCode ? getRiConditionLabel(crStatusCode) : '';
   obj.onHoldDeadline = obj.onHoldDeadline || null;
 
   obj.remarks = obj.remarks || '';
@@ -123,8 +157,56 @@ const uploadProposalRequest = async (id, file, editorName) => {
   if (!file) {
     throw new AppError('Please select a file to upload', 400);
   }
-  if (file.size > 100 * 1024) {
-    throw new AppError('File size must not exceed 100 KB', 400);
+  if (file.size > 150 * 1024) {
+    throw new AppError('File size must not exceed 150 KB.', 400);
+  }
+
+  // Delete previous physical file if it exists to avoid stale files
+  const previousPropPath = record.proposalRequest?.path || record.proposalRequest?.fileUrl;
+  if (previousPropPath) {
+    try {
+      const absolutePath = await resolveReceivedInfoAuditDocumentPath(previousPropPath, {
+        id: record._id?.toString(),
+        docType: 'proposal-request',
+      });
+      if (absolutePath && fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    } catch (e) {
+      console.warn('[uploadProposalRequest] Could not unlink previous file:', e.message);
+    }
+  }
+
+  // Delete previous physical file if it exists to avoid stale files
+  const previousContractPath = record.contractAgreement?.path || record.contractAgreement?.fileUrl;
+  if (previousContractPath) {
+    try {
+      const absolutePath = await resolveReceivedInfoAuditDocumentPath(previousContractPath, {
+        id: record._id?.toString(),
+        docType: 'contract-agreement',
+      });
+      if (absolutePath && fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    } catch (e) {
+      console.warn('[uploadContractAgreement] Could not unlink previous file:', e.message);
+    }
+  }
+
+  // Delete previous physical file if it exists to avoid stale files
+  const previousMouPath = record.mouFile?.path || record.mouFile?.fileUrl;
+  if (previousMouPath) {
+    try {
+      const absolutePath = await resolveReceivedInfoAuditDocumentPath(previousMouPath, {
+        id: record._id?.toString(),
+        docType: 'mou-file',
+      });
+      if (absolutePath && fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    } catch (e) {
+      console.warn('[uploadMouFile] Could not unlink previous file:', e.message);
+    }
   }
 
   const filePath = `/uploads/received-info-audit/${file.filename}`;
@@ -164,8 +246,8 @@ const uploadContractAgreement = async (id, file, editorName) => {
   if (!file) {
     throw new AppError('Please select a file to upload', 400);
   }
-  if (file.size > 100 * 1024) {
-    throw new AppError('File size must not exceed 100 KB', 400);
+  if (file.size > 150 * 1024) {
+    throw new AppError('File size must not exceed 150 KB.', 400);
   }
 
   const filePath = `/uploads/received-info-audit/${file.filename}`;
@@ -205,8 +287,8 @@ const uploadMouFile = async (id, file, editorName) => {
   if (!file) {
     throw new AppError('Please select a file to upload', 400);
   }
-  if (file.size > 100 * 1024) {
-    throw new AppError('File size must not exceed 100 KB', 400);
+  if (file.size > 150 * 1024) {
+    throw new AppError('File size must not exceed 150 KB.', 400);
   }
 
   const filePath = `/uploads/received-info-audit/${file.filename}`;
@@ -252,10 +334,16 @@ const updateConditions = async (id, payload = {}, editorName) => {
 
   let statusCode = null;
 
-  if (payload.riStatus !== undefined && payload.riStatus !== null && payload.riStatus !== '') {
+  const rawCrStatus = payload.crStatus !== undefined ? payload.crStatus : payload.riStatus;
+  if (rawCrStatus !== undefined && rawCrStatus !== null && rawCrStatus !== '') {
+    statusCode = toRiConditionCode(rawCrStatus);
+    if (!statusCode && rawCrStatus !== 'NA' && rawCrStatus !== '-') {
+      throw new AppError('Invalid CR Status. Value must be an integer between 1 and 11.', 400);
+    }
+  } else if (false) {
     statusCode = toRiConditionCode(payload.riStatus);
     if (!statusCode && payload.riStatus !== 'NA') {
-      throw new AppError('Invalid RI Status. Value must be an integer between 1 and 11.', 400);
+      throw new AppError('Invalid CR Status. Value must be an integer between 1 and 11.', 400);
     }
   } else if (payload.activeCondition !== undefined && payload.activeCondition !== null) {
     const raw = String(payload.activeCondition).trim();
@@ -302,6 +390,7 @@ const updateConditions = async (id, payload = {}, editorName) => {
   record.conditionsRequired = updatedConditions;
   record.activeCondition = activeLabel;
   // Strictly store numeric status value (1-11 or null) in database
+  record.crStatus = statusCode;
   record.riStatus = statusCode;
   record.onHoldDeadline = deadlineDate;
   record.updatedBy = editorName;
@@ -312,7 +401,7 @@ const updateConditions = async (id, payload = {}, editorName) => {
     record.statusHistory = record.statusHistory || [];
     record.statusHistory.push({
       status: record.status,
-      description: `RI Condition set to ${activeLabel}`,
+      description: `CR Status set to ${activeLabel}`,
       updatedBy: editorName,
       updatedOn: new Date(),
     });
@@ -334,7 +423,8 @@ const updateRemarks = async (id, remarks, editorName) => {
     record.remarksHistory = record.remarksHistory || [];
     record.remarksHistory.push({
       remark: remarkText,
-      riStatus: toRiConditionCode(record.riStatus),
+      crStatus: toRiConditionCode(record.crStatus || record.riStatus),
+        riStatus: toRiConditionCode(record.crStatus || record.riStatus),
       updatedBy: editorName,
       updatedOn: new Date(),
     });
@@ -392,7 +482,9 @@ const streamReceivedInfoAuditDocument = async (id, docType, res, { download = fa
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Content-Disposition', buildContentDisposition(filename, download));
   res.setHeader('Content-Length', stat.size);
-  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
@@ -525,7 +617,7 @@ const getReceivedInfoAuditById = async (id) => {
   return normalizeReceivedInfoRecord(record);
 };
 
-const getStatusHistory = async (id) => {
+const getStatusHistory = async (id, { all = false } = {}) => {
   const record = await ReceivedInfo.findById(id).select('statusHistory').lean();
   if (!record) {
     throw new AppError('Record not found', 404);
@@ -540,11 +632,41 @@ const getStatusHistory = async (id) => {
     }
     return null;
   };
-  return (record.statusHistory || []).map((item) => {
+  const history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+  const filtered = all ? history : history.filter(isWorkflowStatusHistory);
+  return filtered.map((item) => {
     const itemObj = item.toObject ? item.toObject() : { ...item };
-    itemObj.status = convertStatus(itemObj.status);
-    return itemObj;
+    return {
+      ...itemObj,
+      _id: itemObj._id ? String(itemObj._id) : undefined,
+      id: itemObj._id ? String(itemObj._id) : itemObj.id,
+      status: convertStatus(itemObj.status),
+    };
   });
+};
+
+
+const deleteStatusHistory = async (id, historyId) => {
+  if (!id || !historyId) {
+    throw new AppError('Record ID and History ID are required', 400);
+  }
+  const record = await ReceivedInfo.findById(id);
+  if (!record) {
+    throw new AppError('Record not found', 404);
+  }
+  const historyIndex = (record.statusHistory || []).findIndex(
+    (item, idx) =>
+      (item._id && String(item._id) === String(historyId)) ||
+      (item.id && String(item.id) === String(historyId)) ||
+      (item.updatedOn && String(new Date(item.updatedOn).getTime()) === String(historyId)) ||
+      String(idx) === String(historyId)
+  );
+  if (historyIndex === -1) {
+    throw new AppError('Audit history record not found', 404);
+  }
+  record.statusHistory.splice(historyIndex, 1);
+  await record.save();
+  return { success: true, message: 'Audit history record deleted successfully.' };
 };
 
 module.exports = {
@@ -558,4 +680,5 @@ module.exports = {
   deleteReceivedInfoAuditDocument,
   getReceivedInfoAuditById,
   getStatusHistory,
+  deleteStatusHistory,
 };

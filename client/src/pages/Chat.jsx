@@ -2817,9 +2817,7 @@ const Chat = () => {
                       ? `Are you sure you want to delete ${deleteConfirmModal.count} selected messages for everyone?`
                       : 'Are you sure you want to delete this message for everyone?'}
                   </p>
-                  <p className="text-[11px] text-[#526B70] mt-1.5 leading-relaxed">
-                    This will permanently delete the message content for all participants and replace it with &ldquo;This message was deleted&rdquo;. This action cannot be undone.
-                  </p>
+                  
                 </div>
 
                 <div className="flex items-center justify-between space-x-2 pt-3 border-t border-[#D8E9E2]">
@@ -3226,9 +3224,7 @@ const Chat = () => {
               <p className="text-xs font-bold text-red-700">
                 Are you sure you want to delete &ldquo;{selectedConversation?.displayName || 'this conversation'}&rdquo; for everyone?
               </p>
-              <p className="text-[11px] text-red-600 leading-relaxed">
-                This action is destructive and permanent. All messages and the entire conversation will be permanently removed for ALL participants. This cannot be undone.
-              </p>
+             
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-2">

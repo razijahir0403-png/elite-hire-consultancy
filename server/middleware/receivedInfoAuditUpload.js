@@ -5,7 +5,7 @@ const AppError = require('../utils/AppError');
 const { getUploadsRoot } = require('../utils/clientDocumentPaths');
 
 const UPLOAD_DIR = path.join(getUploadsRoot(), 'received-info-audit');
-const MAX_FILE_SIZE = 100 * 1024; // 100 KB strictly enforced
+const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes) strictly enforced
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -53,7 +53,7 @@ const handleDocumentUpload = (fieldName = 'document') => {
           try {
             fs.unlinkSync(req.file.path);
           } catch {}
-          return next(new AppError('File size must not exceed 100 KB.', 400));
+          return next(new AppError('File size must not exceed 150 KB.', 400));
         }
         return next();
       }
@@ -63,7 +63,7 @@ const handleDocumentUpload = (fieldName = 'document') => {
       }
 
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return next(new AppError('File size must not exceed 100 KB.', 400));
+        return next(new AppError('File size must not exceed 150 KB.', 400));
       }
 
       if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {

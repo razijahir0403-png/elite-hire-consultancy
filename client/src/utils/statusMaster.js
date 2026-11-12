@@ -57,6 +57,7 @@ export const RECEIVED_INFO_STATUS_MAP = {
   13: 'Contract Signed',
   14: 'Follow up Meet',
   15: 'Issue with Call',
+  16: 'On-Hold',
 };
 
 // Reverse mapping for validation
@@ -87,6 +88,7 @@ export const RECEIVED_INFO_STATUS_COLORS = {
   13: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   14: 'bg-amber-50 text-amber-700 border-amber-200',
   15: 'bg-orange-50 text-orange-700 border-orange-200',
+  16: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 export const CommonStatus = { 0: 'Inactive', 1: 'Active' };
@@ -233,3 +235,51 @@ export const recruitmentFilterOptions = Object.entries(RecruitmentStatus).map(([
   label,
   value: Number(value),
 }));
+
+/**
+ * Helper to determine if a history item is a Workflow Status update event.
+ * Filters out Conditions Required (CR Status), Remarks, Document uploads/deletions,
+ * Email Pack activities, and other non-workflow audit entries.
+ */
+export const isWorkflowStatusHistory = (item) => {
+  if (!item) return false;
+
+  // If explicit workflow eventType is present
+  if (item.eventType && ['workflow_status', 'status_update', 'status'].includes(item.eventType)) {
+    return true;
+  }
+  if (item.type && ['workflow_status', 'status_update', 'status'].includes(item.type)) {
+    return true;
+  }
+
+  // Exclude non-workflow event types if present
+  if (item.eventType && !['workflow_status', 'status_update', 'status'].includes(item.eventType)) {
+    return false;
+  }
+  if (item.type && !['workflow_status', 'status_update', 'status'].includes(item.type)) {
+    return false;
+  }
+
+  const desc = String(item.description || '').trim();
+
+  // Exclude Conditions Required / CR / RI Status updates
+  if (/^(?:CR|RI)\s*(?:Condition|Status)/i.test(desc)) return false;
+  if (/Conditions?\s+Required/i.test(desc)) return false;
+  if (/\b(?:CR|RI)\s*(?:Status|Condition)\s*set\b/i.test(desc)) return false;
+
+  // Exclude Remarks updates
+  if (/^Remarks?\s*(?:updated|added|edited|created)?$/i.test(desc)) return false;
+  if (/^Remarks?:/i.test(desc)) return false;
+  if (/\bRemarks?\s+updated\b/i.test(desc)) return false;
+
+  // Exclude Document uploads, replacements, deletions
+  if (/(?:uploaded|deleted)\s*:/i.test(desc)) return false;
+  if (/\bdocument\s+(?:uploaded|deleted|replaced)\b/i.test(desc)) return false;
+  if (/\b(?:uploaded|deleted|replaced)\s+document\b/i.test(desc)) return false;
+  if (/\b(?:Request\s*Letter|URL\s*Letter|Company\s*Profile|Proposal\s*Request|Contract\s*Agreement|MOU\s*File|CL\s*Proof|Cover\s*Letter|CL\s*Profile)\b.*(?:uploaded|deleted)/i.test(desc)) return false;
+
+  // Exclude Email Pack activities
+  if (/email\s*pack/i.test(desc)) return false;
+
+  return true;
+};

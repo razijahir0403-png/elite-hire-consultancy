@@ -4,7 +4,7 @@ const softDeletePlugin = require('./plugins/softDeletePlugin');
 const receivedInfoStatusHistorySchema = new mongoose.Schema(
   {
     status: {
-      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      type: mongoose.Schema.Types.Mixed, // Integer (1-16); Mixed for backwards compatibility with legacy strings
       required: true,
     },
     description: {
@@ -90,15 +90,15 @@ const receivedInfoSchema = new mongoose.Schema(
       trim: true,
     },
     status: {
-      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      type: mongoose.Schema.Types.Mixed, // Integer (1-16); Mixed for backwards compatibility with legacy strings
       default: null,
     },
     initialStatus: {
-      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      type: mongoose.Schema.Types.Mixed, // Integer (1-16); Mixed for backwards compatibility with legacy strings
       default: null,
     },
     currentStatus: {
-      type: mongoose.Schema.Types.Mixed, // Integer (1-15); Mixed for backwards compatibility with legacy strings
+      type: mongoose.Schema.Types.Mixed, // Integer (1-16); Mixed for backwards compatibility with legacy strings
       default: null,
     },
     updatedBy: {
@@ -146,6 +146,10 @@ const receivedInfoSchema = new mongoose.Schema(
       recordId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReceivedInfo' },
     },
     // Conditions Required fields
+    crStatus: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     riStatus: {
       type: mongoose.Schema.Types.Mixed,
       default: null,
@@ -180,6 +184,7 @@ const receivedInfoSchema = new mongoose.Schema(
     remarksHistory: [
       {
         remark: { type: String, required: true },
+        crStatus: { type: Number, default: null },
         riStatus: { type: Number, default: null },
         updatedBy: { type: String, required: true },
         updatedOn: { type: Date, default: Date.now },

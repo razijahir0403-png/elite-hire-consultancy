@@ -3227,7 +3227,7 @@ const Employees = () => {
           <Trash2 size={48} className="mx-auto text-red-500 mb-4 opacity-80" />
           <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Employee</h3>
           <p className="text-sm text-slate-500 mb-6 px-4">
-            Are you sure you want to delete <span className="font-bold text-slate-700">{activeRecord?.employeeName}</span> ({activeRecord?.employeeCode})? This action cannot be undone.
+            Are you sure you want to delete <span className="font-bold text-slate-700">{activeRecord?.employeeName}</span> ({activeRecord?.employeeCode})?
           </p>
           <div className="flex flex-col-reverse sm:flex-row gap-3">
             <button

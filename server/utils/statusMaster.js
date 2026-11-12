@@ -74,9 +74,10 @@ const RECEIVED_INFO_STATUS = {
   CONTRACT_SIGNED: 13,
   FOLLOW_UP_MEET: 14,
   ISSUE_WITH_CALL: 15,
+  ON_HOLD: 16,
 };
 
-const RECEIVED_INFO_STATUS_MAX = 15;
+const RECEIVED_INFO_STATUS_MAX = 16;
 
 const ReceivedInfoStatusLabel = {
   1: 'New Info',
@@ -94,6 +95,7 @@ const ReceivedInfoStatusLabel = {
   13: 'Contract Signed',
   14: 'Follow up Meet',
   15: 'Issue with Call',
+  16: 'On-Hold',
 };
 
 const CommonStatusLabel = {
@@ -195,7 +197,52 @@ const recruitmentFilterOptions = () =>
     value: Number(value),
   }));
 
+
+const isWorkflowStatusHistory = (item) => {
+  if (!item) return false;
+
+  // If explicit workflow eventType is present
+  if (item.eventType && ['workflow_status', 'status_update', 'status'].includes(item.eventType)) {
+    return true;
+  }
+  if (item.type && ['workflow_status', 'status_update', 'status'].includes(item.type)) {
+    return true;
+  }
+
+  // Exclude non-workflow event types if present
+  if (item.eventType && !['workflow_status', 'status_update', 'status'].includes(item.eventType)) {
+    return false;
+  }
+  if (item.type && !['workflow_status', 'status_update', 'status'].includes(item.type)) {
+    return false;
+  }
+
+  const desc = String(item.description || '').trim();
+
+  // Exclude Conditions Required / CR / RI Status updates
+  if (/^(?:CR|RI)\s*(?:Condition|Status)/i.test(desc)) return false;
+  if (/Conditions?\s+Required/i.test(desc)) return false;
+  if (/\b(?:CR|RI)\s*(?:Status|Condition)\s*set\b/i.test(desc)) return false;
+
+  // Exclude Remarks updates
+  if (/^Remarks?\s*(?:updated|added|edited|created)?$/i.test(desc)) return false;
+  if (/^Remarks?:/i.test(desc)) return false;
+  if (/\bRemarks?\s+updated\b/i.test(desc)) return false;
+
+  // Exclude Document uploads, replacements, deletions
+  if (/(?:uploaded|deleted)\s*:/i.test(desc)) return false;
+  if (/\bdocument\s+(?:uploaded|deleted|replaced)\b/i.test(desc)) return false;
+  if (/\b(?:uploaded|deleted|replaced)\s+document\b/i.test(desc)) return false;
+  if (/\b(?:Request\s*Letter|URL\s*Letter|Company\s*Profile|Proposal\s*Request|Contract\s*Agreement|MOU\s*File|CL\s*Proof|Cover\s*Letter|CL\s*Profile)\b.*(?:uploaded|deleted)/i.test(desc)) return false;
+
+  // Exclude Email Pack activities
+  if (/email\s*pack/i.test(desc)) return false;
+
+  return true;
+};
+
 module.exports = {
+  isWorkflowStatusHistory,
   COMMON_STATUS,
   APPROVAL_STATUS,
   TICKET_STATUS,
@@ -214,6 +261,7 @@ module.exports = {
   RECEIVED_INFO_TEXT_TO_CODE,
   toNumber,
   getLabel,
+  getStatusLabel: getLabel,
   toRecruitmentStatusCode,
   toReceivedInfoStatusCode,
   recruitmentFilterOptions,

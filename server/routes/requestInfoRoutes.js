@@ -8,6 +8,7 @@ const {
   deleteRequestInfo,
   updateStatus,
   getStatusHistory,
+  deleteStatusHistory,
 } = require('../controllers/requestInfoController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { requestInfoValidators } = require('../utils/validators');
@@ -17,6 +18,8 @@ router.use(protect);
 
 router.put('/update-status/:id', requestInfoValidators.updateStatus, validate, updateStatus);
 router.get('/history/:id', requestInfoValidators.idParam, validate, getStatusHistory);
+router.delete('/history/:id/:historyId', adminOnly, deleteStatusHistory);
+router.delete('/:id/history/:historyId', adminOnly, deleteStatusHistory);
 
 router.route('/')
   .get(requestInfoValidators.listQuery, validate, getRequestInfos)

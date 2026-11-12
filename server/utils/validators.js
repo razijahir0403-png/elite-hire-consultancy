@@ -160,12 +160,12 @@ const receivedInfoValidators = {
       .optional()
       .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
       .toInt()
-      .withMessage('Status must be an integer between 1 and 15'),
+      .withMessage('Status must be an integer between 1 and 16'),
     body('initialStatus')
       .optional()
       .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
       .toInt()
-      .withMessage('Initial status must be an integer between 1 and 15'),
+      .withMessage('Initial status must be an integer between 1 and 16'),
     body('logDescription').optional().trim(),
   ],
   update: [
@@ -186,19 +186,19 @@ const receivedInfoValidators = {
       .optional()
       .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
       .toInt()
-      .withMessage('Status must be an integer between 1 and 15'),
+      .withMessage('Status must be an integer between 1 and 16'),
     body('initialStatus')
       .optional()
       .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
       .toInt()
-      .withMessage('Initial status must be an integer between 1 and 15'),
+      .withMessage('Initial status must be an integer between 1 and 16'),
     body('logDescription').optional().trim(),
   ],
   updateStatus: [
     param('id').isMongoId().withMessage('Valid record id is required'),
     body('status')
       .isInt({ min: 1, max: RECEIVED_INFO_STATUS_MAX })
-      .withMessage('Status must be an integer between 1 and 15'),
+      .withMessage('Status must be an integer between 1 and 16'),
     body('description').optional().trim(),
   ],
   idParam: [param('id').isMongoId().withMessage('Valid record id is required')],

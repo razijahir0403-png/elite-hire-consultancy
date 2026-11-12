@@ -21,6 +21,7 @@ const {
   deleteClientAuditDocumentHandler,
   updateClientConditionsHandler,
   updateClientRemarksHandler,
+  deleteStatusHistoryHandler,
 } = require('../controllers/clientController');
 
 router.use(protect);
@@ -29,6 +30,8 @@ router.get('/export', clientValidators.listQuery, validate, exportClients);
 
 router.put('/update-status/:id', clientValidators.updateStatus, validate, updateStatus);
 router.get('/history/:id', clientValidators.idParam, validate, getStatusHistory);
+router.delete('/history/:id/:historyId', adminOnly, deleteStatusHistoryHandler);
+router.delete('/:id/history/:historyId', adminOnly, deleteStatusHistoryHandler);
 router.get('/:id/document', clientValidators.idParam, validate, getClientDocument);
 router.get('/:id/proof-document', clientValidators.idParam, validate, getClientProofDocument);
 

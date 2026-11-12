@@ -11,7 +11,7 @@ export const exportReceivedInfoToExcel = async (records, filenamePrefix = 'recei
     'Mobile Number': r.mobileNumber || '',
     Email: r.email || '',
     Vendor: r.vendor || '',
-    'Initial Status': r.status || r.currentStatus || r.initialStatus || 'NA',
+    'CR Status': (r.crStatus && r.crStatus !== '-' && r.crStatus !== 'NA') ? r.crStatus : '-',
     'Created Date': formatDateDDMMYYYY(r.createdAt),
   }));
 

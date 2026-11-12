@@ -5,7 +5,7 @@ const AppError = require('../utils/AppError');
 const { getClientsUploadDir } = require('../utils/clientDocumentPaths');
 
 const UPLOAD_DIR = getClientsUploadDir();
-const MAX_FILE_SIZE = 200 * 1024;
+const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -53,7 +53,7 @@ const handleClientUpload = (req, res, next) => {
     }
 
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return next(new AppError('File size must not exceed 200 KB.', 400));
+      return next(new AppError('File size must not exceed 150 KB.', 400));
     }
 
     if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {

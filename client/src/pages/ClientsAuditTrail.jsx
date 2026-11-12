@@ -33,8 +33,11 @@ import {
 import api from '../api';
 import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
+import EmbeddedDocPreview from '../components/EmbeddedDocPreview';
 import Spinner from '../components/Spinner';
 import StatusBadge from '../components/StatusBadge';
+import { isWorkflowStatusHistory } from '../utils/statusMaster';
+import { getClientStatusLabel, clientFilterOptions } from '../utils/clientStatusMaster';
 import {
   CR_STATUS_OPTIONS,
   toCrStatusCode,
@@ -48,7 +51,7 @@ import {
 } from '../utils/clientAuditDocument';
 
 const CONDITIONS_LIST = CR_STATUS_OPTIONS;
-const MAX_FILE_SIZE = 100 * 1024; // 100 KB
+const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
 
 const toDateInputValue = (dateInput) => {
   if (!dateInput) return '';
@@ -86,9 +89,16 @@ const ClientsAuditTrail = () => {
   const [isEmailPackOpen, setIsEmailPackOpen] = useState(false);
   const [isConditionsOpen, setIsConditionsOpen] = useState(false);
   const [isRemarksOpen, setIsRemarksOpen] = useState(false);
+  // History Delete Confirmation State (Admin only)
+  const [isDeleteHistoryOpen, setIsDeleteHistoryOpen] = useState(false);
+  const [deletingHistoryItem, setDeletingHistoryItem] = useState(null);
+  const [confirmingHistoryDelete, setConfirmingHistoryDelete] = useState(false);
+
 
   // Document Delete state
   const [isDeleteDocumentOpen, setIsDeleteDocumentOpen] = useState(false);
+  // Embedded Document Preview State
+  const [previewDoc, setPreviewDoc] = useState(null); // { docType, fileName, apiUrl, onDownload }
   const [deletingDocType, setDeletingDocType] = useState(null);
   const [deletingDocumentName, setDeletingDocumentName] = useState('');
   const [confirmingDocumentDelete, setConfirmingDocumentDelete] = useState(false);
@@ -162,18 +172,33 @@ const ClientsAuditTrail = () => {
     return new Date() < endOfDay;
   }, [record?.crStatus, record?.activeCondition, record?.onHoldDeadline]);
 
+  // Latest updated remark for the selected record
+  const latestRemark = useMemo(() => {
+    if (Array.isArray(record?.remarksHistory) && record.remarksHistory.length > 0) {
+      const sorted = [...record.remarksHistory].sort(
+        (a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0)
+      );
+      if (sorted[0]?.remark && sorted[0].remark.trim()) {
+        return sorted[0].remark.trim();
+      }
+    }
+    return record?.remarks ? record.remarks.trim() : '';
+  }, [record?.remarks, record?.remarksHistory]);
+
   const filteredHistory = useMemo(() => {
-    let result = Array.isArray(historyList) ? [...historyList] : [];
+    let result = Array.isArray(historyList) ? historyList.filter(isWorkflowStatusHistory) : [];
     if (statusFilter !== '') {
-      result = result.filter((item) => String(item.status) === String(statusFilter));
+      result = result.filter((item) => Number(item.status) === Number(statusFilter));
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter((item) => {
         const descMatch = (item.description || '').toLowerCase().includes(q);
         const userMatch = (item.updatedBy || '').toLowerCase().includes(q);
+        const statusLabel = getClientStatusLabel(item.status).toLowerCase();
+        const statusMatch = statusLabel.includes(q);
         const dateMatch = formatDateTimeDDMMYYYY(item.updatedOn).toLowerCase().includes(q);
-        return descMatch || userMatch || dateMatch;
+        return descMatch || userMatch || statusMatch || dateMatch;
       });
     }
     result.sort((a, b) => {
@@ -200,7 +225,7 @@ const ClientsAuditTrail = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
-      const err = `File size (${(file.size / 1024).toFixed(1)} KB) exceeds maximum allowed limit of 100 KB.`;
+      const err = 'File size must not exceed 150 KB.';
       setErrorMsg(err);
       toast.error(err);
       e.target.value = '';
@@ -213,7 +238,7 @@ const ClientsAuditTrail = () => {
 
   const handleUploadDocument = async (docType, file, setUploading, setFile, setFileError) => {
     if (!file) { toast.error('Please select a file to upload'); return; }
-    if (file.size > MAX_FILE_SIZE) { toast.error('File size must not exceed 100 KB.'); return; }
+    if (file.size > MAX_FILE_SIZE) { toast.error('File size must not exceed 150 KB.'); return; }
     setUploading(true);
     const formData = new FormData();
     formData.append('document', file);
@@ -224,6 +249,7 @@ const ClientsAuditTrail = () => {
       setRecord(data);
       setFile(null);
       setFileError('');
+      setPreviewDoc(null);
       toast.success(`${docType} document uploaded successfully`);
       await fetchData();
     } catch (err) {
@@ -249,6 +275,7 @@ const ClientsAuditTrail = () => {
       setDeletingDocType(null);
       setDeletingDocumentName('');
       toast.success('Document deleted successfully.');
+      setPreviewDoc(null);
       await fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete document.');
@@ -297,6 +324,34 @@ const ClientsAuditTrail = () => {
     }
   };
 
+  // Delete History Record Handler (Admin only)
+  const handleDeleteHistoryClick = (hist) => {
+    setDeletingHistoryItem(hist);
+    setIsDeleteHistoryOpen(true);
+  };
+
+  const handleConfirmDeleteHistory = async () => {
+    if (!deletingHistoryItem || confirmingHistoryDelete) return;
+    const historyId = deletingHistoryItem?._id || deletingHistoryItem?.id || (deletingHistoryItem?.updatedOn ? String(new Date(deletingHistoryItem.updatedOn).getTime()) : null);
+    if (!historyId) {
+      toast.error('Invalid history record ID');
+      return;
+    }
+    setConfirmingHistoryDelete(true);
+    try {
+      await api.delete(`/clients/history/${id}/${historyId}`);
+      toast.success('Audit history record deleted successfully.');
+      setIsDeleteHistoryOpen(false);
+      setDeletingHistoryItem(null);
+      await fetchData(true);
+    } catch (err) {
+      console.error('Delete history error:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete audit history record');
+    } finally {
+      setConfirmingHistoryDelete(false);
+    }
+  };
+
   const handleOpenRemarksModal = () => {
     const existing = record?.remarks ? record.remarks.trim() : '';
     setRemarks(existing);
@@ -324,9 +379,21 @@ const ClientsAuditTrail = () => {
   };
 
   // Reusable Document Modal Content
-  const DocumentModalContent = ({ docType, docField, fieldLabel, file, setFile, fileError, setFileError, uploading, setUploading, onClose }) => {
+  const DocumentModalContent = ({  docType, docField, fieldLabel, file, setFile, fileError, setFileError, uploading, setUploading, onClose , previewDoc, setPreviewDoc }) => {
     const docData = record?.[docField];
     const hasDoc = docData?.fileUrl || docData?.path;
+    
+    if (previewDoc && previewDoc.docType === docType) {
+      return (
+        <EmbeddedDocPreview
+          fileName={previewDoc.fileName}
+          apiUrl={previewDoc.apiUrl}
+          onClose={() => setPreviewDoc(null)}
+          onDownload={previewDoc.onDownload}
+        />
+      );
+    }
+
     return (
       <div className="space-y-5 text-slate-800">
         <div>
@@ -349,16 +416,26 @@ const ClientsAuditTrail = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-1.5 flex-shrink-0">
-                <a
-                  href={getClientAuditDocumentUrl(record?._id, docType)}
-                  onClick={(e) => { e.preventDefault(); viewClientAuditDocument(record?._id, docType, docData.fileName); }}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewDoc({
+                      docType,
+                      fileName: docData.fileName || fieldLabel,
+                      apiUrl: `/clients/${record?._id}/audit-document/${docType}?t=${docData?.uploadedAt ? new Date(docData.uploadedAt).getTime() : Date.now()}`,
+                      onDownload: () =>
+                        downloadClientAuditDocument(
+                          record?._id,
+                          docType,
+                          docData.fileName || fieldLabel
+                        ),
+                    })
+                  }
                   className="p-2 bg-white border border-slate-200 hover:bg-[#D5F5E7] text-[#07566A] rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1 cursor-pointer"
                   title="View Document"
                 >
                   <Eye size={14} /><span className="hidden sm:inline">View</span>
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={() => downloadClientAuditDocument(record?._id, docType, docData.fileName || fieldLabel)}
@@ -395,7 +472,7 @@ const ClientsAuditTrail = () => {
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 {hasDoc ? `Replace ${fieldLabel}` : `Upload ${fieldLabel}`}
               </label>
-              <span className="text-[11px] font-semibold text-slate-400">Max size: <strong className="text-slate-600">100 KB</strong></span>
+              <span className="text-[11px] font-semibold text-slate-400">Max size: <strong className="text-slate-600">150 KB</strong></span>
             </div>
             <div className="space-y-2">
               <input
@@ -517,8 +594,21 @@ const ClientsAuditTrail = () => {
               </div>
               <div className="h-8 w-px bg-slate-200 hidden sm:block" />
               <div className="flex flex-col sm:items-end">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Audit Logs</span>
-                <span className="text-sm font-extrabold text-[#07566A] mt-0.5">{historyList.length} {historyList.length === 1 ? 'record' : 'records'}</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Remarks</span>
+                <div className="mt-1">
+                  {latestRemark ? (
+                    <span
+                      className="px-2.5 py-1 text-xs font-extrabold rounded-lg bg-[#D9FFF0] text-[#047857] border border-[#00D98B]/40 shadow-2xs inline-block max-w-[160px] sm:max-w-[220px] truncate align-middle cursor-help"
+                      title={latestRemark}
+                    >
+                      {latestRemark}
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 text-xs font-extrabold rounded-lg bg-[#D9FFF0] text-[#047857] border border-[#00D98B]/40 shadow-2xs inline-block">
+                      -
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -617,6 +707,21 @@ const ClientsAuditTrail = () => {
             </div>
           </div>
           <div className="space-y-1">
+            <label className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Filter by Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-brand-800"
+            >
+              <option value="">All Statuses</option>
+              {clientFilterOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
             <label className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Sort Order</label>
             <div className="flex items-center space-x-2">
               <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-brand-800">
@@ -646,17 +751,20 @@ const ClientsAuditTrail = () => {
               <button onClick={handleBack} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">Return</button>
             </div>
           </div>
-        ) : historyList.length === 0 ? (
-          <div className="py-20 px-6 text-center space-y-3">
-            <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><Clock size={24} /></div>
-            <div><h3 className="text-sm font-bold text-slate-800">No Audit Trail Records</h3><p className="text-xs text-slate-400 mt-1">No status logs recorded for this record yet.</p></div>
-          </div>
         ) : filteredHistory.length === 0 ? (
-          <div className="py-16 px-6 text-center space-y-3">
-            <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><Search size={18} /></div>
-            <div><h3 className="text-sm font-bold text-slate-800">No Matching Records</h3><p className="text-xs text-slate-400 mt-1">Try adjusting your search.</p></div>
-            <button onClick={resetFilters} className="mt-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">Clear Filters</button>
-          </div>
+          hasActiveFilters ? (
+            <div className="py-16 px-6 text-center space-y-3">
+              <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><Search size={18} /></div>
+              <div><h3 className="text-sm font-bold text-slate-800">No Matching Records</h3><p className="text-xs text-slate-400 mt-1">Try adjusting your search or status filter.</p></div>
+              <button onClick={resetFilters} className="mt-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">Clear Filters</button>
+            </div>
+          ) : (
+            <div className="py-20 px-6 text-center space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><Clock size={24} /></div>
+              <div><h3 className="text-sm font-bold text-slate-800">No Audit Trail Records</h3><p className="text-xs text-slate-400 mt-1">No workflow status logs recorded for this record yet.</p></div>
+              <button onClick={handleBack} className="mt-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-[#07566A] text-xs font-bold rounded-xl transition-all shadow-xs">Back to Data Received</button>
+            </div>
+          )
         ) : viewMode === 'timeline' ? (
           <div className="p-6 sm:p-8">
             <div className="relative border-l-2 border-[#00B96B]/30 pl-6 sm:pl-8 ml-3 space-y-8 text-slate-800">
@@ -673,9 +781,21 @@ const ClientsAuditTrail = () => {
                           {isLatest && <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide rounded-md bg-[#D9FFF0] text-[#047857] border border-[#00D98B]/30">Latest</span>}
                           <span className="text-[11px] text-slate-400 font-bold">Entry #{globalIndex}</span>
                         </div>
+                        <div className="flex items-center space-x-2">
                         <div className="flex items-center space-x-1.5 text-xs text-slate-500">
                           <Calendar size={13} className="text-[#00B96B]" /><span>{formatDateTimeDDMMYYYY(hist.updatedOn)}</span>
                         </div>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHistoryClick(hist)}
+                            className="p-1 bg-slate-50 border border-slate-200 hover:border-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all text-slate-400 cursor-pointer ml-1"
+                            title="Delete History Record"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
                       </div>
                       <div className="space-y-1">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Action Note</span>
@@ -696,10 +816,11 @@ const ClientsAuditTrail = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Description / Action Note</th>
+                  <th className="py-3 px-4">Workflow Status</th>
+                  <th className="py-3 px-4">Description / Comment</th>
                   <th className="py-3 px-4">Updated By</th>
-                  <th className="py-3 px-4">Date &amp; Time</th>
+                  <th className="py-3 px-4">Date & Time</th>
+                  {isAdmin && <th className="py-3 px-4 text-right">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -709,6 +830,18 @@ const ClientsAuditTrail = () => {
                     <td className="py-3.5 px-4 max-w-md"><p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{hist.description}</p></td>
                     <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-800">{hist.updatedBy || 'System'}</td>
                     <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">{formatDateTimeDDMMYYYY(hist.updatedOn)}</td>
+                      {isAdmin && (
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHistoryClick(hist)}
+                            className="p-1.5 bg-slate-50 border border-slate-200 hover:border-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all text-slate-400"
+                            title="Delete History Record"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
+                      )}
                   </tr>
                 ))}
               </tbody>
@@ -745,29 +878,68 @@ const ClientsAuditTrail = () => {
       {/* ======= MODALS ======= */}
 
       {/* CL Proof Doc */}
-      <Modal isOpen={isClProofDocOpen} onClose={() => setIsClProofDocOpen(false)} title="CL Proof Doc" maxWidth="max-w-lg">
+      <Modal
+        isOpen={isClProofDocOpen}
+        onClose={() => {
+          setPreviewDoc(null);
+          setIsClProofDocOpen(false);
+        }}
+        title={previewDoc?.docType === 'cl-proof-doc' ? 'CL Proof Doc – Preview' : 'CL Proof Doc'}
+        maxWidth={previewDoc?.docType === 'cl-proof-doc' ? 'max-w-4xl' : 'max-w-lg'}
+      >
         <DocumentModalContent
           docType="cl-proof-doc" docField="clProofDoc" fieldLabel="CL Proof Doc"
           file={clProofDocFile} setFile={setClProofDocFile} fileError={clProofDocError} setFileError={setClProofDocError}
-          uploading={uploadingClProofDoc} setUploading={setUploadingClProofDoc} onClose={() => setIsClProofDocOpen(false)}
+          uploading={uploadingClProofDoc} setUploading={setUploadingClProofDoc} onClose={() => {
+            setPreviewDoc(null);
+            setIsClProofDocOpen(false);
+          }}
+          previewDoc={previewDoc}
+          setPreviewDoc={setPreviewDoc}
         />
       </Modal>
 
       {/* Cover Letter */}
-      <Modal isOpen={isCoverLetterOpen} onClose={() => setIsCoverLetterOpen(false)} title="Cover Letter" maxWidth="max-w-lg">
+      <Modal
+        isOpen={isCoverLetterOpen}
+        onClose={() => {
+          setPreviewDoc(null);
+          setIsCoverLetterOpen(false);
+        }}
+        title={previewDoc?.docType === 'cover-letter' ? 'Cover Letter – Preview' : 'Cover Letter'}
+        maxWidth={previewDoc?.docType === 'cover-letter' ? 'max-w-4xl' : 'max-w-lg'}
+      >
         <DocumentModalContent
           docType="cover-letter" docField="coverLetter" fieldLabel="Cover Letter"
           file={coverLetterFile} setFile={setCoverLetterFile} fileError={coverLetterError} setFileError={setCoverLetterError}
-          uploading={uploadingCoverLetter} setUploading={setUploadingCoverLetter} onClose={() => setIsCoverLetterOpen(false)}
+          uploading={uploadingCoverLetter} setUploading={setUploadingCoverLetter} onClose={() => {
+            setPreviewDoc(null);
+            setIsCoverLetterOpen(false);
+          }}
+          previewDoc={previewDoc}
+          setPreviewDoc={setPreviewDoc}
         />
       </Modal>
 
       {/* CL Profile Doc */}
-      <Modal isOpen={isClProfileDocOpen} onClose={() => setIsClProfileDocOpen(false)} title="CL Profile Doc" maxWidth="max-w-lg">
+      <Modal
+        isOpen={isClProfileDocOpen}
+        onClose={() => {
+          setPreviewDoc(null);
+          setIsClProfileDocOpen(false);
+        }}
+        title={previewDoc?.docType === 'cl-profile-doc' ? 'CL Profile Doc – Preview' : 'CL Profile Doc'}
+        maxWidth={previewDoc?.docType === 'cl-profile-doc' ? 'max-w-4xl' : 'max-w-lg'}
+      >
         <DocumentModalContent
           docType="cl-profile-doc" docField="clProfileDoc" fieldLabel="CL Profile Doc"
           file={clProfileDocFile} setFile={setClProfileDocFile} fileError={clProfileDocError} setFileError={setClProfileDocError}
-          uploading={uploadingClProfileDoc} setUploading={setUploadingClProfileDoc} onClose={() => setIsClProfileDocOpen(false)}
+          uploading={uploadingClProfileDoc} setUploading={setUploadingClProfileDoc} onClose={() => {
+            setPreviewDoc(null);
+            setIsClProfileDocOpen(false);
+          }}
+          previewDoc={previewDoc}
+          setPreviewDoc={setPreviewDoc}
         />
       </Modal>
 
@@ -910,7 +1082,7 @@ const ClientsAuditTrail = () => {
               {deletingDocumentName && <p className="mt-2 text-[11px] font-semibold text-slate-600 bg-white border border-red-200 px-2.5 py-1.5 rounded-lg truncate">{deletingDocumentName}</p>}
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed">This action is <strong className="text-slate-700">irreversible</strong>. The document will be permanently removed from both the database and file storage.</p>
+          
           <div className="flex items-center space-x-3 pt-1">
             <button type="button" onClick={() => { setIsDeleteDocumentOpen(false); setDeletingDocType(null); setDeletingDocumentName(''); }} disabled={confirmingDocumentDelete} className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold disabled:opacity-50">Cancel</button>
             <button type="button" onClick={confirmDeleteDocument} disabled={confirmingDocumentDelete} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 disabled:opacity-50">
@@ -920,6 +1092,63 @@ const ClientsAuditTrail = () => {
           </div>
         </div>
       </Modal>
+    
+      {/* DELETE HISTORY RECORD CONFIRMATION MODAL */}
+      <Modal
+        isOpen={isDeleteHistoryOpen}
+        onClose={() => {
+          if (!confirmingHistoryDelete) {
+            setIsDeleteHistoryOpen(false);
+            setDeletingHistoryItem(null);
+          }
+        }}
+        title="Delete History Record"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-5 text-slate-800">
+          <div className="flex items-start space-x-4 p-4 bg-red-50 border border-red-200 rounded-2xl">
+            <div className="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center text-red-600 flex-shrink-0">
+              <Trash2 size={20} />
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-red-800 mb-1">Permanent Deletion Warning</p>
+              <p className="text-xs text-red-700 leading-relaxed font-semibold">
+                Are you sure you want to permanently delete ?
+              </p>
+              {deletingHistoryItem?.description && (
+                <p className="mt-2 text-[11px] font-medium text-slate-600 bg-white border border-red-200 px-2.5 py-1.5 rounded-lg truncate">
+                  {deletingHistoryItem.description}
+                </p>
+              )}
+            </div>
+          </div>
+
+
+          <div className="flex items-center space-x-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeleteHistoryOpen(false);
+                setDeletingHistoryItem(null);
+              }}
+              disabled={confirmingHistoryDelete}
+              className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDeleteHistory}
+              disabled={confirmingHistoryDelete}
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1.5 cursor-pointer"
+            >
+              <Trash2 size={13} className={confirmingHistoryDelete ? 'animate-bounce' : ''} />
+              <span>{confirmingHistoryDelete ? 'Deleting...' : 'Delete'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 };

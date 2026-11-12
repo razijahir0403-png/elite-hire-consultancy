@@ -73,10 +73,29 @@ export const ClientStatusColors = {
   21: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // On-Hold
 };
 
-export const getClientStatusLabel = (code) => ClientStatus[Number(code)] ?? 'Unknown';
+export const getClientStatusLabel = (code) => {
+  if (code === undefined || code === null) return 'Unknown';
+  if (typeof code === 'string') {
+    if (ClientStatus[code]) return ClientStatus[code];
+    const num = Number(code);
+    if (!Number.isNaN(num) && ClientStatus[num]) return ClientStatus[num];
+    if (Object.values(ClientStatus).includes(code)) return code;
+    return code;
+  }
+  return ClientStatus[Number(code)] ?? 'Unknown';
+};
 
-export const getClientStatusBadgeClass = (code) =>
-  ClientStatusColors[Number(code)] || 'bg-slate-50 text-slate-600 border-slate-200';
+export const getClientStatusBadgeClass = (code) => {
+  const num = Number(code);
+  if (!Number.isNaN(num) && ClientStatusColors[num]) {
+    return ClientStatusColors[num];
+  }
+  const entry = Object.entries(ClientStatus).find(([_, label]) => label === code);
+  if (entry && ClientStatusColors[Number(entry[0])]) {
+    return ClientStatusColors[Number(entry[0])];
+  }
+  return 'bg-slate-50 text-slate-600 border-slate-200';
+};
 
 export const clientFilterOptions = Object.entries(ClientStatus).map(([value, label]) => ({
   label,

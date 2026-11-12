@@ -57,6 +57,10 @@ const buildDocumentPathCandidates = (storedPath) => {
   candidates.push(path.join(clientsDir, basename));
   candidates.push(path.join(uploadsRoot, 'clients', basename));
   candidates.push(path.join(SERVER_ROOT, 'uploads', 'clients', basename));
+  // Current working directory fallbacks (useful for PM2 / container / Hostinger working directory)
+  candidates.push(path.join(process.cwd(), relative));
+  candidates.push(path.join(process.cwd(), 'uploads', 'clients', basename));
+  candidates.push(path.join(process.cwd(), 'server', 'uploads', 'clients', basename));
 
   if (!relative.includes('/')) {
     candidates.push(path.join(clientsDir, relative));

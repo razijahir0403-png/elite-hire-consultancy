@@ -5,7 +5,9 @@ const AppError = require('../utils/AppError');
 const {
   CLIENT_STATUS,
   toClientStatusCode,
+  ClientStatusLabel,
 } = require('../utils/clientStatusMaster');
+const { isWorkflowStatusHistory } = require('../utils/statusMaster');
 const { getAgeDateRange, calculateAgeInDays } = require('../utils/ageFilterHelper');
 const {
   resolveClientDocumentPath,
@@ -48,7 +50,9 @@ const streamDocumentFile = async (record, fieldPrefix, res, { download = false }
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', buildContentDisposition(filename, download));
-  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
   return new Promise((resolve, reject) => {
@@ -195,7 +199,9 @@ const createClient = async (body, files, editorName) => {
 
   const statusCode = toClientStatusCode(status, CLIENT_STATUS.INFO_VERIFIED);
   const profileFile = files?.profileDocument?.[0];
+  if (profileFile && profileFile.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
   const proofFile = files?.proofDocument?.[0];
+  if (proofFile && proofFile.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
   const profileDocInfo = applyUploadedDocument(profileFile);
   const proofDocInfo = applyUploadedDocument(proofFile);
 
@@ -219,6 +225,7 @@ const createClient = async (body, files, editorName) => {
         description,
         updatedBy: editorName,
         updatedOn: new Date(),
+        eventType: 'workflow_status',
       },
     ],
   };
@@ -325,6 +332,7 @@ const updateClientStatus = async (id, { status, description }, editorName) => {
     description,
     updatedBy: editorName,
     updatedOn: new Date(),
+    eventType: 'workflow_status',
   };
 
   record.status = statusCode;
@@ -337,15 +345,26 @@ const updateClientStatus = async (id, { status, description }, editorName) => {
   return normalizeClientRecord(saved);
 };
 
-const getStatusHistory = async (id) => {
+const getStatusHistory = async (id, { all = false } = {}) => {
   const record = await Client.findById(id).select('statusHistory').lean();
   if (!record) {
     throw new AppError('Client not found', 404);
   }
-  return record.statusHistory.map((item) => ({
-    ...(item.toObject ? item.toObject() : item),
-    status: toClientStatusCode(item.status),
-  }));
+  const history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+  const filtered = all ? history : history.filter(isWorkflowStatusHistory);
+  const mapped = filtered.map((item) => {
+    const raw = item.toObject ? item.toObject() : { ...item };
+    const statusCode = toClientStatusCode(raw.status);
+    return {
+      ...raw,
+      _id: raw._id ? String(raw._id) : undefined,
+      id: raw._id ? String(raw._id) : raw.id,
+      status: statusCode,
+      statusLabel: ClientStatusLabel[statusCode] || 'Unknown',
+    };
+  });
+  mapped.sort((a, b) => new Date(b.updatedOn || 0) - new Date(a.updatedOn || 0));
+  return mapped;
 };
 
 const exportClients = async (queryParams) => {
@@ -391,6 +410,7 @@ const uploadClientAuditDocument = async (id, docType, file, editorName) => {
   const record = await Client.findById(id);
   if (!record) throw new AppError('Client not found', 404);
   if (!file) throw new AppError('No file uploaded', 400);
+  if (file.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
   // Delete old file if exists
   const oldDoc = record[fieldName];
   if (oldDoc && (oldDoc.path || oldDoc.fileUrl)) {
@@ -410,6 +430,7 @@ const uploadClientAuditDocument = async (id, docType, file, editorName) => {
   record.statusHistory.push({
     status: record.status,
     description: `${docType} document uploaded: ${file.originalname}`,
+    eventType: 'document_upload',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -431,9 +452,15 @@ const streamClientAuditDocument = async (id, docType, res, options = {}) => {
   if (!resolved) throw new AppError('Document file not found on server', 404);
   const filename = doc.fileName || path.basename(storedPath);
   const download = options.download === true;
+  const stat = fs.statSync(resolved);
   res.set('Content-Disposition', buildAuditContentDisposition(filename, download));
   res.set('Content-Type', getMimeType(filename));
-  res.set('Cache-Control', 'no-cache');
+  res.set('Content-Length', stat.size);
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.set('X-Content-Type-Options', 'nosniff');
   const stream = fs.createReadStream(resolved);
   stream.on('error', (err) => {
     console.error('[ClientAudit] stream error', err);
@@ -458,6 +485,7 @@ const deleteClientAuditDocument = async (id, docType, editorName) => {
   record.statusHistory.push({
     status: record.status,
     description: `${docType} document deleted: ${docName}`,
+    eventType: 'document_delete',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -480,6 +508,7 @@ const updateClientConditions = async (id, body, editorName) => {
   record.statusHistory.push({
     status: record.status,
     description: 'Conditions Required updated: ' + condLabel,
+    eventType: 'condition_update',
     updatedBy: editorName,
     updatedOn: new Date(),
   });
@@ -498,11 +527,35 @@ const updateClientRemarks = async (id, remarks, editorName) => {
   }
   record.remarks = remarks || '';
   if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
-  record.statusHistory.push({ status: record.status, description: 'Remarks updated', updatedBy: editorName, updatedOn: new Date() });
+  record.statusHistory.push({ status: record.status, description: 'Remarks updated', updatedBy: editorName, updatedOn: new Date(), eventType: 'remark_update' });
   record.updatedBy = editorName;
   record.updatedOn = new Date();
   const saved = await record.save();
   return normalizeClientRecord(saved);
+};
+
+
+const deleteStatusHistory = async (id, historyId) => {
+  if (!id || !historyId) {
+    throw new AppError('Client ID and History ID are required', 400);
+  }
+  const record = await Client.findById(id);
+  if (!record) {
+    throw new AppError('Client not found', 404);
+  }
+  const historyIndex = (record.statusHistory || []).findIndex(
+    (item, idx) =>
+      (item._id && String(item._id) === String(historyId)) ||
+      (item.id && String(item.id) === String(historyId)) ||
+      (item.updatedOn && String(new Date(item.updatedOn).getTime()) === String(historyId)) ||
+      String(idx) === String(historyId)
+  );
+  if (historyIndex === -1) {
+    throw new AppError('Audit history record not found', 404);
+  }
+  record.statusHistory.splice(historyIndex, 1);
+  await record.save();
+  return { success: true, message: 'Audit history record deleted successfully.' };
 };
 
 module.exports = {
@@ -521,5 +574,6 @@ module.exports = {
   deleteClientAuditDocument,
   updateClientConditions,
   updateClientRemarks,
+  deleteStatusHistory,
 };
 

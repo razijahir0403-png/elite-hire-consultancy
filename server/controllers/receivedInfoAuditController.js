@@ -7,7 +7,8 @@ const getReceivedInfoAudit = asyncHandler(async (req, res) => {
 });
 
 const getStatusHistory = asyncHandler(async (req, res) => {
-  const history = await receivedInfoAuditService.getStatusHistory(req.params.id);
+  const includeAll = req.query.all === 'true' || req.query.all === '1';
+  const history = await receivedInfoAuditService.getStatusHistory(req.params.id, { all: includeAll });
   res.json(history);
 });
 
@@ -51,6 +52,12 @@ const deleteReceivedInfoAuditDocument = asyncHandler(async (req, res) => {
   res.json(record);
 });
 
+
+const deleteStatusHistory = asyncHandler(async (req, res) => {
+  const result = await receivedInfoAuditService.deleteStatusHistory(req.params.id, req.params.historyId);
+  res.json(result);
+});
+
 module.exports = {
   getReceivedInfoAudit,
   getStatusHistory,
@@ -61,4 +68,5 @@ module.exports = {
   updateRemarks,
   streamReceivedInfoAuditDocument,
   deleteReceivedInfoAuditDocument,
+  deleteStatusHistory,
 };

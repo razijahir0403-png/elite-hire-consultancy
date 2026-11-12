@@ -40,7 +40,7 @@ const getReceivedStatusBadge = (status) => {
   if (status !== undefined && status !== null && status !== '') {
     if (typeof status === 'number' || (typeof status === 'string' && !isNaN(Number(status)))) {
       statusInt = Number(status);
-      if (Number.isInteger(statusInt) && statusInt >= 1 && statusInt <= 15) {
+      if (Number.isInteger(statusInt) && statusInt >= 1 && statusInt <= 16) {
         // Find label from centralized mapping
         const opt = RECEIVED_INFO_STATUS_OPTIONS.find((o) => o.value === statusInt);
         label = opt ? opt.label : String(statusInt);
@@ -290,7 +290,7 @@ const ReceivedInfo = () => {
       errors.vendor = 'Vendor selection is required';
     }
     if (!formData.status && !formData.initialStatus) {
-      errors.initialStatus = 'Initial status is required';
+      errors.initialStatus = 'Workflow status is required';
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -531,7 +531,6 @@ const ReceivedInfo = () => {
                   <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Location</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[180px]">Resource Info</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[110px]">Vendor</th>
-                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Initial Status</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[220px]">Log Description</th>
                   <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
@@ -563,9 +562,7 @@ const ReceivedInfo = () => {
                         {r.vendor || 'NA'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap min-w-[130px]">
-                      {getReceivedStatusBadge(r.status || r.currentStatus || r.initialStatus)}
-                    </td>
+                   
                     <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap min-w-[220px] break-words text-xs">
                       {r.logDescription || 'NA'}
                     </td>
@@ -760,13 +757,13 @@ const ReceivedInfo = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status *</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Workflow Status *</label>
               <select
                 value={formData.status || formData.initialStatus || ''}
                 onChange={(e) => setFormData({ ...formData, status: Number(e.target.value), initialStatus: Number(e.target.value) })}
                 className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
               >
-                <option value="">Select</option>
+                <option value="">Select Workflow Status</option>
                 {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
@@ -813,7 +810,7 @@ const ReceivedInfo = () => {
       >
         <div className="space-y-4 text-slate-800">
           <p className="text-xs text-slate-600 leading-relaxed">
-            Are you sure you want to delete lead <span className="font-extrabold text-brand-850">{activeRecord?.requestId}</span>? This action is permanent and will clear the sourcing details.
+            Are you sure you want to delete lead? <span className="font-extrabold text-brand-850">{activeRecord?.requestId}</span>
           </p>
           <div className="flex items-center space-x-3 pt-2">
             <button

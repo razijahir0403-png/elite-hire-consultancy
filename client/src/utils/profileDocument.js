@@ -1,4 +1,4 @@
-export const MAX_PDF_SIZE = 200 * 1024;
+export const MAX_PDF_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
 
 export const validateProfilePdf = (file) => {
   if (!file) return null;
@@ -6,7 +6,7 @@ export const validateProfilePdf = (file) => {
     return 'Only PDF files are allowed.';
   }
   if (file.size > MAX_PDF_SIZE) {
-    return 'File size must not exceed 200 KB.';
+    return 'File size must not exceed 150 KB.';
   }
   return null;
 };

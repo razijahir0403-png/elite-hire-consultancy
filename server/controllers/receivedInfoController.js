@@ -67,10 +67,22 @@ const updateStatus = asyncHandler(async (req, res, next) => {
 
 const getStatusHistory = asyncHandler(async (req, res, next) => {
   try {
-    const history = await receivedInfoService.getStatusHistory(req.params.id);
+    const includeAll = req.query.all === 'true' || req.query.all === '1';
+    const history = await receivedInfoService.getStatusHistory(req.params.id, { all: includeAll });
     res.json(history);
   } catch (error) {
     console.error('[ReceivedInfoController] Error getting status history. Error:', error);
+    next(error);
+  }
+});
+
+
+const deleteStatusHistory = asyncHandler(async (req, res, next) => {
+  try {
+    const result = await receivedInfoService.deleteStatusHistory(req.params.id, req.params.historyId);
+    res.json(result);
+  } catch (error) {
+    console.error('[ReceivedInfoController] Error deleting status history. Error:', error);
     next(error);
   }
 });
@@ -83,4 +95,5 @@ module.exports = {
   deleteReceivedInfo,
   updateStatus,
   getStatusHistory,
+  deleteStatusHistory,
 };
