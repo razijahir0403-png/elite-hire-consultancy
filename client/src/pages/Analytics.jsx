@@ -28,6 +28,7 @@ import {
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import { recruitmentFilterOptions, RECRUITMENT_STATUS } from '../utils/statusMaster';
 import StatusBadge from '../components/StatusBadge';
+import SearchableDropdown from '../components/SearchableDropdown';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
 
 const Analytics = () => {
@@ -361,16 +362,16 @@ const Analytics = () => {
           {/* Status filter */}
           <div className="space-y-1.5">
             <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Filter Status</label>
-            <select
+            <SearchableDropdown
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-            >
-              <option value="">Select</option>
-              {recruitmentFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              options={recruitmentFilterOptions}
+              placeholder="Select"
+              emptyOptionLabel="All Statuses"
+              emptyOptionValue=""
+              buttonClassName="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-medium"
+              searchPlaceholder="Search status..."
+            />
           </div>
 
           {/* Age Filter */}
@@ -699,16 +700,16 @@ const Analytics = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status</label>
-                  <select
+                  <SearchableDropdown
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-                  >
-                    <option value="">Select</option>
-                    {recruitmentFilterOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    options={recruitmentFilterOptions}
+                    placeholder="Select"
+                    emptyOptionLabel="Select"
+                    emptyOptionValue=""
+                    buttonClassName="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-medium"
+                    searchPlaceholder="Search status..."
+                  />
                 </div>
               </div>
               {formErrors.status && (

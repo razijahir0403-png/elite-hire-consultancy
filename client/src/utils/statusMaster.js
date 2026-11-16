@@ -32,9 +32,14 @@ export const RECRUITMENT_STATUS = {
   NEED_AN_HELP: 22,
   SENT_FOLLOW_UP: 23,
   ON_HOLD: 24,
+  DOCUMENTS_UPLOAD_NEEDED: 25,
+  DOCUMENTS_UPLOADED: 26,
+  UPDATE_REQUIRED: 27,
+  ATTENTION_REQUIRED: 28,
+  URGENT_NOTE: 29,
 };
 
-export const RECRUITMENT_STATUS_MAX = 24;
+export const RECRUITMENT_STATUS_MAX = 29;
 
 // ============================================================
 // RECEIVED INFO WORKFLOW STATUS - INTEGER MAPPING (1-based)
@@ -125,6 +130,11 @@ export const RecruitmentStatus = {
   22: 'Need an Help',
   23: 'Sent Follow up Message',
   24: 'On-Hold',
+  25: 'Documents Upload Needed',
+  26: 'Documents Uploaded',
+  27: 'Update Required',
+  28: 'Attention Required',
+  29: 'Urgent Note',
 };
 
 /** Tailwind badge classes per status type */
@@ -155,6 +165,11 @@ export const StatusColors = {
     22: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Need an Help
     23: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Sent Follow up Message
     24: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // On-Hold
+    25: 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]/50', // Documents Upload Needed
+    26: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Documents Uploaded
+    27: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#93C5FD]/40', // Update Required
+    28: 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]/50', // Attention Required
+    29: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Urgent Note
   },
   approval: {
     0: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Pending

@@ -55,18 +55,18 @@ const run = async () => {
   console.log('=== Step 1: Checking Canonical Workflow Status Configuration ===');
   const options = recruitmentFilterOptions();
   console.log(`Total workflow status options: ${options.length}`);
-  if (options.length !== 25) {
-    throw new Error(`Expected 25 workflow statuses, found ${options.length}`);
+  if (options.length !== 30) {
+    throw new Error("Expected 30 workflow statuses, found " + options.length);
   }
 
   // Ensure 0 to 24 are in exact ascending numerical order
-  for (let i = 0; i <= 24; i++) {
+  for (let i = 0; i <= 29; i++) {
     if (options[i].value !== i) {
       throw new Error(`Workflow status index ${i} has mismatch value ${options[i].value}`);
     }
     console.log(`  [${options[i].value}] ${options[i].label}`);
   }
-  console.log('✅ Canonical workflow statuses are in exact sequential order (0 to 24).\n');
+  console.log('✅ Canonical workflow statuses are in exact sequential order (0 to 29).\n');
 
   console.log('=== Step 2: Connecting to Database ===');
   await connectDB();
@@ -100,7 +100,7 @@ const run = async () => {
 
     console.log('=== Step 6: Testing Workflow Status Update via API ===');
     // Test transitioning to a different workflow status (e.g. 24: On-Hold or 13: Selected or 21: Response Received)
-    const targetStatus = record.status === 24 ? 13 : 24;
+    const targetStatus = 26; // Test new status: Documents Uploaded
     const testRemarks = `Automated verification test - workflow transition to ${RecruitmentStatusLabel[targetStatus]} at ${new Date().toISOString()}`;
 
     const updateRes = await makeRequest(
@@ -153,7 +153,7 @@ const run = async () => {
       throw new Error(`History endpoint failed: ${JSON.stringify(historyRes.data)}`);
     }
 
-    const apiLatestHistory = historyRes.data[historyRes.data.length - 1];
+    const apiLatestHistory = historyRes.data[0];
     console.log('Latest history entry from API:', apiLatestHistory);
     if (apiLatestHistory.status !== targetStatus) {
       throw new Error(`API history status mismatch: ${apiLatestHistory.status}`);

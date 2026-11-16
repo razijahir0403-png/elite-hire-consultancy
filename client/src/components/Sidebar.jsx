@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import rasLogo from '../assets/ras.jpeg';
 import Modal from './Modal';
+import SearchableDropdown from './SearchableDropdown';
 import ThreeBarLogo from './ThreeBarLogo';
 import api from '../api';
 import { recruitmentFilterOptions, getStatusLabel, RECEIVED_INFO_STATUS_OPTIONS } from '../utils/statusMaster';
@@ -293,18 +294,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <label className="text-[10px] font-bold text-[#374151] dark:text-[#E2E8F0] uppercase tracking-wider block">
             Status Type
           </label>
-          <select
+          <SearchableDropdown
             value={statusType}
             onChange={(e) => setStatusType(e.target.value)}
-            className="w-full px-2.5 py-2 bg-white dark:bg-[#1E293B] border border-[#AEB7C4] dark:border-[#475569] rounded-xl text-[#111827] dark:text-[#FFFFFF] text-xs font-semibold focus:outline-none focus:border-[#00B96B] focus:ring-1 focus:ring-[#00B96B]"
-          >
-            <option value="">Select Workflow Status</option>
-            {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            options={options}
+            placeholder="Select Workflow Status"
+            emptyOptionLabel="Select Workflow Status"
+            emptyOptionValue=""
+            buttonClassName="w-full px-2.5 py-2 bg-white dark:bg-[#1E293B] border border-[#AEB7C4] dark:border-[#475569] rounded-xl text-[#111827] dark:text-[#FFFFFF] text-xs font-semibold focus:outline-none focus:border-[#00B96B] focus:ring-1 focus:ring-[#00B96B]"
+            searchPlaceholder="Search workflow status..."
+            disabled={savingStatus}
+          />
           {statusType !== '' && selectedLabel && (
             <div className="pt-0.5">
               <span className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-[#D9FFF0] dark:bg-[#0E3D48] px-2 py-0.5 rounded-md border border-[#00D98B]/30 dark:border-[#00D98B]/40 font-bold inline-block truncate max-w-full">

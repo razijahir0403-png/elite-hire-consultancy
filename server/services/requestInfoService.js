@@ -337,6 +337,7 @@ const updateRequestStatus = async (id, { status, description }, editorName) => {
     description,
     updatedBy: editorName,
     updatedOn: new Date(),
+    eventType: 'workflow_status',
   };
 
   record.status = statusCode;

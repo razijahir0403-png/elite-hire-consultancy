@@ -21,6 +21,7 @@ import api from '../api';
 import Modal from '../components/Modal';
 import Spinner from '../components/Spinner';
 import StatusBadge from '../components/StatusBadge';
+import SearchableDropdown from '../components/SearchableDropdown';
 import { exportClientsToExcel } from '../utils/exportClientsExcel';
 import {
   isValidContactNumber,
@@ -284,16 +285,16 @@ const Clients = () => {
 
           <div className="space-y-1.5">
             <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Filter Status</label>
-            <select
+            <SearchableDropdown
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 text-xs"
-            >
-              <option value="">Select</option>
-              {clientFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              options={clientFilterOptions}
+              placeholder="Select"
+              emptyOptionLabel="All Statuses"
+              emptyOptionValue=""
+              buttonClassName="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 text-xs font-medium"
+              searchPlaceholder="Search status..."
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -535,16 +536,16 @@ const Clients = () => {
             <>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Initial Status</label>
-                <select
+                <SearchableDropdown
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value === '' ? '' : Number(e.target.value) })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-                >
-                  <option value="">Select</option>
-                  {clientFilterOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                  options={clientFilterOptions}
+                  placeholder="Select"
+                  emptyOptionLabel="Select"
+                  emptyOptionValue=""
+                  buttonClassName="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-medium"
+                  searchPlaceholder="Search status..."
+                />
                 {formErrors.status && <p className="text-[10px] text-red-600 mt-1">{formErrors.status}</p>}
               </div>
               <div>

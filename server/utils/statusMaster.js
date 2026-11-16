@@ -54,9 +54,14 @@ const RECRUITMENT_STATUS = {
   NEED_AN_HELP: 22,
   SENT_FOLLOW_UP: 23,
   ON_HOLD: 24,
+  DOCUMENTS_UPLOAD_NEEDED: 25,
+  DOCUMENTS_UPLOADED: 26,
+  UPDATE_REQUIRED: 27,
+  ATTENTION_REQUIRED: 28,
+  URGENT_NOTE: 29,
 };
 
-const RECRUITMENT_STATUS_MAX = 24;
+const RECRUITMENT_STATUS_MAX = 29;
 
 const RECEIVED_INFO_STATUS = {
   NEW_INFO: 1,
@@ -150,6 +155,11 @@ const RecruitmentStatusLabel = {
   22: 'Need an Help',
   23: 'Sent Follow up Message',
   24: 'On-Hold',
+  25: 'Documents Upload Needed',
+  26: 'Documents Uploaded',
+  27: 'Update Required',
+  28: 'Attention Required',
+  29: 'Urgent Note',
 };
 
 const RECRUITMENT_TEXT_TO_CODE = Object.entries(RecruitmentStatusLabel).reduce((acc, [code, label]) => {

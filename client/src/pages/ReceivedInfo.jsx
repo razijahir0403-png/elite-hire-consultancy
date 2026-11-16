@@ -758,16 +758,19 @@ const ReceivedInfo = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Workflow Status *</label>
-              <select
+              <SearchableDropdown
                 value={formData.status || formData.initialStatus || ''}
-                onChange={(e) => setFormData({ ...formData, status: Number(e.target.value), initialStatus: Number(e.target.value) })}
-                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs"
-              >
-                <option value="">Select Workflow Status</option>
-                {statusOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                onChange={(e) => {
+                  const val = e.target.value === '' ? '' : Number(e.target.value);
+                  setFormData({ ...formData, status: val, initialStatus: val });
+                }}
+                options={statusOptions}
+                placeholder="Select Workflow Status"
+                emptyOptionLabel="Select Workflow Status"
+                emptyOptionValue=""
+                buttonClassName="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-medium"
+                searchPlaceholder="Search workflow status..."
+              />
               {(formErrors.status || formErrors.initialStatus) && (
                 <p className="text-[10px] text-red-600 mt-1">{formErrors.status || formErrors.initialStatus}</p>
               )}

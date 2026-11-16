@@ -39,6 +39,7 @@ import Modal from '../components/Modal';
 import EmbeddedDocPreview from '../components/EmbeddedDocPreview';
 import Spinner from '../components/Spinner';
 import StatusBadge from '../components/StatusBadge';
+import SearchableDropdown from '../components/SearchableDropdown';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY, formatDeadlineDate } from '../utils/dateFormatter';
 import {
   viewReceivedInfoDocument,
@@ -837,18 +838,16 @@ const ReceivedInfoAuditTrail = () => {
             <label className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
               Filter by Status
             </label>
-            <select
+            <SearchableDropdown
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-brand-800"
-            >
-              <option value="">All Statuses</option>
-              {RECEIVED_INFO_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              options={RECEIVED_INFO_STATUS_OPTIONS}
+              placeholder="All Statuses"
+              emptyOptionLabel="All Statuses"
+              emptyOptionValue=""
+              buttonClassName="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-brand-800 font-medium"
+              searchPlaceholder="Search status..."
+            />
           </div>
 
           <div className="space-y-1">
