@@ -81,9 +81,17 @@ const normalizeReceivedInfoRecord = (doc) => {
     return base;
   };
 
-  obj.proposalRequest = normDoc(obj.proposalRequest, 'proposal-request');
-  obj.contractAgreement = normDoc(obj.contractAgreement, 'contract-agreement');
-  obj.mouFile = normDoc(obj.mouFile, 'mou-file');
+  const propDoc = normDoc(obj.proposalRequest || obj.clProofDoc, 'proposal-request');
+  obj.proposalRequest = propDoc;
+  obj.clProofDoc = propDoc;
+
+  const contractDoc = normDoc(obj.contractAgreement || obj.coverLetter, 'contract-agreement');
+  obj.contractAgreement = contractDoc;
+  obj.coverLetter = contractDoc;
+
+  const mouDoc = normDoc(obj.mouFile || obj.clProfileDoc, 'mou-file');
+  obj.mouFile = mouDoc;
+  obj.clProfileDoc = mouDoc;
 
   // Normalize conditionsRequired and latest CR Status
   let crStatusCode = toRiConditionCode(obj.crStatus || obj.riStatus || obj.activeCondition);
@@ -174,38 +182,6 @@ const uploadProposalRequest = async (id, file, editorName) => {
       }
     } catch (e) {
       console.warn('[uploadProposalRequest] Could not unlink previous file:', e.message);
-    }
-  }
-
-  // Delete previous physical file if it exists to avoid stale files
-  const previousContractPath = record.contractAgreement?.path || record.contractAgreement?.fileUrl;
-  if (previousContractPath) {
-    try {
-      const absolutePath = await resolveReceivedInfoAuditDocumentPath(previousContractPath, {
-        id: record._id?.toString(),
-        docType: 'contract-agreement',
-      });
-      if (absolutePath && fs.existsSync(absolutePath)) {
-        await fs.promises.unlink(absolutePath);
-      }
-    } catch (e) {
-      console.warn('[uploadContractAgreement] Could not unlink previous file:', e.message);
-    }
-  }
-
-  // Delete previous physical file if it exists to avoid stale files
-  const previousMouPath = record.mouFile?.path || record.mouFile?.fileUrl;
-  if (previousMouPath) {
-    try {
-      const absolutePath = await resolveReceivedInfoAuditDocumentPath(previousMouPath, {
-        id: record._id?.toString(),
-        docType: 'mou-file',
-      });
-      if (absolutePath && fs.existsSync(absolutePath)) {
-        await fs.promises.unlink(absolutePath);
-      }
-    } catch (e) {
-      console.warn('[uploadMouFile] Could not unlink previous file:', e.message);
     }
   }
 
@@ -446,14 +422,14 @@ const streamReceivedInfoAuditDocument = async (id, docType, res, { download = fa
   let docObj = null;
   let defaultName = 'document';
 
-  if (type === 'proposalrequest') {
-    docObj = record.proposalRequest;
+  if (type === 'proposalrequest' || type === 'clproofdoc') {
+    docObj = record.proposalRequest || record.clProofDoc;
     defaultName = 'proposal-request';
-  } else if (type === 'contractagreement') {
-    docObj = record.contractAgreement;
+  } else if (type === 'contractagreement' || type === 'coverletter') {
+    docObj = record.contractAgreement || record.coverLetter;
     defaultName = 'contract-agreement';
-  } else if (type === 'moufile') {
-    docObj = record.mouFile;
+  } else if (type === 'moufile' || type === 'clprofiledoc') {
+    docObj = record.mouFile || record.clProfileDoc;
     defaultName = 'mou-file';
   } else {
     throw new AppError('Invalid document type requested', 400);
@@ -519,13 +495,13 @@ const deleteReceivedInfoAuditDocument = async (id, docType, editorName) => {
   let fieldKey = null;
   let docLabel = '';
 
-  if (type === 'proposalrequest') {
+  if (type === 'proposalrequest' || type === 'clproofdoc') {
     fieldKey = 'proposalRequest';
     docLabel = 'Proposal Request';
-  } else if (type === 'contractagreement') {
+  } else if (type === 'contractagreement' || type === 'coverletter') {
     fieldKey = 'contractAgreement';
     docLabel = 'Contract Agreement';
-  } else if (type === 'moufile') {
+  } else if (type === 'moufile' || type === 'clprofiledoc') {
     fieldKey = 'mouFile';
     docLabel = 'MOU File';
   } else {
@@ -567,7 +543,7 @@ const deleteReceivedInfoAuditDocument = async (id, docType, editorName) => {
 
   // Clear the sub-document fields in MongoDB
   if (fieldKey === 'mouFile') {
-    record[fieldKey] = {
+    const emptyMou = {
       fileName: '',
       originalName: '',
       name: '',
@@ -580,8 +556,10 @@ const deleteReceivedInfoAuditDocument = async (id, docType, editorName) => {
       uploadedBy: '',
       recordId: null,
     };
-  } else {
-    record[fieldKey] = {
+    record.mouFile = emptyMou;
+    record.clProfileDoc = emptyMou;
+  } else if (fieldKey === 'proposalRequest') {
+    const emptyProp = {
       fileName: '',
       name: '',
       fileUrl: '',
@@ -591,6 +569,21 @@ const deleteReceivedInfoAuditDocument = async (id, docType, editorName) => {
       uploadedAt: null,
       uploadedBy: '',
     };
+    record.proposalRequest = emptyProp;
+    record.clProofDoc = emptyProp;
+  } else {
+    const emptyContract = {
+      fileName: '',
+      name: '',
+      fileUrl: '',
+      path: '',
+      fileSize: 0,
+      size: 0,
+      uploadedAt: null,
+      uploadedBy: '',
+    };
+    record.contractAgreement = emptyContract;
+    record.coverLetter = emptyContract;
   }
 
   record.updatedBy = editorName;

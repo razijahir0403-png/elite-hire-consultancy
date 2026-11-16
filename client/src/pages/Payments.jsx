@@ -15,7 +15,8 @@ import {
   FileText,
   Download,
   Users as UsersIcon,
-  DollarSign
+  DollarSign,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api';
@@ -24,6 +25,7 @@ import Spinner from '../components/Spinner';
 import { exportPaymentsToExcel } from '../utils/exportPaymentsExcel';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
 import { Navigate } from 'react-router-dom';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 // Local custom Status Badge to mimic the recruitment one but tailored for payments
 const StatusBadge = ({ status }) => {
@@ -86,6 +88,7 @@ const Payments = () => {
   const [isInstallmentOpen, setIsInstallmentOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
@@ -284,17 +287,24 @@ const Payments = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.clientId]);
 
+  const handleViewClick = (record) => {
+    setActiveRecord(record);
+    setIsViewOpen(true);
+  };
+
   const validateClientId = async (clientId) => {
     setIsValidatingClient(true);
     setClientValidationMsg('');
     try {
       const { data } = await api.get('/clients', {
-        params: { search: clientId, limit: 10 }
+        params: { search: clientId.trim(), limit: 50 }
       });
-      // Find exact match just to be absolutely sure
-      const exactMatch = data.records.find(c => c.clientId.toUpperCase() === clientId.toUpperCase());
+      const list = data.records || data.data || [];
+      const exactMatch = list.find(
+        c => (c.clientId || '').trim().toUpperCase() === clientId.trim().toUpperCase()
+      );
       if (exactMatch) {
-        setFormData(prev => ({ ...prev, clientName: exactMatch.clientName }));
+        setFormData(prev => ({ ...prev, clientName: exactMatch.clientName || '' }));
         setClientValidationMsg('');
       } else {
         setFormData(prev => ({ ...prev, clientName: '' }));
@@ -698,6 +708,14 @@ const Payments = () => {
                           <History size={13} />
                         </button>
                         <button
+                          type="button"
+                          onClick={() => handleViewClick(r)}
+                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-slate-400 rounded-lg transition-all text-slate-500"
+                          title="View Payment Details"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
                           onClick={() => handleEditClick(r)}
                           className="p-1.5 bg-slate-50 border border-slate-200 hover:border-brand-300 hover:text-brand-800 hover:bg-brand-50 rounded-lg transition-all text-slate-500"
                           title="Edit Main Fields"
@@ -1082,6 +1100,73 @@ const Payments = () => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* 5. VIEW PAYMENT MODAL */}
+      <Modal
+        isOpen={isViewOpen}
+        onClose={() => setIsViewOpen(false)}
+        title={activeRecord ? `Payment Details: ${activeRecord.paymentId}` : 'Payment Details'}
+        maxWidth="max-w-md"
+      >
+        {activeRecord && (
+          <div className="space-y-4 text-xs text-slate-700">
+            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Payment ID</p>
+                <p className="font-extrabold text-brand-800 text-sm">{activeRecord.paymentId}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Status</p>
+                <div className="mt-0.5">
+                  <StatusBadge status={activeRecord.status} />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Client ID</p>
+                <p className="font-bold text-slate-900">{activeRecord.clientId}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Client Name</p>
+                <p className="font-semibold text-slate-800">{activeRecord.clientName || '—'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 bg-brand-50/50 p-3 rounded-xl border border-brand-100 text-center">
+              <div>
+                <p className="text-[9px] text-brand-800 font-bold uppercase">Total Amount</p>
+                <p className="font-extrabold text-slate-900 mt-0.5">₹{activeRecord.totalAmount?.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-emerald-700 font-bold uppercase">Paid Amount</p>
+                <p className="font-extrabold text-emerald-600 mt-0.5">₹{activeRecord.paidAmount?.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-red-600 font-bold uppercase">Due Amount</p>
+                <p className="font-extrabold text-red-600 mt-0.5">₹{activeRecord.dueAmount?.toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-[11px] bg-slate-50 p-3 rounded-xl border border-slate-150">
+              <p><span className="font-bold text-slate-500">Hold State:</span> {activeRecord.isOnHold ? <span className="text-amber-600 font-bold">On-Hold</span> : 'Active'}</p>
+              <p><span className="font-bold text-slate-500">Created:</span> {formatDateTimeDDMMYYYY(activeRecord.createdAt)}</p>
+              <p><span className="font-bold text-slate-500">Created By:</span> {activeRecord.createdBy || '—'}</p>
+              <p><span className="font-bold text-slate-500">Last Updated:</span> {formatDateTimeDDMMYYYY(activeRecord.updatedOn || activeRecord.updatedAt)}</p>
+              <p><span className="font-bold text-slate-500">Updated By:</span> {activeRecord.updatedBy || '—'}</p>
+              <p><span className="font-bold text-slate-500">Installments Recorded:</span> {activeRecord.installments?.length || 0}</p>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsViewOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

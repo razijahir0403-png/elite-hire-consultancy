@@ -1131,7 +1131,7 @@ const ReceivedInfoAuditTrail = () => {
         isOpen={isProposalRequestOpen}
         onClose={() => {
           setPreviewDoc(null);
-          isProposalRequestOpen(false);
+          setIsProposalRequestOpen(false);
         }}
         title={previewDoc?.docType === 'proposal-request' ? 'Proposal Request – Preview' : 'Proposal Request'}
         maxWidth={previewDoc?.docType === 'proposal-request' ? 'max-w-4xl' : 'max-w-lg'}
@@ -1304,7 +1304,7 @@ const ReceivedInfoAuditTrail = () => {
         isOpen={isContractAgreementOpen}
         onClose={() => {
           setPreviewDoc(null);
-          isContractAgreementOpen(false);
+          setIsContractAgreementOpen(false);
         }}
         title={previewDoc?.docType === 'contract-agreement' ? 'Contract Agreement – Preview' : 'Contract Agreement'}
         maxWidth={previewDoc?.docType === 'contract-agreement' ? 'max-w-4xl' : 'max-w-lg'}
@@ -1477,7 +1477,7 @@ const ReceivedInfoAuditTrail = () => {
         isOpen={isMouFileOpen}
         onClose={() => {
           setPreviewDoc(null);
-          isMouFileOpen(false);
+          setIsMouFileOpen(false);
         }}
         title={previewDoc?.docType === 'mou-file' ? 'MOU File – Preview' : 'MOU File'}
         maxWidth={previewDoc?.docType === 'mou-file' ? 'max-w-4xl' : 'max-w-lg'}

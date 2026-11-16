@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -1220,7 +1220,7 @@ const SourcingAuditTrails = () => {
         isOpen={isRequestLetterOpen}
         onClose={() => {
           setPreviewDoc(null);
-          isRequestLetterOpen(false);
+          setIsRequestLetterOpen(false);
         }}
         title={previewDoc?.docType === 'request-letter' ? 'Request Letter – Preview' : 'Request Letter'}
         maxWidth={previewDoc?.docType === 'request-letter' ? 'max-w-4xl' : 'max-w-lg'}
@@ -1396,7 +1396,7 @@ const SourcingAuditTrails = () => {
         isOpen={isUrlLetterOpen}
         onClose={() => {
           setPreviewDoc(null);
-          isUrlLetterOpen(false);
+          setIsUrlLetterOpen(false);
         }}
         title={previewDoc?.docType === 'url-letter' ? 'URL Letter – Preview' : 'URL Letter'}
         maxWidth={previewDoc?.docType === 'url-letter' ? 'max-w-4xl' : 'max-w-lg'}
@@ -1572,7 +1572,7 @@ const SourcingAuditTrails = () => {
         isOpen={isCompanyProfileOpen}
         onClose={() => {
           setPreviewDoc(null);
-          isCompanyProfileOpen(false);
+          setIsCompanyProfileOpen(false);
         }}
         title={previewDoc?.docType === 'company-profile' ? 'Company Profile – Preview' : 'Company Profile'}
         maxWidth={previewDoc?.docType === 'company-profile' ? 'max-w-4xl' : 'max-w-lg'}

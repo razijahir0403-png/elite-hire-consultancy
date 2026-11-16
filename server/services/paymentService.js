@@ -40,14 +40,6 @@ const paymentStatusExpression = {
 const buildAggregationPipeline = ({ search = '', status = '', clientId = '', clientName = '' }, sort, skip, limitNum, isExport = false) => {
   const matchStage = { isDeleted: { $ne: true } };
 
-  if (search) {
-    matchStage.$or = [
-      { paymentId: { $regex: search, $options: 'i' } },
-      { clientId: { $regex: search, $options: 'i' } },
-      { clientName: { $regex: search, $options: 'i' } },
-    ];
-  }
-
   if (clientId) {
     matchStage.clientId = { $regex: clientId, $options: 'i' };
   }
@@ -74,6 +66,19 @@ const buildAggregationPipeline = ({ search = '', status = '', clientId = '', cli
       },
     },
   ];
+
+  if (search) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { paymentId: { $regex: search, $options: 'i' } },
+          { clientId: { $regex: search, $options: 'i' } },
+          { clientName: { $regex: search, $options: 'i' } },
+          { status: { $regex: search, $options: 'i' } },
+        ],
+      },
+    });
+  }
 
   if (status) {
     // Exact match for status
@@ -147,13 +152,6 @@ const getDashboardMetrics = async (queryParams) => {
   // Instead of using buildAggregationPipeline with export, we can modify the facet or build it manually.
   
   const matchStage = { isDeleted: { $ne: true } };
-  if (search) {
-    matchStage.$or = [
-      { paymentId: { $regex: search, $options: 'i' } },
-      { clientId: { $regex: search, $options: 'i' } },
-      { clientName: { $regex: search, $options: 'i' } },
-    ];
-  }
   if (clientId) matchStage.clientId = { $regex: clientId, $options: 'i' };
   if (clientName) matchStage.clientName = { $regex: clientName, $options: 'i' };
 
@@ -175,6 +173,19 @@ const getDashboardMetrics = async (queryParams) => {
       },
     }
   ];
+
+  if (search) {
+    dashPipeline.push({
+      $match: {
+        $or: [
+          { paymentId: { $regex: search, $options: 'i' } },
+          { clientId: { $regex: search, $options: 'i' } },
+          { clientName: { $regex: search, $options: 'i' } },
+          { status: { $regex: search, $options: 'i' } },
+        ],
+      },
+    });
+  }
 
   if (status) {
     dashPipeline.push({ $match: { status } });
@@ -199,13 +210,27 @@ const getDashboardMetrics = async (queryParams) => {
 };
 
 const validateClientDetails = async (clientId, clientName) => {
-  const client = await Client.findOne({ clientId: String(clientId).trim() });
+  const trimmedId = String(clientId || '').trim();
+  const trimmedName = String(clientName || '').trim();
+
+  if (!trimmedId) {
+    throw new AppError('The Client ID must not be empty.', 400);
+  }
+
+  const client = await Client.findOne({
+    clientId: { $regex: new RegExp(`^${trimmedId}$`, 'i') },
+    isDeleted: { $ne: true },
+  });
+
   if (!client) {
     throw new AppError('The provided Client ID does not exist in the system.', 404);
   }
-  if (client.clientName !== String(clientName).trim()) {
+
+  if (trimmedName && client.clientName && client.clientName.trim().toLowerCase() !== trimmedName.toLowerCase()) {
     throw new AppError('The provided Client Name does not match the associated Client ID.', 400);
   }
+
+  return client;
 };
 
 const createPayment = async (body, editorName) => {

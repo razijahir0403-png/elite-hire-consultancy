@@ -99,11 +99,11 @@ const normalizeReceivedRecord = (doc) => {
   return obj;
 };
 
-const buildListQuery = ({ search = '', vendor = '', domain = '', location = '', age = '' }) => {
+const buildListQuery = ({ search = '', status = '', vendor = '', domain = '', location = '', age = '' }) => {
   const query = {};
 
   if (search) {
-    query.$or = [
+    const searchConditions = [
       { requestId: { $regex: search, $options: 'i' } },
       { domain: { $regex: search, $options: 'i' } },
       { companyName: { $regex: search, $options: 'i' } },
@@ -112,8 +112,25 @@ const buildListQuery = ({ search = '', vendor = '', domain = '', location = '', 
       { email: { $regex: search, $options: 'i' } },
       { mobileNumber: { $regex: search, $options: 'i' } },
       { vendor: { $regex: search, $options: 'i' } },
-      { status: { $regex: search, $options: 'i' } },
+      { logDescription: { $regex: search, $options: 'i' } },
     ];
+
+    const statusCode = toReceivedInfoStatusCode(search, null);
+    if (statusCode !== null) {
+      searchConditions.push({ status: statusCode });
+      if (ReceivedInfoStatusLabel[statusCode]) {
+        searchConditions.push({ status: ReceivedInfoStatusLabel[statusCode] });
+      }
+    }
+
+    query.$or = searchConditions;
+  }
+
+  if (status !== '' && status !== undefined && status !== null) {
+    const filterStatusCode = toReceivedInfoStatusCode(status, null);
+    if (filterStatusCode !== null) {
+      query.status = { $in: [filterStatusCode, String(filterStatusCode), ReceivedInfoStatusLabel[filterStatusCode]].filter(Boolean) };
+    }
   }
 
   if (vendor) query.vendor = vendor;
@@ -134,6 +151,7 @@ const getReceivedInfos = async (queryParams) => {
     page = 1,
     limit = 10,
     search = '',
+    status = '',
     vendor = '',
     location = '',
     age = '',
@@ -141,7 +159,7 @@ const getReceivedInfos = async (queryParams) => {
     sortOrder = 'desc',
   } = queryParams;
 
-  const query = buildListQuery({ search, vendor, location, age });
+  const query = buildListQuery({ search, status, vendor, location, age });
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);
   const skip = (pageNum - 1) * limitNum;
@@ -195,6 +213,7 @@ const createReceivedInfo = async (body, editorName) => {
     description: descriptionText,
     updatedBy: editorName,
     updatedOn: new Date(),
+    eventType: 'workflow_status',
   };
 
   const recordPayload = {
@@ -293,6 +312,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
         description: 'Initial status',
         updatedBy: record.updatedBy || editorName,
         updatedOn: record.createdAt || new Date(),
+        eventType: 'workflow_status',
       });
     }
 
@@ -301,6 +321,7 @@ const updateReceivedInfo = async (id, body, editorName) => {
       description: logDescription ? String(logDescription).trim() : `Status updated to ${ReceivedInfoStatusLabel[newStatus] || newStatus}`,
       updatedBy: editorName,
       updatedOn: new Date(),
+      eventType: 'workflow_status',
     });
   }
 
@@ -352,6 +373,7 @@ const updateReceivedStatus = async (id, body, editorName) => {
       description: 'Initial status',
       updatedBy: record.updatedBy || editorName,
       updatedOn: record.createdAt || new Date(),
+      eventType: 'workflow_status',
     });
   }
 
@@ -360,6 +382,7 @@ const updateReceivedStatus = async (id, body, editorName) => {
     description: description ? String(description).trim() : `Status updated to ${ReceivedInfoStatusLabel[statusInt] || statusInt}`,
     updatedBy: editorName,
     updatedOn: new Date(),
+    eventType: 'workflow_status',
   });
 
   record.updatedBy = editorName;
@@ -383,6 +406,7 @@ const getStatusHistory = async (id, { all = false } = {}) => {
       description: record.logDescription || 'Initial status',
       updatedBy: record.updatedBy || 'System',
       updatedOn: record.createdAt || record.updatedOn || new Date(),
+      eventType: 'workflow_status',
     }];
   }
   // Sort status history by latest update timestamp descending

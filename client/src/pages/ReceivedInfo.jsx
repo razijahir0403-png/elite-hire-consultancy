@@ -13,7 +13,8 @@ import {
   ChevronDown,
   X,
   FileText,
-  Download
+  Download,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api';
@@ -28,6 +29,7 @@ import {
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import { formatDateDDMMYYYY } from '../utils/dateFormatter';
 import { RECEIVED_INFO_STATUS_OPTIONS, RECEIVED_INFO_STATUS_COLORS } from '../utils/statusMaster';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 // Status options for Received Info (from centralized integer mapping)
 const statusOptions = RECEIVED_INFO_STATUS_OPTIONS;
@@ -72,6 +74,7 @@ const ReceivedInfo = () => {
 
   // Search & Filter state
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [ageFilter, setAgeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('');
@@ -87,6 +90,7 @@ const ReceivedInfo = () => {
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
@@ -116,6 +120,7 @@ const ReceivedInfo = () => {
           page,
           limit,
           search,
+          status: statusFilter,
           vendor: vendorFilter,
           age: ageFilter === 'All' ? '' : ageFilter,
           location: locationFilter,
@@ -136,7 +141,7 @@ const ReceivedInfo = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, [page, limit, vendorFilter, ageFilter, locationFilter, sortBy, sortOrder]);
+  }, [page, limit, statusFilter, vendorFilter, ageFilter, locationFilter, sortBy, sortOrder]);
 
   // Handle Search submit
   const handleSearchSubmit = (e) => {
@@ -156,12 +161,13 @@ const ReceivedInfo = () => {
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || vendorFilter || ageFilter !== 'All' || locationFilter);
+  const hasActiveFilters = Boolean(search || statusFilter || vendorFilter || ageFilter !== 'All' || locationFilter);
 
   const fetchAllRecordsForExport = async () => {
     const pageSize = 100;
     const filterParams = {
       search,
+      status: statusFilter,
       vendor: vendorFilter,
       age: ageFilter === 'All' ? '' : ageFilter,
       location: locationFilter,
@@ -219,10 +225,17 @@ const ReceivedInfo = () => {
   // Reset all filters
   const resetFilters = () => {
     setSearch('');
+    setStatusFilter('');
     setVendorFilter('');
     setAgeFilter('All');
     setLocationFilter('');
     setPage(1);
+  };
+
+  // Open View Details modal
+  const handleViewClick = (record) => {
+    setActiveRecord(record);
+    setIsViewOpen(true);
   };
 
   // Open Create Form modal
@@ -387,7 +400,7 @@ const ReceivedInfo = () => {
 
       {/* Filter and Search Form */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 items-end">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
           {/* Search Box */}
           <div className="space-y-1.5 col-span-1 sm:col-span-2">
             <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Search Keyword</label>
@@ -400,6 +413,21 @@ const ReceivedInfo = () => {
               />
               <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
             </div>
+          </div>
+
+          {/* Status filter */}
+          <div className="space-y-1.5">
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Filter Status</label>
+            <SearchableDropdown
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              options={statusOptions}
+              placeholder="All Statuses"
+              emptyOptionLabel="All Statuses"
+              emptyOptionValue=""
+              buttonClassName="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-medium"
+              searchPlaceholder="Search status..."
+            />
           </div>
 
           {/* Vendor filter */}
@@ -531,6 +559,7 @@ const ReceivedInfo = () => {
                   <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Location</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[180px]">Resource Info</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[110px]">Vendor</th>
+                  <th className="px-6 py-4 whitespace-nowrap min-w-[130px]">Status</th>
                   <th className="px-6 py-4 whitespace-nowrap min-w-[220px]">Log Description</th>
                   <th onClick={() => handleSort('createdAt')} className="px-6 py-4 cursor-pointer hover:text-[#00D98B] whitespace-nowrap min-w-[140px]">
                     <div className="flex items-center space-x-1">
@@ -562,7 +591,9 @@ const ReceivedInfo = () => {
                         {r.vendor || 'NA'}
                       </span>
                     </td>
-                   
+                    <td className="px-6 py-4 whitespace-nowrap min-w-[130px]">
+                      {getReceivedStatusBadge(r.status)}
+                    </td>
                     <td className="px-6 py-4 text-slate-700 whitespace-pre-wrap min-w-[220px] break-words text-xs">
                       {r.logDescription || 'NA'}
                     </td>
@@ -572,6 +603,15 @@ const ReceivedInfo = () => {
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap min-w-[150px]">
                       <div className="flex items-center justify-end space-x-1.5">
+                        {/* View Action */}
+                        <button
+                          type="button"
+                          onClick={() => handleViewClick(r)}
+                          className="p-1.5 bg-slate-50 border border-slate-200 hover:border-slate-400 rounded-lg transition-all text-slate-500"
+                          title="View Details"
+                        >
+                          <Eye size={13} />
+                        </button>
                         {/* Edit Action */}
                         <button
                           onClick={() => handleEditClick(r)}
@@ -830,6 +870,66 @@ const ReceivedInfo = () => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* 3. VIEW LEAD MODAL */}
+      <Modal
+        isOpen={isViewOpen}
+        onClose={() => setIsViewOpen(false)}
+        title={activeRecord ? `Lead Details: ${activeRecord.requestId}` : 'Lead Details'}
+        maxWidth="max-w-md"
+      >
+        {activeRecord && (
+          <div className="space-y-4 text-xs text-slate-700">
+            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Request ID</p>
+                <p className="font-extrabold text-brand-800 text-sm">{activeRecord.requestId}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Status</p>
+                <div className="mt-0.5">
+                  {getReceivedStatusBadge(activeRecord.status)}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Domain Vertical</p>
+                <p className="font-bold text-slate-900">{activeRecord.domain || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Company Name</p>
+                <p className="font-semibold text-slate-800">{activeRecord.companyName || '—'}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-150">
+              <p><span className="font-bold text-slate-500">Location:</span> {activeRecord.location || '—'}</p>
+              <p><span className="font-bold text-slate-500">Resource Name:</span> {activeRecord.resourceName || '—'}</p>
+              <p><span className="font-bold text-slate-500">Email:</span> {activeRecord.email || '—'}</p>
+              <p><span className="font-bold text-slate-500">Mobile:</span> {normalizeContactNumber(activeRecord.mobileNumber) || '—'}</p>
+              <p><span className="font-bold text-slate-500">Vendor:</span> <span className="inline-flex px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 text-slate-800 uppercase tracking-wide border border-slate-200">{activeRecord.vendor || 'NA'}</span></p>
+              <p><span className="font-bold text-slate-500">Created:</span> {formatDateDDMMYYYY(activeRecord.createdAt)}</p>
+              <p><span className="font-bold text-slate-500">Updated By:</span> {activeRecord.updatedBy || '—'}</p>
+            </div>
+
+            {activeRecord.logDescription && (
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Log Description</p>
+                <p className="text-slate-700 whitespace-pre-wrap">{activeRecord.logDescription}</p>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsViewOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
