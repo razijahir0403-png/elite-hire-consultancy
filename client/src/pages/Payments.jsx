@@ -77,7 +77,7 @@ const Payments = () => {
   const [clientNameFilter, setClientNameFilter] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   // Sorting state
   const [sortBy, setSortBy] = useState('updatedOn');
@@ -160,10 +160,12 @@ const Payments = () => {
   };
 
   useEffect(() => {
-    fetchRecords();
-    fetchDashboardMetrics();
+    if (!authLoading && isAdmin) {
+      fetchRecords();
+      fetchDashboardMetrics();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, statusFilter, clientIdFilter, clientNameFilter, sortBy, sortOrder]);
+  }, [page, limit, statusFilter, clientIdFilter, clientNameFilter, sortBy, sortOrder, authLoading, isAdmin]);
 
   // Handle Search submit
   const handleSearchSubmit = (e) => {
@@ -172,6 +174,14 @@ const Payments = () => {
     fetchRecords();
     fetchDashboardMetrics();
   };
+
+  if (authLoading) {
+    return (
+      <div className="py-20 flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return <Navigate to="/dashboard" replace />;
