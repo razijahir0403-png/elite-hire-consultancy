@@ -1,17 +1,17 @@
 const RequestInfo = require('../models/RequestInfo');
 
-const ID_PREFIX = 'RAS';
+const ID_PREFIX = '11';
 const SEQUENCE_PAD_LENGTH = 3;
 const MAX_GENERATION_ATTEMPTS = 5;
 
-/** Matches RAS-YYYY-XXX (sequence is 3+ digits when sequence exceeds 999). */
-const ID_NUMBER_PATTERN = /^RAS-(\d{4})-(\d+)$/;
+/** Matches 11YYYYXXX (sequence is 3+ digits when sequence exceeds 999). */
+const ID_NUMBER_PATTERN = /^11(\d{4})(\d+)$/;
 
-/** Matches both RAS-YYYY-XXX and legacy EH-YYYY-XXX formats for parsing. */
-const LEGACY_ID_NUMBER_PATTERN = /^(?:RAS|EH)-(\d{4})-(\d+)$/;
+/** Matches both 11YYYYXXX and legacy RAS-YYYY-XXX / EH-YYYY-XXX formats for parsing. */
+const LEGACY_ID_NUMBER_PATTERN = /^(?:11|RAS|EH)-?(\d{4})-?(\d+)$/;
 
 const formatRequestId = (year, sequence) =>
-  `${ID_PREFIX}-${year}-${String(sequence).padStart(SEQUENCE_PAD_LENGTH, '0')}`;
+  `${ID_PREFIX}${year}${String(sequence).padStart(SEQUENCE_PAD_LENGTH, '0')}`;
 
 const parseRequestId = (idnumber) => {
   const match = String(idnumber || '').match(LEGACY_ID_NUMBER_PATTERN);
@@ -25,20 +25,27 @@ const parseRequestId = (idnumber) => {
 /**
  * Highest numeric sequence for the year across all records (including soft-deleted).
  * Aggregate bypasses soft-delete query middleware so occupied IDs are not reused.
- * Matches both RAS and legacy EH prefixes so existing records and new records
- * coexist seamlessly without duplicate sequence numbers.
+ * Matches the new 11YYYYXXX format and legacy RAS/EH formats so existing records
+ * and new records coexist seamlessly without duplicate sequence numbers.
  */
 const getMaxSequenceForYear = async (year) => {
+  const yearPrefix = `${ID_PREFIX}${year}`;
   const [result] = await RequestInfo.aggregate([
     {
       $match: {
-        idnumber: { $regex: `^(?:${ID_PREFIX}|EH)-${year}-\\d+$` },
+        idnumber: { $regex: `^${yearPrefix}\\d+$` },
       },
     },
     {
       $addFields: {
         sequence: {
-          $toInt: { $arrayElemAt: [{ $split: ['$idnumber', '-'] }, 2] },
+          $toInt: {
+            $substrCP: [
+              '$idnumber',
+              yearPrefix.length,
+              { $subtract: [{ $strLenCP: '$idnumber' }, yearPrefix.length] },
+            ],
+          },
         },
       },
     },

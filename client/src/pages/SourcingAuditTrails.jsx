@@ -1121,7 +1121,7 @@ const SourcingAuditTrails = () => {
                       </td> */}
 
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <StatusBadge status={hist.status} type="recruitment" />
+                        <span className="text-xs text-slate-600">{getStatusLabel('recruitment', hist.status)}</span>
                       </td>
                       <td className="py-3.5 px-4 max-w-md">
                         <p className="text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">

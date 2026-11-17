@@ -825,7 +825,9 @@ const ClientsAuditTrail = () => {
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {paginatedHistory.map((hist, idx) => (
                   <tr key={hist._id || idx} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 whitespace-nowrap"><StatusBadge status={hist.status} type="client" /></td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="text-xs text-slate-600">{getClientStatusLabel(hist.status)}</span>
+                    </td>
                     <td className="py-3.5 px-4 max-w-md"><p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{hist.description}</p></td>
                     <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-800">{hist.updatedBy || 'System'}</td>
                     <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">{formatDateTimeDDMMYYYY(hist.updatedOn)}</td>

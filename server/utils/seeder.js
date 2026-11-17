@@ -23,7 +23,7 @@ const defaultRoles = [
 
 const mockRequestInfos = [
   {
-    idnumber: 'RAS-2026-001',
+    idnumber: '112026001',
     companyName: 'TechNova Solutions',
     domain: 'React Native Developer',
     location: 'Bangalore',
@@ -51,7 +51,7 @@ const mockRequestInfos = [
     ],
   },
   {
-    idnumber: 'RAS-2026-002',
+    idnumber: '112026002',
     companyName: 'CloudStack India',
     domain: 'Node.js Backend Engineer',
     location: 'Hyderabad',

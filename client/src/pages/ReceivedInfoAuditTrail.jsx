@@ -1040,7 +1040,7 @@ const ReceivedInfoAuditTrail = () => {
                   return (
                     <tr key={hist._id || idx} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <StatusBadge status={hist.status} type="received-info" />
+                        <span className="text-xs text-slate-600">{getStatusLabel('received-info', hist.status)}</span>
                       </td>
                       <td className="py-3.5 px-4 max-w-md">
                         <p className="text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">
