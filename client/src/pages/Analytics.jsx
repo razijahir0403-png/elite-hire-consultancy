@@ -13,7 +13,11 @@ import {
   ChevronDown,
   X,
   FileText,
-  Download
+  Download,
+  RefreshCw,
+  Activity,
+  HelpCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api';
@@ -30,6 +34,43 @@ import { recruitmentFilterOptions, RECRUITMENT_STATUS } from '../utils/statusMas
 import StatusBadge from '../components/StatusBadge';
 import SearchableDropdown from '../components/SearchableDropdown';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatter';
+
+// Queue name → Analytics workflow status codes (current status only)
+const ANALYTICS_QUEUE_MAP = {
+  Novation: [30],
+  'Process On – Going': [0, 1, 2, 3, 5, 6, 7, 8, 12, 14, 16, 19, 20, 21, 28, 29],
+  Cancellation: [15, 18],
+  'Need Help': [22],
+  Documentation: [25, 26, 27],
+  Completed: [13],
+};
+
+const QUEUE_ICONS = {
+  Novation: RefreshCw,
+  'Process On – Going': Activity,
+  Cancellation: X,
+  'Need Help': HelpCircle,
+  Documentation: FileText,
+  Completed: CheckCircle2,
+};
+
+const QUEUE_GRADIENTS = {
+  Novation: 'from-[#00E99A] to-[#00B96B]',
+  'Process On – Going': 'from-[#38BDF8] to-[#07566A]',
+  Cancellation: 'from-[#FBBF24] to-[#FB7185]',
+  'Need Help': 'from-[#A78BFA] to-[#7C3AED]',
+  Documentation: 'from-[#F0F9FF] to-[#0284C7]',
+  Completed: 'from-[#D9FFF0] to-[#00D98B]',
+};
+
+const QUEUE_ICON_STYLES = {
+  Novation: 'text-[#00B96B] dark:text-emerald-400 bg-[#D9FFF0] dark:bg-[#0E3D48] border-[#00D98B]/30 dark:border-[#00D98B]/40',
+  'Process On – Going': 'text-[#0284C7] dark:text-sky-400 bg-[#F0F9FF] dark:bg-sky-950/40 border-[#38BDF8]/30 dark:border-[#38BDF8]/40',
+  Cancellation: 'text-[#D97706] dark:text-amber-400 bg-[#FFFBEB] dark:bg-amber-950/40 border-[#FBBF24]/40 dark:border-[#FBBF24]/40',
+  'Need Help': 'text-[#7C3AED] dark:text-purple-400 bg-[#F5F3FF] dark:bg-purple-950/40 border-[#8B5CF6]/30 dark:border-[#8B5CF6]/40',
+  Documentation: 'text-[#0369A1] dark:text-sky-400 bg-[#F0F9FF] dark:bg-sky-950/40 border-[#38BDF8]/30 dark:border-[#38BDF8]/40',
+  Completed: 'text-[#00B96B] dark:text-emerald-400 bg-[#D9FFF0] dark:bg-[#0E3D48] border-[#00D98B]/30 dark:border-[#00D98B]/40',
+};
 
 const Analytics = () => {
   // State for candidates list & meta
@@ -52,6 +93,10 @@ const Analytics = () => {
   // Sorting state
   const [sortBy, setSortBy] = useState('updatedOn');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  // Queue dashboard state
+  const [queueCounts, setQueueCounts] = useState({});
+  const [queueFilter, setQueueFilter] = useState(null);
 
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
@@ -79,12 +124,15 @@ const Analytics = () => {
   const fetchRecords = async () => {
     setLoading(true);
     try {
+      const statusParam = queueFilter
+        ? ANALYTICS_QUEUE_MAP[queueFilter].join(',')
+        : statusFilter;
       const { data } = await api.get('/analytics', {
         params: {
           page,
           limit,
           search,
-          status: statusFilter,
+          status: statusParam,
           age: ageFilter === 'All' ? '' : ageFilter,
           location: locationFilter,
           sortBy,
@@ -102,14 +150,28 @@ const Analytics = () => {
     }
   };
 
+  // Fetch queue dashboard counts from backend
+  const fetchQueueCounts = async () => {
+    try {
+      const { data } = await api.get('/analytics/dashboard-counts');
+      if (data && data.data) {
+        setQueueCounts(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching analytics queue counts:', error);
+    }
+  };
+
   useEffect(() => {
     fetchRecords();
-  }, [page, limit, statusFilter, ageFilter, locationFilter, sortBy, sortOrder]);
+    fetchQueueCounts();
+  }, [page, limit, statusFilter, ageFilter, locationFilter, sortBy, sortOrder, queueFilter]);
 
   // Listen for audit trail updates from sidebar Update Status
   useEffect(() => {
     const handleAuditTrailUpdate = () => {
       fetchRecords();
+      fetchQueueCounts();
     };
     window.addEventListener('audit-trail-updated', handleAuditTrailUpdate);
     return () => {
@@ -135,7 +197,7 @@ const Analytics = () => {
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || statusFilter || ageFilter !== 'All' || locationFilter);
+  const hasActiveFilters = Boolean(search || statusFilter || ageFilter !== 'All' || locationFilter || queueFilter);
 
   const fetchAllRecordsForExport = async () => {
     const pageSize = 100;
@@ -201,6 +263,19 @@ const Analytics = () => {
     setStatusFilter('');
     setAgeFilter('All');
     setLocationFilter('');
+    setQueueFilter(null);
+    setPage(1);
+  };
+
+  // Select a dashboard queue card to filter records
+  const handleCardClick = (queue) => {
+    setQueueFilter(queueFilter === queue ? null : queue);
+    setPage(1);
+  };
+
+  // Clear the currently selected queue filter
+  const handleClearQueueFilter = () => {
+    setQueueFilter(null);
     setPage(1);
   };
 
@@ -216,7 +291,7 @@ const Analytics = () => {
       contactNumber: '',
       resourcePerson: '',
       portalLink: '',
-      status: '',
+      status: RECRUITMENT_STATUS.NEW_INFO,
       description: '',
     });
     setFormErrors({});
@@ -257,9 +332,6 @@ const Analytics = () => {
     if (!isValidContactNumber(formData.contactNumber)) {
       errors.contactNumber = 'Mobile number must be exactly 10 digits';
     }
-    if (!activeRecord && formData.status === '') {
-      errors.status = 'Status is required';
-    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -296,6 +368,7 @@ const Analytics = () => {
       }
       setIsAddEditOpen(false);
       fetchRecords();
+      fetchQueueCounts();
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Error processing record.';
       toast.error(errorMsg);
@@ -315,6 +388,7 @@ const Analytics = () => {
       toast.success('Record deleted.');
       setIsDeleteOpen(false);
       fetchRecords();
+      fetchQueueCounts();
     } catch (error) {
       toast.error('Failed to remove record.');
     }
@@ -341,6 +415,61 @@ const Analytics = () => {
           <span>Add Info</span>
         </button>
       </div>
+
+      {/* Queue Dashboard Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {Object.entries(QUEUE_ICONS).map(([queue, Icon]) => {
+          const count = queueCounts[queue] ?? 0;
+          const isSelected = queueFilter === queue;
+          const Gradient = QUEUE_GRADIENTS[queue];
+          const iconStyle = QUEUE_ICON_STYLES[queue];
+          return (
+            <div
+              key={queue}
+              onClick={() => handleCardClick(queue)}
+              className={`group cursor-pointer bg-white dark:bg-[#16202E] rounded-2xl border border-[#D8E9E2] dark:border-[#273548] shadow-xs transition-all duration-300 flex flex-col justify-between overflow-hidden hover:-translate-y-1 ${isSelected ? 'border-[#00B96B] shadow-[0_14px_30px_-6px_rgba(0,217,139,0.2)]' : 'hover:border-[#00D98B]/60 hover:shadow-[0_14px_30px_-6px_rgba(0,217,139,0.2)]'}`}
+            >
+              {/* Top Accent Gradient Line */}
+              <div className={`h-1.5 w-full bg-gradient-to-r ${Gradient}`} />
+
+              <div className="p-5 flex flex-col justify-between flex-1">
+                <div className="flex items-start justify-between">
+                  <div className={`p-2.5 rounded-xl border flex items-center justify-center shadow-xs ${iconStyle}`}>
+                    <Icon size={18} />
+                  </div>
+                  {isSelected && (
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-full bg-[#00B96B]/10 text-[#00B96B] border border-[#00B96B]/20">
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-5 flex items-baseline justify-between">
+                  <span className="text-[10px] text-[#526B70] dark:text-slate-400 font-bold uppercase tracking-wider block">
+                    {queue}
+                  </span>
+                  <span className="text-3xl font-black text-[#07566A] dark:text-white tracking-tight block">
+                    {count}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* {queueFilter && (
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            onClick={handleClearQueueFilter}
+            className="text-[10px] font-bold text-[#00B96B] hover:text-[#00D98B] underline underline-offset-4"
+          >
+            Clear '{queueFilter}' filter
+          </button>
+          <span className="text-[10px] text-slate-400">·</span>
+          <span className="text-[10px] text-slate-500 font-medium">Showing {queueFilter} queue</span>
+        </div>
+      )} */}
 
       {/* Filter and Search Form */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -702,12 +831,13 @@ const Analytics = () => {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status</label>
                   <SearchableDropdown
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value === '' ? '' : Number(e.target.value) })}
+                    onChange={() => {}}
                     options={recruitmentFilterOptions}
                     placeholder="Select"
-                    emptyOptionLabel="Select"
+                    emptyOptionLabel="New Info"
                     emptyOptionValue=""
-                    buttonClassName="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs font-medium"
+                    disabled
+                    buttonClassName="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 font-medium text-xs"
                     searchPlaceholder="Search status..."
                   />
                 </div>

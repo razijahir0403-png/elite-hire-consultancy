@@ -55,18 +55,18 @@ const run = async () => {
   console.log('=== Step 1: Checking Canonical Workflow Status Configuration ===');
   const options = recruitmentFilterOptions();
   console.log(`Total workflow status options: ${options.length}`);
-  if (options.length !== 30) {
-    throw new Error("Expected 30 workflow statuses, found " + options.length);
+  if (options.length !== 31) {
+    throw new Error("Expected 31 workflow statuses, found " + options.length);
   }
 
-  // Ensure 0 to 24 are in exact ascending numerical order
-  for (let i = 0; i <= 29; i++) {
+  // Ensure 0 to 30 are in exact ascending numerical order
+  for (let i = 0; i <= 30; i++) {
     if (options[i].value !== i) {
       throw new Error(`Workflow status index ${i} has mismatch value ${options[i].value}`);
     }
     console.log(`  [${options[i].value}] ${options[i].label}`);
   }
-  console.log('✅ Canonical workflow statuses are in exact sequential order (0 to 29).\n');
+  console.log('✅ Canonical workflow statuses are in exact sequential order (0 to 30).\n');
 
   console.log('=== Step 2: Connecting to Database ===');
   await connectDB();

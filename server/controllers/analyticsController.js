@@ -8,6 +8,7 @@ module.exports = {
   deleteAnalytics: requestInfoController.deleteRequestInfo,
   updateStatus: requestInfoController.updateStatus,
   getStatusHistory: requestInfoController.getStatusHistory,
+  getAnalyticsQueueCounts: requestInfoController.getAnalyticsQueueCounts,
   uploadRequestLetter: requestInfoController.uploadRequestLetter,
   uploadUrlLetter: requestInfoController.uploadUrlLetter,
   uploadCompanyProfile: requestInfoController.uploadCompanyProfile,

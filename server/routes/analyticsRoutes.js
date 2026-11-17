@@ -10,6 +10,7 @@ const {
   deleteAnalytics,
   updateStatus,
   getStatusHistory,
+  getAnalyticsQueueCounts,
   uploadRequestLetter,
   uploadUrlLetter,
   uploadCompanyProfile,
@@ -30,6 +31,7 @@ router.put('/update-status/:id', requestInfoValidators.updateStatus, validate, u
 router.get('/history/:id', requestInfoValidators.idParam, validate, getStatusHistory);
 router.delete('/history/:id/:historyId', adminOnly, deleteStatusHistory);
 router.delete('/:id/history/:historyId', adminOnly, deleteStatusHistory);
+router.get('/dashboard-counts', getAnalyticsQueueCounts);
 
 // Action Section Endpoints
 router.post(

@@ -1,5 +1,5 @@
 const { body, param, query } = require('express-validator');
-const { RECRUITMENT_STATUS_MAX, RECEIVED_INFO_STATUS_MAX } = require('./statusMaster');
+const { RECRUITMENT_STATUS, RECRUITMENT_STATUS_MAX, RECEIVED_INFO_STATUS_MAX } = require('./statusMaster');
 
 const authValidators = {
   register: [
@@ -88,9 +88,15 @@ const requestInfoValidators = {
     body('resourcePerson').optional({ values: 'falsy' }).trim(),
     body('portalLink').optional().trim(),
     body('status')
-      .optional()
+      .optional({ values: 'falsy' })
       .isInt({ min: 0, max: RECRUITMENT_STATUS_MAX })
-      .toInt(),
+      .toInt()
+      .custom((value) => {
+        if (value !== undefined && value !== null && value !== '' && value !== RECRUITMENT_STATUS.NEW_INFO) {
+          throw new Error('New records must use the initial status "New Info"');
+        }
+        return true;
+      }),
     body('description').optional().trim(),
   ],
   update: [
@@ -131,8 +137,21 @@ const requestInfoValidators = {
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
     query('status')
       .optional({ values: 'falsy' })
-      .isInt({ min: 0, max: RECRUITMENT_STATUS_MAX })
-      .toInt(),
+      .customSanitizer((v) => String(v))
+      .custom((v) => {
+        const parts = String(v)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (parts.length === 0) return true;
+        for (const part of parts) {
+          const num = Number(part);
+          if (!Number.isInteger(num) || num < 0 || num > RECRUITMENT_STATUS_MAX) {
+            throw new Error('Status must be a valid numeric code');
+          }
+        }
+        return true;
+      }),
   ],
 };
 

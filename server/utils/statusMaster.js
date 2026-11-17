@@ -59,9 +59,10 @@ const RECRUITMENT_STATUS = {
   UPDATE_REQUIRED: 27,
   ATTENTION_REQUIRED: 28,
   URGENT_NOTE: 29,
+  NEW_INFO: 30,
 };
 
-const RECRUITMENT_STATUS_MAX = 29;
+const RECRUITMENT_STATUS_MAX = 30;
 
 const RECEIVED_INFO_STATUS = {
   NEW_INFO: 1,
@@ -160,6 +161,7 @@ const RecruitmentStatusLabel = {
   27: 'Update Required',
   28: 'Attention Required',
   29: 'Urgent Note',
+  30: 'New Info',
 };
 
 const RECRUITMENT_TEXT_TO_CODE = Object.entries(RecruitmentStatusLabel).reduce((acc, [code, label]) => {

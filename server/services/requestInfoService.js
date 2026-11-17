@@ -132,7 +132,15 @@ const buildListQuery = ({ search = '', status = '', domain = '', location = '', 
   }
 
   if (status !== '' && status !== undefined && status !== null) {
-    query.status = toRecruitmentStatusCode(status);
+    const statusValues = String(status)
+      .split(',')
+      .map((s) => toRecruitmentStatusCode(s.trim()))
+      .filter((n) => Number.isInteger(n));
+    if (statusValues.length === 1) {
+      query.status = statusValues[0];
+    } else if (statusValues.length > 1) {
+      query.status = { $in: statusValues };
+    }
   }
   if (location) query.location = location;
 
@@ -180,6 +188,23 @@ const getRequestInfos = async (queryParams) => {
   };
 };
 
+const ANALYTICS_QUEUE_MAP = {
+  Novation: [30],
+  'Process On – Going': [0, 1, 2, 3, 5, 6, 7, 8, 12, 14, 16, 19, 20, 21, 28, 29],
+  Cancellation: [15, 18],
+  'Need Help': [22],
+  Documentation: [25, 26, 27],
+  Completed: [13],
+};
+
+const getAnalyticsQueueCounts = async () => {
+  const counts = {};
+  for (const [queue, statusCodes] of Object.entries(ANALYTICS_QUEUE_MAP)) {
+    counts[queue] = await RequestInfo.countDocuments({ status: { $in: statusCodes } });
+  }
+  return counts;
+};
+
 const getRequestInfoById = async (id) => {
   const record = await RequestInfo.findById(id).lean();
   if (!record) {
@@ -198,14 +223,13 @@ const createRequestInfo = async (body, editorName) => {
     contactNumber,
     resourcePerson,
     portalLink,
-    status,
     description = 'Initial record creation',
   } = body;
 
-  const statusCode = toRecruitmentStatusCode(status, RECRUITMENT_STATUS.VERIFIED);
+  const statusCode = RECRUITMENT_STATUS.NEW_INFO;
   const historyItem = {
     status: statusCode,
-    description,
+    description: description || 'Record created with initial status: New Info',
     updatedBy: editorName,
     updatedOn: new Date(),
     eventType: 'workflow_status',
@@ -228,7 +252,7 @@ const createRequestInfo = async (body, editorName) => {
     resourcePerson: resourcePerson ? String(resourcePerson).trim() : '',
     portalLink,
     status: statusCode,
-    description,
+    description: description || 'Initial record creation',
     updatedBy: editorName,
     updatedOn: new Date(),
     statusHistory: [historyItem],
@@ -925,4 +949,6 @@ module.exports = {
   streamAnalyticsDocument,
   deleteAnalyticsDocument,
   deleteStatusHistory,
+  getAnalyticsQueueCounts,
+  ANALYTICS_QUEUE_MAP,
 };

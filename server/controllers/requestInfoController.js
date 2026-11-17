@@ -41,6 +41,11 @@ const getStatusHistory = asyncHandler(async (req, res) => {
   res.json(history);
 });
 
+const getAnalyticsQueueCounts = asyncHandler(async (req, res) => {
+  const counts = await requestInfoService.getAnalyticsQueueCounts();
+  res.json({ success: true, data: counts });
+});
+
 const uploadRequestLetter = asyncHandler(async (req, res) => {
   const record = await requestInfoService.uploadRequestLetter(req.params.id, req.file, req.user.name);
   res.json(record);
@@ -105,6 +110,7 @@ module.exports = {
   deleteRequestInfo,
   updateStatus,
   getStatusHistory,
+  getAnalyticsQueueCounts,
   uploadRequestLetter,
   uploadUrlLetter,
   uploadCompanyProfile,
