@@ -101,6 +101,7 @@ const Analytics = () => {
   // Modals visibility state
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form selections and data fields
   const [activeRecord, setActiveRecord] = useState(null);
@@ -310,6 +311,8 @@ const Analytics = () => {
       contactNumber: normalizeContactNumber(record.contactNumber),
       resourcePerson: record.resourcePerson || '',
       portalLink: record.portalLink || '',
+      status: record.status,
+      description: record.description || '',
     });
     setFormErrors({});
     setIsAddEditOpen(true);
@@ -339,6 +342,7 @@ const Analytics = () => {
   // Create or Update candidate record handler
   const handleAddEditSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!validateForm()) {
       toast.error('Please fix the highlighted form errors.');
       return;
@@ -355,6 +359,7 @@ const Analytics = () => {
       portalLink: formData.portalLink.trim(),
     };
 
+    setIsSaving(true);
     try {
       if (activeRecord) {
         // Edit record
@@ -372,6 +377,8 @@ const Analytics = () => {
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Error processing record.';
       toast.error(errorMsg);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -845,17 +852,17 @@ const Analytics = () => {
               {formErrors.status && (
                 <p className="text-[10px] text-red-600 mt-1">{formErrors.status}</p>
               )}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Log Description</label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
-                />
-              </div>
             </>
           )}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Log Description</label>
+            <textarea
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-brand-800 focus:ring-1 focus:ring-brand-800 text-xs animate-none"
+            />
+          </div>
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
             <button
@@ -867,9 +874,10 @@ const Analytics = () => {
             </button>
             <button
               type="submit"
-              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98]"
+              disabled={isSaving}
+              className="w-full sm:flex-1 py-2.5 bg-gradient-to-r from-[#00D98B] to-[#00B96B] hover:from-[#00E99A] hover:to-[#00D98B] text-[#07566A] font-extrabold text-xs rounded-xl shadow-[0_4px_14px_rgba(0,217,139,0.3)] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {activeRecord ? 'Save Changes' : 'Add Info'}
+              {isSaving ? 'Saving...' : activeRecord ? 'Save Changes' : 'Add Info'}
             </button>
           </div>
         </form>

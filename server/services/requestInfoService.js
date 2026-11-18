@@ -298,6 +298,7 @@ const updateRequestInfo = async (id, body, editorName) => {
     contactNumber,
     resourcePerson,
     portalLink,
+    description,
   } = body;
 
   if (idnumber && idnumber !== record.idnumber) {
@@ -330,6 +331,7 @@ const updateRequestInfo = async (id, body, editorName) => {
   if (contactNumber !== undefined) record.contactNumber = contactNumber || '';
   if (resourcePerson !== undefined) record.resourcePerson = resourcePerson ? String(resourcePerson).trim() : '';
   if (portalLink !== undefined) record.portalLink = portalLink;
+  if (description !== undefined) record.description = String(description).trim();
   if (body.crStatus !== undefined) record.crStatus = String(body.crStatus).trim();
   if (body.remarks !== undefined) record.remarks = String(body.remarks).trim();
 

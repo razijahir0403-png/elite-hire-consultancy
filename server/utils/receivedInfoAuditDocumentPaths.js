@@ -24,28 +24,26 @@ const buildReceivedInfoAuditDocumentPathCandidates = (storedPath) => {
 
   const candidates = [];
 
+  // Canonical persistent location (configured audit uploads directory). Deterministic and
+  // environment-independent: it does not depend on process.cwd(), so documents keep
+  // resolving after restarts, redeploys, or launches from a different working directory.
+  candidates.push(path.join(auditDir, basename));
+  candidates.push(path.join(uploadsRoot, 'received-info-audit', basename));
+
+  // Stored-as-absolute path (for references already persisted as absolute paths)
   if (path.isAbsolute(normalized)) {
     candidates.push(normalized);
   }
 
+  // SERVER_ROOT-relative locations (stable: based on __dirname, not process.cwd())
   candidates.push(path.join(SERVER_ROOT, relative));
-
   if (relative.startsWith('uploads/')) {
     candidates.push(path.join(SERVER_ROOT, relative));
   }
-
   if (relative.startsWith('received-info-audit/')) {
     candidates.push(path.join(uploadsRoot, relative));
   }
-
-  candidates.push(path.join(auditDir, basename));
-  candidates.push(path.join(uploadsRoot, 'received-info-audit', basename));
   candidates.push(path.join(SERVER_ROOT, 'uploads', 'received-info-audit', basename));
-
-  // Current working directory fallbacks (useful for PM2 / container / Hostinger working directory)
-  candidates.push(path.join(process.cwd(), relative));
-  candidates.push(path.join(process.cwd(), 'uploads', 'received-info-audit', basename));
-  candidates.push(path.join(process.cwd(), 'server', 'uploads', 'received-info-audit', basename));
 
   const seen = new Set();
   return candidates.filter((candidate) => {
