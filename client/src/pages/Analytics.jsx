@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -38,7 +38,7 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../utils/dateFormatt
 // Queue name → Analytics workflow status codes (current status only)
 const ANALYTICS_QUEUE_MAP = {
   Novation: [30],
-  'Process On – Going': [0, 1, 2, 3, 5, 6, 7, 8, 12, 14, 16, 19, 20, 21, 28, 29],
+  'In Progress': [0, 1, 2, 3, 5, 6, 7, 8, 12, 14, 16, 19, 20, 21, 28, 29],
   Cancellation: [15, 18],
   'Need Help': [22],
   Documentation: [25, 26, 27],
@@ -47,7 +47,7 @@ const ANALYTICS_QUEUE_MAP = {
 
 const QUEUE_ICONS = {
   Novation: RefreshCw,
-  'Process On – Going': Activity,
+  'In Progress': Activity,
   Cancellation: X,
   'Need Help': HelpCircle,
   Documentation: FileText,
@@ -56,7 +56,7 @@ const QUEUE_ICONS = {
 
 const QUEUE_GRADIENTS = {
   Novation: 'from-[#00E99A] to-[#00B96B]',
-  'Process On – Going': 'from-[#38BDF8] to-[#07566A]',
+  'In Progress': 'from-[#38BDF8] to-[#07566A]',
   Cancellation: 'from-[#FBBF24] to-[#FB7185]',
   'Need Help': 'from-[#A78BFA] to-[#7C3AED]',
   Documentation: 'from-[#F0F9FF] to-[#0284C7]',
@@ -65,7 +65,7 @@ const QUEUE_GRADIENTS = {
 
 const QUEUE_ICON_STYLES = {
   Novation: 'text-[#00B96B] dark:text-emerald-400 bg-[#D9FFF0] dark:bg-[#0E3D48] border-[#00D98B]/30 dark:border-[#00D98B]/40',
-  'Process On – Going': 'text-[#0284C7] dark:text-sky-400 bg-[#F0F9FF] dark:bg-sky-950/40 border-[#38BDF8]/30 dark:border-[#38BDF8]/40',
+  'In Progress': 'text-[#0284C7] dark:text-sky-400 bg-[#F0F9FF] dark:bg-sky-950/40 border-[#38BDF8]/30 dark:border-[#38BDF8]/40',
   Cancellation: 'text-[#D97706] dark:text-amber-400 bg-[#FFFBEB] dark:bg-amber-950/40 border-[#FBBF24]/40 dark:border-[#FBBF24]/40',
   'Need Help': 'text-[#7C3AED] dark:text-purple-400 bg-[#F5F3FF] dark:bg-purple-950/40 border-[#8B5CF6]/30 dark:border-[#8B5CF6]/40',
   Documentation: 'text-[#0369A1] dark:text-sky-400 bg-[#F0F9FF] dark:bg-sky-950/40 border-[#38BDF8]/30 dark:border-[#38BDF8]/40',
@@ -838,7 +838,7 @@ const Analytics = () => {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Initial Status</label>
                   <SearchableDropdown
                     value={formData.status}
-                    onChange={() => {}}
+                    onChange={() => { }}
                     options={recruitmentFilterOptions}
                     placeholder="Select"
                     emptyOptionLabel="New Info"
@@ -892,7 +892,7 @@ const Analytics = () => {
       >
         <div className="space-y-4 text-slate-800">
           <p className="text-xs text-slate-600 leading-relaxed">
-            Are you sure you want to delete candidate <span className="font-extrabold text-brand-850">{activeRecord?.idnumber}</span>? 
+            Are you sure you want to delete candidate <span className="font-extrabold text-brand-850">{activeRecord?.idnumber}</span>?
           </p>
           <div className="flex items-center space-x-3 pt-2">
             <button
