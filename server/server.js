@@ -15,6 +15,7 @@ const { port, nodeEnv, serveClient, validateEnv, uploadsRoot } = require('./conf
 const { corsOptions } = require('./config/cors');
 const connectDB = require('./config/db');
 const { closeDB } = connectDB;
+const { initGridFS } = require('./config/gridfs');
 const seedDB = require('./utils/seeder');
 
 const { notFound, errorHandler } = require('./middleware/errorHandler');
@@ -169,6 +170,9 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await connectDB();
+
+    // Initialise GridFS bucket (uses existing MongoDB connection)
+    initGridFS();
 
     // Optional Seeder
     await seedDB();

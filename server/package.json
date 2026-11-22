@@ -10,6 +10,7 @@
     "seed": "node utils/seeder.js",
     "migrate:status": "node utils/migrateStatuses.js",
     "migrate:employee-codes": "node utils/migrateEmployeeCodes.js",
+    "migrate:gridfs": "node utils/migrateToGridFS.js",
     "purge:data": "node utils/purgeCollections.js"
   },
   "dependencies": {

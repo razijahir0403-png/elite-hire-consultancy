@@ -744,7 +744,7 @@ const ReceivedInfoAuditTrail = () => {
             </div>
             <span className="text-xs font-bold text-center">Proposal Request</span>
             <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-              {(record?.proposalRequest?.fileUrl || record?.proposalRequest?.path) ? 'Document Available' : 'No Docs'}
+              {(record?.proposalRequest?.fileId || record?.proposalRequest?.gridfsId || record?.proposalRequest?.fileUrl || record?.proposalRequest?.path) ? 'Document Available' : 'No Docs'}
             </span>
           </button>
 
@@ -762,7 +762,7 @@ const ReceivedInfoAuditTrail = () => {
             </div>
             <span className="text-xs font-bold text-center">Contract Agreement</span>
             <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-              {(record?.contractAgreement?.fileUrl || record?.contractAgreement?.path) ? 'Document Available' : 'No Docs'}
+              {(record?.contractAgreement?.fileId || record?.contractAgreement?.gridfsId || record?.contractAgreement?.fileUrl || record?.contractAgreement?.path) ? 'Document Available' : 'No Docs'}
             </span>
           </button>
 
@@ -780,7 +780,7 @@ const ReceivedInfoAuditTrail = () => {
             </div>
             <span className="text-xs font-bold text-center">MOU File</span>
             <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-              {(record?.mouFile?.fileUrl || record?.mouFile?.path) ? 'Document Available' : 'No Docs'}
+              {(record?.mouFile?.fileId || record?.mouFile?.gridfsId || record?.mouFile?.fileUrl || record?.mouFile?.path) ? 'Document Available' : 'No Docs'}
             </span>
           </button>
 
@@ -1149,7 +1149,7 @@ const ReceivedInfoAuditTrail = () => {
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Uploaded Document
             </h4>
-            {(record?.proposalRequest?.fileUrl || record?.proposalRequest?.path) ? (
+            {(record?.proposalRequest?.fileId || record?.proposalRequest?.gridfsId || record?.proposalRequest?.fileUrl || record?.proposalRequest?.path) ? (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -1239,7 +1239,7 @@ const ReceivedInfoAuditTrail = () => {
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {(record?.proposalRequest?.fileUrl || record?.proposalRequest?.path) ? 'Replace Proposal Request' : 'Upload Proposal Request'}
+                  {(record?.proposalRequest?.fileId || record?.proposalRequest?.gridfsId || record?.proposalRequest?.fileUrl || record?.proposalRequest?.path) ? 'Replace Proposal Request' : 'Upload Proposal Request'}
                 </label>
                 <span className="text-[11px] font-semibold text-slate-400">
                   Max size: <strong className="text-slate-600">150 KB</strong>
@@ -1322,7 +1322,7 @@ const ReceivedInfoAuditTrail = () => {
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Uploaded Document
             </h4>
-            {(record?.contractAgreement?.fileUrl || record?.contractAgreement?.path) ? (
+            {(record?.contractAgreement?.fileId || record?.contractAgreement?.gridfsId || record?.contractAgreement?.fileUrl || record?.contractAgreement?.path) ? (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -1412,7 +1412,7 @@ const ReceivedInfoAuditTrail = () => {
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {(record?.contractAgreement?.fileUrl || record?.contractAgreement?.path) ? 'Replace Contract Agreement' : 'Upload Contract Agreement'}
+                  {(record?.contractAgreement?.fileId || record?.contractAgreement?.gridfsId || record?.contractAgreement?.fileUrl || record?.contractAgreement?.path) ? 'Replace Contract Agreement' : 'Upload Contract Agreement'}
                 </label>
                 <span className="text-[11px] font-semibold text-slate-400">
                   Max size: <strong className="text-slate-600">150 KB</strong>
@@ -1495,7 +1495,7 @@ const ReceivedInfoAuditTrail = () => {
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Uploaded Document
             </h4>
-            {(record?.mouFile?.fileUrl || record?.mouFile?.path) ? (
+            {(record?.mouFile?.fileId || record?.mouFile?.gridfsId || record?.mouFile?.fileUrl || record?.mouFile?.path) ? (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -1585,7 +1585,7 @@ const ReceivedInfoAuditTrail = () => {
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {(record?.mouFile?.fileUrl || record?.mouFile?.path) ? 'Replace MOU File' : 'Upload MOU File'}
+                  {(record?.mouFile?.fileId || record?.mouFile?.gridfsId || record?.mouFile?.fileUrl || record?.mouFile?.path) ? 'Replace MOU File' : 'Upload MOU File'}
                 </label>
                 <span className="text-[11px] font-semibold text-slate-400">
                   Max size: <strong className="text-slate-600">150 KB</strong>

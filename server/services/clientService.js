@@ -19,6 +19,12 @@ const {
   isDuplicateClientIdError,
   MAX_GENERATION_ATTEMPTS,
 } = require('../utils/clientIdGenerator');
+const {
+  uploadToGridFS,
+  streamFromGridFS,
+  deleteFromGridFS,
+  findGridFSFileByMetadata,
+} = require('./gridfsService');
 
 const buildContentDisposition = (filename, download) => {
   const safeFilename = String(filename || 'document.pdf').replace(/[^\w.\-() ]/g, '_');
@@ -29,9 +35,39 @@ const buildContentDisposition = (filename, download) => {
 const streamDocumentFile = async (record, fieldPrefix, res, { download = false } = {}) => {
   const pathField = `${fieldPrefix}DocumentPath`;
   const nameField = `${fieldPrefix}DocumentName`;
+  const gridfsIdField = `${fieldPrefix}DocumentGridfsId`;
+  const contentTypeField = `${fieldPrefix}DocumentContentType`;
   const label = fieldPrefix === 'profile' ? 'Profile' : 'Proof';
   const defaultName = `${fieldPrefix}-document.pdf`;
 
+  // ── GridFS path ──
+  const gridfsId = record[gridfsIdField];
+  if (gridfsId) {
+    const filename = record[nameField] || defaultName;
+    const mimeType = record[contentTypeField] || 'application/pdf';
+    return streamFromGridFS(gridfsId, filename, mimeType, res, download);
+  }
+
+  // ── GridFS metadata lookup fallback ──
+  const gridfsFile = await findGridFSFileByMetadata(
+    (record._id || '').toString(),
+    fieldPrefix
+  );
+  if (gridfsFile) {
+    // Auto-heal: save the found gridfsId back to the parent record
+    await Client.updateOne(
+      { _id: record._id },
+      { $set: {
+        [gridfsIdField]: gridfsFile._id,
+        [contentTypeField]: gridfsFile.contentType || 'application/pdf',
+      } }
+    );
+    const filename = record[nameField] || gridfsFile.filename || defaultName;
+    const mimeType = gridfsFile.contentType || gridfsFile.metadata?.contentType || 'application/pdf';
+    return streamFromGridFS(gridfsFile._id, filename, mimeType, res, download);
+  }
+
+  // ── Legacy local filesystem fallback ──
   const storedPath = record[pathField];
   if (!storedPath) {
     throw new AppError(`No ${label.toLowerCase()} document found for this client`, 404);
@@ -89,16 +125,42 @@ const normalizeClientRecord = (doc) => {
       status: toClientStatusCode(item.status),
     }));
   }
-  if (obj._id && obj.profileDocumentPath) {
+  if (obj._id && (obj.profileDocumentPath || obj.profileDocumentGridfsId)) {
     obj.profileDocumentUrl = `/api/clients/${obj._id}/document`;
+    obj.profileDocumentFileId = obj.profileDocumentGridfsId ? String(obj.profileDocumentGridfsId) : '';
+    obj.profileDocumentStorageType = obj.profileDocumentGridfsId ? 'gridfs' : 'local';
   }
-  if (obj._id && obj.proofDocumentPath) {
+  if (obj._id && (obj.proofDocumentPath || obj.proofDocumentGridfsId)) {
     obj.proofDocumentUrl = `/api/clients/${obj._id}/proof-document`;
+    obj.proofDocumentFileId = obj.proofDocumentGridfsId ? String(obj.proofDocumentGridfsId) : '';
+    obj.proofDocumentStorageType = obj.proofDocumentGridfsId ? 'gridfs' : 'local';
+  }
+
+  // Normalize client audit document sub-documents to include gridfs fields
+  const auditDocFields = ['clProofDoc', 'coverLetter', 'clProfileDoc'];
+  for (const field of auditDocFields) {
+    const docObj = obj[field];
+    if (docObj && typeof docObj === 'object') {
+      const gId = docObj.gridfsId ? String(docObj.gridfsId) : '';
+      obj[field] = {
+        ...docObj,
+        fileId: gId,
+        gridfsId: gId,
+        storageType: gId ? 'gridfs' : (docObj.fileUrl || docObj.path ? 'local' : ''),
+      };
+    }
   }
   return obj;
 };
 
-const deleteProfileFile = async (relativePath) => {
+const deleteProfileFile = async (relativePath, gridfsId) => {
+  // Delete from GridFS if present
+  if (gridfsId) {
+    try { await deleteFromGridFS(gridfsId); } catch (e) {
+      console.warn('[Client] could not delete GridFS file:', e.message);
+    }
+  }
+  // Also try to delete legacy local file
   if (!relativePath) return;
   const absolutePath = resolveClientDocumentPathSync(relativePath);
   if (!absolutePath) return;
@@ -109,11 +171,20 @@ const deleteProfileFile = async (relativePath) => {
   }
 };
 
-const applyUploadedDocument = (file) => {
-  if (!file) return { path: '', name: '' };
+/**
+ * Upload a single client document file to GridFS.
+ * Returns { path, name, gridfsId, contentType }
+ */
+const applyUploadedDocument = async (file, metadata = {}) => {
+  if (!file) return { path: '', name: '', gridfsId: null, contentType: '' };
+  if (file.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
+
+  const gridfsResult = await uploadToGridFS(file.buffer, file.originalname, file.mimetype, metadata);
   return {
-    path: toStoredDocumentPath(file.filename),
+    path: '',
     name: file.originalname,
+    gridfsId: gridfsResult.gridfsId,
+    contentType: gridfsResult.contentType,
   };
 };
 
@@ -202,8 +273,9 @@ const createClient = async (body, files, editorName) => {
   if (profileFile && profileFile.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
   const proofFile = files?.proofDocument?.[0];
   if (proofFile && proofFile.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
-  const profileDocInfo = applyUploadedDocument(profileFile);
-  const proofDocInfo = applyUploadedDocument(proofFile);
+
+  const profileDocInfo = await applyUploadedDocument(profileFile, { documentType: 'profile', uploadedBy: editorName });
+  const proofDocInfo = await applyUploadedDocument(proofFile, { documentType: 'proof', uploadedBy: editorName });
 
   const recordPayload = {
     clientName: String(clientName).trim(),
@@ -212,8 +284,12 @@ const createClient = async (body, files, editorName) => {
     category: String(category).trim(),
     profileDocumentPath: profileDocInfo.path,
     profileDocumentName: profileDocInfo.name,
+    profileDocumentGridfsId: profileDocInfo.gridfsId,
+    profileDocumentContentType: profileDocInfo.contentType,
     proofDocumentPath: proofDocInfo.path,
     proofDocumentName: proofDocInfo.name,
+    proofDocumentGridfsId: proofDocInfo.gridfsId,
+    proofDocumentContentType: proofDocInfo.contentType,
     status: statusCode,
     description,
     createdBy: editorName,
@@ -248,8 +324,8 @@ const createClient = async (body, files, editorName) => {
         }
         continue;
       }
-      if (profileDocInfo.path) await deleteProfileFile(profileDocInfo.path);
-      if (proofDocInfo.path) await deleteProfileFile(proofDocInfo.path);
+      if (profileDocInfo.gridfsId) await deleteFromGridFS(profileDocInfo.gridfsId).catch(() => {});
+      if (proofDocInfo.gridfsId) await deleteFromGridFS(proofDocInfo.gridfsId).catch(() => {});
       throw err;
     }
   }
@@ -278,30 +354,40 @@ const updateClient = async (id, body, files, editorName) => {
 
   if (profileFile) {
     const previousPath = record.profileDocumentPath;
-    const docInfo = applyUploadedDocument(profileFile);
+    const previousGridfsId = record.profileDocumentGridfsId;
+    const docInfo = await applyUploadedDocument(profileFile, { documentType: 'profile', uploadedBy: editorName });
     record.profileDocumentPath = docInfo.path;
     record.profileDocumentName = docInfo.name;
-    if (previousPath && previousPath !== docInfo.path) {
-      await deleteProfileFile(previousPath);
+    record.profileDocumentGridfsId = docInfo.gridfsId;
+    record.profileDocumentContentType = docInfo.contentType;
+    if (previousGridfsId || previousPath) {
+      await deleteProfileFile(previousPath, previousGridfsId);
     }
-  } else if (shouldRemoveProfileDoc && record.profileDocumentPath) {
-    await deleteProfileFile(record.profileDocumentPath);
+  } else if (shouldRemoveProfileDoc && (record.profileDocumentPath || record.profileDocumentGridfsId)) {
+    await deleteProfileFile(record.profileDocumentPath, record.profileDocumentGridfsId);
     record.profileDocumentPath = '';
     record.profileDocumentName = '';
+    record.profileDocumentGridfsId = null;
+    record.profileDocumentContentType = '';
   }
 
   if (proofFile) {
     const previousPath = record.proofDocumentPath;
-    const docInfo = applyUploadedDocument(proofFile);
+    const previousGridfsId = record.proofDocumentGridfsId;
+    const docInfo = await applyUploadedDocument(proofFile, { documentType: 'proof', uploadedBy: editorName });
     record.proofDocumentPath = docInfo.path;
     record.proofDocumentName = docInfo.name;
-    if (previousPath && previousPath !== docInfo.path) {
-      await deleteProfileFile(previousPath);
+    record.proofDocumentGridfsId = docInfo.gridfsId;
+    record.proofDocumentContentType = docInfo.contentType;
+    if (previousGridfsId || previousPath) {
+      await deleteProfileFile(previousPath, previousGridfsId);
     }
-  } else if (shouldRemoveProofDoc && record.proofDocumentPath) {
-    await deleteProfileFile(record.proofDocumentPath);
+  } else if (shouldRemoveProofDoc && (record.proofDocumentPath || record.proofDocumentGridfsId)) {
+    await deleteProfileFile(record.proofDocumentPath, record.proofDocumentGridfsId);
     record.proofDocumentPath = '';
     record.proofDocumentName = '';
+    record.proofDocumentGridfsId = null;
+    record.proofDocumentContentType = '';
   }
 
   record.updatedBy = editorName;
@@ -411,17 +497,28 @@ const uploadClientAuditDocument = async (id, docType, file, editorName) => {
   if (!record) throw new AppError('Client not found', 404);
   if (!file) throw new AppError('No file uploaded', 400);
   if (file.size > 150 * 1024) throw new AppError('File size must not exceed 150 KB.', 400);
-  // Delete old file if exists
+
+  // Delete old GridFS file if exists
   const oldDoc = record[fieldName];
-  if (oldDoc && (oldDoc.path || oldDoc.fileUrl)) {
-    const resolved = await resolveClientAuditDocumentPath(oldDoc.path || oldDoc.fileUrl);
-    if (resolved) { try { fs.unlinkSync(resolved); } catch (e) { console.warn('[ClientAudit] could not delete old file:', e.message); } }
+  if (oldDoc && oldDoc.gridfsId) {
+    try { await deleteFromGridFS(oldDoc.gridfsId); } catch (e) {
+      console.warn('[ClientAudit] could not delete old GridFS file:', e.message);
+    }
   }
-  const storedPath = toStoredClientAuditPath(file.filename);
+
+  // Upload to GridFS
+  const gridfsResult = await uploadToGridFS(file.buffer, file.originalname, file.mimetype, {
+    recordId: record._id.toString(),
+    documentType: docType,
+    uploadedBy: editorName,
+  });
+
   record[fieldName] = {
     fileName: file.originalname,
-    fileUrl: storedPath,
-    path: storedPath,
+    fileUrl: '',
+    path: '',
+    gridfsId: gridfsResult.gridfsId,
+    contentType: gridfsResult.contentType,
     fileSize: file.size,
     uploadedAt: new Date(),
     uploadedBy: editorName,
@@ -446,12 +543,43 @@ const streamClientAuditDocument = async (id, docType, res, options = {}) => {
   const record = await Client.findById(id).lean();
   if (!record) throw new AppError('Client not found', 404);
   const doc = record[fieldName];
-  if (!doc || (!doc.path && !doc.fileUrl)) throw new AppError('No document uploaded for this type', 404);
+  if (!doc) throw new AppError('No document uploaded for this type', 404);
+
+  const download = options.download === true;
+
+  // ── GridFS path ──
+  if (doc.gridfsId) {
+    const filename = doc.fileName || docType;
+    const mimeType = doc.contentType || getMimeType(filename);
+    return streamFromGridFS(doc.gridfsId, filename, mimeType, res, download);
+  }
+
+  // ── GridFS metadata lookup fallback ──
+  const gridfsFile = await findGridFSFileByMetadata(
+    (record._id || '').toString(),
+    docType
+  );
+  if (gridfsFile) {
+    // Auto-heal: save the found gridfsId back to the parent record
+    await Client.updateOne(
+      { _id: record._id },
+      { $set: {
+        [`${fieldName}.gridfsId`]: gridfsFile._id,
+        [`${fieldName}.contentType`]: gridfsFile.contentType || '',
+      } }
+    );
+    const filename = doc.fileName || gridfsFile.filename || docType;
+    const mimeType = gridfsFile.contentType || gridfsFile.metadata?.contentType || getMimeType(filename);
+    return streamFromGridFS(gridfsFile._id, filename, mimeType, res, download);
+  }
+
+  // ── Legacy local filesystem fallback ──
   const storedPath = doc.path || doc.fileUrl;
+  if (!storedPath) throw new AppError('No document uploaded for this type', 404);
+
   const resolved = await resolveClientAuditDocumentPath(storedPath, { id, docType });
   if (!resolved) throw new AppError('Document file not found on server', 404);
   const filename = doc.fileName || path.basename(storedPath);
-  const download = options.download === true;
   const stat = fs.statSync(resolved);
   res.set('Content-Disposition', buildAuditContentDisposition(filename, download));
   res.set('Content-Type', getMimeType(filename));
@@ -475,10 +603,22 @@ const deleteClientAuditDocument = async (id, docType, editorName) => {
   const record = await Client.findById(id);
   if (!record) throw new AppError('Client not found', 404);
   const doc = record[fieldName];
-  if (!doc || (!doc.path && !doc.fileUrl)) throw new AppError('No document found for this type', 404);
+  if (!doc || (!doc.path && !doc.fileUrl && !doc.gridfsId)) throw new AppError('No document found for this type', 404);
+
+  // Delete from GridFS
+  if (doc.gridfsId) {
+    try { await deleteFromGridFS(doc.gridfsId); } catch (e) {
+      console.warn('[ClientAudit] could not delete GridFS file:', e.message);
+    }
+  }
+
+  // Also try to delete legacy local file
   const storedPath = doc.path || doc.fileUrl;
-  const resolved = await resolveClientAuditDocumentPath(storedPath, { id, docType });
-  if (resolved) { try { fs.unlinkSync(resolved); } catch (e) { console.warn('[ClientAudit] could not delete file:', e.message); } }
+  if (storedPath) {
+    const resolved = await resolveClientAuditDocumentPath(storedPath, { id, docType });
+    if (resolved) { try { fs.unlinkSync(resolved); } catch (e) { console.warn('[ClientAudit] could not delete file:', e.message); } }
+  }
+
   const docName = doc.fileName || docType;
   record[fieldName] = null;
   if (!Array.isArray(record.statusHistory)) record.statusHistory = [];

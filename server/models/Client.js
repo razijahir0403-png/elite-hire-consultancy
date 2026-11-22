@@ -33,6 +33,8 @@ const documentSubSchema = new mongoose.Schema(
     fileName: { type: String, default: '' },
     fileUrl: { type: String, default: '' },
     path: { type: String, default: '' },
+    gridfsId: { type: mongoose.Schema.Types.ObjectId, default: null }, // GridFS file _id
+    contentType: { type: String, default: '' },
     fileSize: { type: Number, default: 0 },
     uploadedAt: { type: Date, default: null },
     uploadedBy: { type: String, default: '' },
@@ -93,12 +95,30 @@ const clientSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    profileDocumentGridfsId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    profileDocumentContentType: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     proofDocumentPath: {
       type: String,
       trim: true,
       default: '',
     },
     proofDocumentName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    proofDocumentGridfsId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    proofDocumentContentType: {
       type: String,
       trim: true,
       default: '',

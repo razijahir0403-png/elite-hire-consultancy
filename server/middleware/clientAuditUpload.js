@@ -1,28 +1,18 @@
-const path = require('path');
-const fs = require('fs');
+/**
+ * Client Audit Upload Middleware (GridFS version)
+ *
+ * Uses multer memoryStorage so the file buffer is passed directly
+ * to GridFS without being written to the local filesystem.
+ *
+ * File size limit: 150 KB (matches the original disk-storage limit).
+ * Allowed types: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG.
+ */
+
 const multer = require('multer');
+const path = require('path');
 const AppError = require('../utils/AppError');
-const { getUploadsRoot } = require('../utils/clientDocumentPaths');
 
-const UPLOAD_DIR = path.join(getUploadsRoot(), 'clients-audit');
-const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
-
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '';
-    const safeBase = path
-      .basename(file.originalname, ext)
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .slice(0, 80);
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${unique}-${safeBase}${ext}`);
-  },
-});
+const MAX_FILE_SIZE = 150 * 1024; // 150 KB
 
 const ALLOWED_MIMETYPES = new Set([
   'application/pdf',
@@ -45,27 +35,27 @@ const fileFilter = (_req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: MAX_FILE_SIZE, files: 1 },
 });
 
-const handleClientAuditUpload = (fieldName = 'document') => (req, res, next) => {
-  upload.single(fieldName)(req, res, (err) => {
-    if (!err) return next();
-    if (err instanceof AppError) return next(err);
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return next(new AppError('File size must not exceed 150 KB.', 400));
-    }
-    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-      return next(new AppError('Unexpected file field.', 400));
-    }
-    return next(err);
-  });
-};
+const handleClientAuditUpload = (fieldName = 'document') =>
+  (req, res, next) => {
+    upload.single(fieldName)(req, res, (err) => {
+      if (!err) return next();
+      if (err instanceof AppError) return next(err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return next(new AppError('File size must not exceed 150 KB.', 400));
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return next(new AppError('Unexpected file field.', 400));
+      }
+      return next(err);
+    });
+  };
 
 module.exports = {
   handleClientAuditUpload,
-  UPLOAD_DIR,
   MAX_FILE_SIZE,
 };

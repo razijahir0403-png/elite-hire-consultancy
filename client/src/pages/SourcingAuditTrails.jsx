@@ -58,6 +58,10 @@ const CONDITIONS_LIST = CR_STATUS_OPTIONS;
 
 const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
 
+/** Check if a document sub-object has an uploaded file (GridFS or legacy local). */
+const hasUploadedDoc = (docObj) =>
+  !!(docObj?.fileId || docObj?.gridfsId || docObj?.fileUrl || docObj?.path);
+
 const toDateInputValue = (dateInput) => {
   if (!dateInput) return '';
   const d = new Date(dateInput);
@@ -782,7 +786,7 @@ const SourcingAuditTrails = () => {
             </div>
             <span className="text-xs font-bold text-center">Request Letter</span>
             <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-              {(record?.requestLetter?.fileUrl || record?.requestLetter?.path) ? 'Document Available' : 'No Docs'}
+              {hasUploadedDoc(record?.requestLetter) ? 'Document Available' : 'No Docs'}
             </span>
           </button>
 
@@ -801,7 +805,7 @@ const SourcingAuditTrails = () => {
             </div>
             <span className="text-xs font-bold text-center">URL Letter</span>
             <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-              {(record?.urlLetter?.fileUrl || record?.urlLetter?.path) ? 'Document Available' : 'No Docs'}
+              {hasUploadedDoc(record?.urlLetter) ? 'Document Available' : 'No Docs'}
             </span>
           </button>
 
@@ -820,7 +824,7 @@ const SourcingAuditTrails = () => {
             </div>
             <span className="text-xs font-bold text-center">Company Profile</span>
             <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-              {(record?.companyProfile?.fileUrl || record?.companyProfile?.path) ? 'Document Available' : 'No Docs'}
+              {hasUploadedDoc(record?.companyProfile) ? 'Document Available' : 'No Docs'}
             </span>
           </button>
 
@@ -1239,7 +1243,7 @@ const SourcingAuditTrails = () => {
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Uploaded Document
             </h4>
-            {(record?.requestLetter?.fileUrl || record?.requestLetter?.path) ? (
+            {hasUploadedDoc(record?.requestLetter) ? (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -1330,7 +1334,7 @@ const SourcingAuditTrails = () => {
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {(record?.requestLetter?.fileUrl || record?.requestLetter?.path) ? 'Replace Request Letter' : 'Upload Request Letter'}
+                  {hasUploadedDoc(record?.requestLetter) ? 'Replace Request Letter' : 'Upload Request Letter'}
                 </label>
                 <span className="text-[11px] font-semibold text-slate-400">
                   Max size: <strong className="text-slate-600">150 KB</strong>
@@ -1415,7 +1419,7 @@ const SourcingAuditTrails = () => {
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Uploaded Document
             </h4>
-            {(record?.urlLetter?.fileUrl || record?.urlLetter?.path) ? (
+            {hasUploadedDoc(record?.urlLetter) ? (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -1506,7 +1510,7 @@ const SourcingAuditTrails = () => {
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {(record?.urlLetter?.fileUrl || record?.urlLetter?.path) ? 'Replace URL Letter' : 'Upload URL Letter'}
+                  {hasUploadedDoc(record?.urlLetter) ? 'Replace URL Letter' : 'Upload URL Letter'}
                 </label>
                 <span className="text-[11px] font-semibold text-slate-400">
                   Max size: <strong className="text-slate-600">150 KB</strong>
@@ -1591,7 +1595,7 @@ const SourcingAuditTrails = () => {
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Uploaded Document
             </h4>
-            {(record?.companyProfile?.fileUrl || record?.companyProfile?.path) ? (
+            {hasUploadedDoc(record?.companyProfile) ? (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center space-x-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-xl bg-[#D9FFF0] border border-[#00D98B]/30 flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -1682,7 +1686,7 @@ const SourcingAuditTrails = () => {
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {(record?.companyProfile?.fileUrl || record?.companyProfile?.path) ? 'Replace Company Profile' : 'Upload Company Profile'}
+                  {hasUploadedDoc(record?.companyProfile) ? 'Replace Company Profile' : 'Upload Company Profile'}
                 </label>
                 <span className="text-[11px] font-semibold text-slate-400">
                   Max size: <strong className="text-slate-600">150 KB</strong>

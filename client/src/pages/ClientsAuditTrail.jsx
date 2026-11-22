@@ -382,7 +382,7 @@ const ClientsAuditTrail = () => {
   // Reusable Document Modal Content
   const DocumentModalContent = ({  docType, docField, fieldLabel, file, setFile, fileError, setFileError, uploading, setUploading, onClose , previewDoc, setPreviewDoc }) => {
     const docData = record?.[docField];
-    const hasDoc = docData?.fileUrl || docData?.path;
+    const hasDoc = docData?.fileId || docData?.gridfsId || docData?.fileUrl || docData?.path;
     
     if (previewDoc && previewDoc.docType === docType) {
       return (
@@ -688,7 +688,7 @@ const ClientsAuditTrail = () => {
               </div>
               <span className="text-xs font-bold text-center">{label}</span>
               <span className="text-[10px] text-slate-400 font-medium mt-0.5 truncate max-w-[120px]">
-                {field ? ((record?.[field]?.fileUrl || record?.[field]?.path) ? 'Document Available' : 'No Docs') :
+                {field ? ((record?.[field]?.fileId || record?.[field]?.gridfsId || record?.[field]?.fileUrl || record?.[field]?.path) ? 'Document Available' : 'No Docs') :
                   key === 'conditions' ? (getCrStatusLabel(record?.crStatus) !== 'NA' ? getCrStatusLabel(record?.crStatus) : 'None Active') :
                   key === 'remarks' ? (record?.remarks ? 'Has Remarks' : 'Add Note') : 'On Progress'}
               </span>

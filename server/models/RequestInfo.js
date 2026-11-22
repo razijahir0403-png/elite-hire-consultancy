@@ -110,6 +110,8 @@ const requestInfoSchema = new mongoose.Schema(
       name: { type: String, default: '', trim: true },
       fileUrl: { type: String, default: '', trim: true },
       path: { type: String, default: '', trim: true },
+      gridfsId: { type: mongoose.Schema.Types.ObjectId, default: null }, // GridFS file _id
+      contentType: { type: String, default: '', trim: true },
       fileSize: { type: Number, default: 0 },
       size: { type: Number, default: 0 },
       uploadedAt: { type: Date },
@@ -120,6 +122,8 @@ const requestInfoSchema = new mongoose.Schema(
       name: { type: String, default: '', trim: true },
       fileUrl: { type: String, default: '', trim: true },
       path: { type: String, default: '', trim: true },
+      gridfsId: { type: mongoose.Schema.Types.ObjectId, default: null }, // GridFS file _id
+      contentType: { type: String, default: '', trim: true },
       fileSize: { type: Number, default: 0 },
       size: { type: Number, default: 0 },
       uploadedAt: { type: Date },
@@ -132,6 +136,8 @@ const requestInfoSchema = new mongoose.Schema(
       fileType: { type: String, default: '', trim: true },
       fileUrl: { type: String, default: '', trim: true },
       path: { type: String, default: '', trim: true },
+      gridfsId: { type: mongoose.Schema.Types.ObjectId, default: null }, // GridFS file _id
+      contentType: { type: String, default: '', trim: true },
       fileSize: { type: Number, default: 0 },
       size: { type: Number, default: 0 },
       uploadedAt: { type: Date },

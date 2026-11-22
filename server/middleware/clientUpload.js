@@ -1,27 +1,18 @@
-const path = require('path');
-const fs = require('fs');
+/**
+ * Client Upload Middleware (GridFS version)
+ *
+ * Uses multer memoryStorage so the file buffer is passed directly
+ * to GridFS without being written to the local filesystem.
+ *
+ * File size limit: 150 KB (matches the original disk-storage limit).
+ * Allowed types: PDF only (profileDocument and proofDocument).
+ */
+
 const multer = require('multer');
+const path = require('path');
 const AppError = require('../utils/AppError');
-const { getClientsUploadDir } = require('../utils/clientDocumentPaths');
 
-const UPLOAD_DIR = getClientsUploadDir();
-const MAX_FILE_SIZE = 150 * 1024; // 150 KB (153,600 bytes)
-
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const safeBase = path
-      .basename(file.originalname, path.extname(file.originalname))
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .slice(0, 80);
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${unique}-${safeBase}.pdf`);
-  },
-});
+const MAX_FILE_SIZE = 150 * 1024; // 150 KB
 
 const fileFilter = (_req, file, cb) => {
   const isPdf =
@@ -36,7 +27,7 @@ const fileFilter = (_req, file, cb) => {
 };
 
 const uploadProfileDocument = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: MAX_FILE_SIZE, files: 2 },
 });
@@ -44,22 +35,18 @@ const uploadProfileDocument = multer({
 const handleClientUpload = (req, res, next) => {
   uploadProfileDocument.fields([
     { name: 'profileDocument', maxCount: 1 },
-    { name: 'proofDocument', maxCount: 1 }
+    { name: 'proofDocument', maxCount: 1 },
   ])(req, res, (err) => {
     if (!err) return next();
 
-    if (err instanceof AppError) {
-      return next(err);
-    }
+    if (err instanceof AppError) return next(err);
 
     if (err.code === 'LIMIT_FILE_SIZE') {
       return next(new AppError('File size must not exceed 150 KB.', 400));
     }
-
     if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
       return next(new AppError('Too many files uploaded or unexpected file field.', 400));
     }
-
     if (err.message === 'Only PDF files are allowed.') {
       return next(new AppError('Only PDF files are allowed.', 400));
     }
@@ -70,6 +57,5 @@ const handleClientUpload = (req, res, next) => {
 
 module.exports = {
   handleClientUpload,
-  UPLOAD_DIR,
   MAX_FILE_SIZE,
 };

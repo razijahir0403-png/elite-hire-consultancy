@@ -6,6 +6,12 @@ const {
   buildContentDisposition,
   getMimeType,
 } = require('../utils/analyticsDocumentPaths');
+const {
+  uploadToGridFS,
+  streamFromGridFS,
+  deleteFromGridFS,
+  findGridFSFileByMetadata,
+} = require('./gridfsService');
 const AppError = require('../utils/AppError');
 const {
   RECRUITMENT_STATUS,
@@ -74,11 +80,17 @@ const normalizeRequestRecord = (doc) => {
   obj.remarks = obj.remarks || '';
   obj.remarksHistory = Array.isArray(obj.remarksHistory) ? obj.remarksHistory : [];
   const reqLet = obj.requestLetter || {};
+  const reqLetGridfsId = reqLet.gridfsId ? String(reqLet.gridfsId) : '';
   obj.requestLetter = {
     fileName: reqLet.fileName || reqLet.name || '',
     name: reqLet.name || reqLet.fileName || '',
+    originalName: reqLet.originalName || reqLet.fileName || reqLet.name || '',
     fileUrl: reqLet.fileUrl || reqLet.path || '',
     path: reqLet.path || reqLet.fileUrl || '',
+    fileId: reqLetGridfsId,
+    gridfsId: reqLetGridfsId,
+    contentType: reqLet.contentType || '',
+    storageType: reqLetGridfsId ? 'gridfs' : (reqLet.fileUrl || reqLet.path ? 'local' : ''),
     fileSize: reqLet.fileSize || reqLet.size || 0,
     size: reqLet.size || reqLet.fileSize || 0,
     uploadedAt: reqLet.uploadedAt || null,
@@ -86,11 +98,17 @@ const normalizeRequestRecord = (doc) => {
   };
 
   const urlLet = obj.urlLetter || {};
+  const urlLetGridfsId = urlLet.gridfsId ? String(urlLet.gridfsId) : '';
   obj.urlLetter = {
     fileName: urlLet.fileName || urlLet.name || '',
     name: urlLet.name || urlLet.fileName || '',
+    originalName: urlLet.originalName || urlLet.fileName || urlLet.name || '',
     fileUrl: urlLet.fileUrl || urlLet.path || '',
     path: urlLet.path || urlLet.fileUrl || '',
+    fileId: urlLetGridfsId,
+    gridfsId: urlLetGridfsId,
+    contentType: urlLet.contentType || '',
+    storageType: urlLetGridfsId ? 'gridfs' : (urlLet.fileUrl || urlLet.path ? 'local' : ''),
     fileSize: urlLet.fileSize || urlLet.size || 0,
     size: urlLet.size || urlLet.fileSize || 0,
     uploadedAt: urlLet.uploadedAt || null,
@@ -98,6 +116,7 @@ const normalizeRequestRecord = (doc) => {
   };
 
   const compProf = obj.companyProfile || {};
+  const compProfGridfsId = compProf.gridfsId ? String(compProf.gridfsId) : '';
   obj.companyProfile = {
     fileName: compProf.fileName || compProf.originalName || compProf.name || '',
     originalName: compProf.originalName || compProf.fileName || compProf.name || '',
@@ -105,6 +124,10 @@ const normalizeRequestRecord = (doc) => {
     fileType: compProf.fileType || '',
     fileUrl: compProf.fileUrl || compProf.path || '',
     path: compProf.path || compProf.fileUrl || '',
+    fileId: compProfGridfsId,
+    gridfsId: compProfGridfsId,
+    contentType: compProf.contentType || '',
+    storageType: compProfGridfsId ? 'gridfs' : (compProf.fileUrl || compProf.path ? 'local' : ''),
     fileSize: compProf.fileSize || compProf.size || 0,
     size: compProf.size || compProf.fileSize || 0,
     uploadedAt: compProf.uploadedAt || null,
@@ -410,28 +433,28 @@ const uploadRequestLetter = async (id, file, editorName) => {
     throw new AppError('File size must not exceed 150 KB.', 400);
   }
 
-  // Delete previous physical file if it exists to avoid stale files
-  const previousReqPath = record.requestLetter?.path || record.requestLetter?.fileUrl;
-  if (previousReqPath) {
-    try {
-      const absolutePath = await resolveAnalyticsDocumentPath(previousReqPath, {
-        id: record._id?.toString(),
-        docType: 'request-letter',
-      });
-      if (absolutePath && fs.existsSync(absolutePath)) {
-        await fs.promises.unlink(absolutePath);
-      }
-    } catch (e) {
-      console.warn('[uploadRequestLetter] Could not unlink previous file:', e.message);
+  // Delete previous GridFS file if it exists
+  const previousGridfsId = record.requestLetter?.gridfsId;
+  if (previousGridfsId) {
+    try { await deleteFromGridFS(previousGridfsId); } catch (e) {
+      console.warn('[uploadRequestLetter] Could not delete previous GridFS file:', e.message);
     }
   }
 
-  const filePath = `/uploads/analytics/${file.filename}`;
+  // Upload to GridFS
+  const gridfsResult = await uploadToGridFS(file.buffer, file.originalname, file.mimetype, {
+    recordId: record._id.toString(),
+    documentType: 'request-letter',
+    uploadedBy: editorName,
+  });
+
   record.requestLetter = {
     fileName: file.originalname,
     name: file.originalname,
-    fileUrl: filePath,
-    path: filePath,
+    fileUrl: '',
+    path: '',
+    gridfsId: gridfsResult.gridfsId,
+    contentType: gridfsResult.contentType,
     fileSize: file.size,
     size: file.size,
     uploadedAt: new Date(),
@@ -467,28 +490,28 @@ const uploadUrlLetter = async (id, file, editorName) => {
     throw new AppError('File size must not exceed 150 KB.', 400);
   }
 
-  // Delete previous physical file if it exists to avoid stale files
-  const previousUrlPath = record.urlLetter?.path || record.urlLetter?.fileUrl;
-  if (previousUrlPath) {
-    try {
-      const absolutePath = await resolveAnalyticsDocumentPath(previousUrlPath, {
-        id: record._id?.toString(),
-        docType: 'url-letter',
-      });
-      if (absolutePath && fs.existsSync(absolutePath)) {
-        await fs.promises.unlink(absolutePath);
-      }
-    } catch (e) {
-      console.warn('[uploadUrlLetter] Could not unlink previous file:', e.message);
+  // Delete previous GridFS file if it exists
+  const previousGridfsId = record.urlLetter?.gridfsId;
+  if (previousGridfsId) {
+    try { await deleteFromGridFS(previousGridfsId); } catch (e) {
+      console.warn('[uploadUrlLetter] Could not delete previous GridFS file:', e.message);
     }
   }
 
-  const filePath = `/uploads/analytics/${file.filename}`;
+  // Upload to GridFS
+  const gridfsResult = await uploadToGridFS(file.buffer, file.originalname, file.mimetype, {
+    recordId: record._id.toString(),
+    documentType: 'url-letter',
+    uploadedBy: editorName,
+  });
+
   record.urlLetter = {
     fileName: file.originalname,
     name: file.originalname,
-    fileUrl: filePath,
-    path: filePath,
+    fileUrl: '',
+    path: '',
+    gridfsId: gridfsResult.gridfsId,
+    contentType: gridfsResult.contentType,
     fileSize: file.size,
     size: file.size,
     uploadedAt: new Date(),
@@ -524,33 +547,32 @@ const uploadCompanyProfile = async (id, file, editorName) => {
     throw new AppError('File size must not exceed 150 KB.', 400);
   }
 
-  // Delete previous physical file if it exists to avoid stale files
-  const previousCompPath = record.companyProfile?.path || record.companyProfile?.fileUrl;
-  if (previousCompPath) {
-    try {
-      const absolutePath = await resolveAnalyticsDocumentPath(previousCompPath, {
-        id: record._id?.toString(),
-        docType: 'company-profile',
-      });
-      if (absolutePath && fs.existsSync(absolutePath)) {
-        await fs.promises.unlink(absolutePath);
-      }
-    } catch (e) {
-      console.warn('[uploadCompanyProfile] Could not unlink previous file:', e.message);
+  // Delete previous GridFS file if it exists
+  const previousGridfsId = record.companyProfile?.gridfsId;
+  if (previousGridfsId) {
+    try { await deleteFromGridFS(previousGridfsId); } catch (e) {
+      console.warn('[uploadCompanyProfile] Could not delete previous GridFS file:', e.message);
     }
   }
 
-  const filePath = `/uploads/analytics/${file.filename}`;
-  const fileExt = (file.originalname || '').split('.').pop().toLowerCase();
-  const fileType = file.mimetype || fileExt;
+  const fileType = file.mimetype || (file.originalname || '').split('.').pop().toLowerCase();
+
+  // Upload to GridFS
+  const gridfsResult = await uploadToGridFS(file.buffer, file.originalname, file.mimetype, {
+    recordId: record._id.toString(),
+    documentType: 'company-profile',
+    uploadedBy: editorName,
+  });
 
   record.companyProfile = {
     fileName: file.originalname,
     originalName: file.originalname,
     name: file.originalname,
     fileType: fileType,
-    fileUrl: filePath,
-    path: filePath,
+    fileUrl: '',
+    path: '',
+    gridfsId: gridfsResult.gridfsId,
+    contentType: gridfsResult.contentType,
     fileSize: file.size,
     size: file.size,
     uploadedAt: new Date(),
@@ -760,11 +782,41 @@ const streamAnalyticsDocument = async (id, docType, res, { download = false } = 
     throw new AppError('Invalid document type requested', 400);
   }
 
-  if (!docObj || (!docObj.path && !docObj.fileUrl)) {
+  if (!docObj) {
     throw new AppError(`No ${docType} document found for this record`, 404);
   }
 
+  // ── GridFS path: stream from MongoDB ──
+  if (docObj.gridfsId) {
+    const filename = docObj.fileName || docObj.originalName || docObj.name || `${defaultName}`;
+    const mimeType = docObj.contentType || getMimeType(filename, 'application/octet-stream');
+    return streamFromGridFS(docObj.gridfsId, filename, mimeType, res, download);
+  }
+
+  // ── GridFS metadata lookup fallback (for records uploaded to GridFS but missing gridfsId link) ──
+  const gridfsFile = await findGridFSFileByMetadata(record._id.toString(), defaultName);
+  if (gridfsFile) {
+    // Auto-heal: save the found gridfsId back to the parent record
+    const fieldKey = type === 'requestletter' ? 'requestLetter'
+      : type === 'urlletter' ? 'urlLetter' : 'companyProfile';
+    await RequestInfo.updateOne(
+      { _id: record._id },
+      { $set: {
+        [`${fieldKey}.gridfsId`]: gridfsFile._id,
+        [`${fieldKey}.contentType`]: gridfsFile.contentType || '',
+      } }
+    );
+    const filename = docObj.fileName || docObj.originalName || docObj.name || gridfsFile.filename || `${defaultName}`;
+    const mimeType = gridfsFile.contentType || gridfsFile.metadata?.contentType || getMimeType(filename, 'application/octet-stream');
+    return streamFromGridFS(gridfsFile._id, filename, mimeType, res, download);
+  }
+
+  // ── Legacy fallback: stream from local filesystem ──
   const storedPath = docObj.path || docObj.fileUrl;
+  if (!storedPath) {
+    throw new AppError(`No ${docType} document found for this record`, 404);
+  }
+
   const absolutePath = await resolveAnalyticsDocumentPath(storedPath, {
     id: record._id?.toString(),
     docType,
@@ -833,63 +885,43 @@ const deleteAnalyticsDocument = async (id, docType, editorName) => {
   }
 
   const docObj = record[fieldKey];
+  const gridfsId = docObj?.gridfsId;
   const storedPath = docObj?.path || docObj?.fileUrl || '';
   const originalName = docObj?.fileName || docObj?.originalName || docObj?.name || '';
 
-  if (!storedPath) {
+  if (!storedPath && !gridfsId) {
     throw new AppError(`No ${docLabel} document found on this record.`, 404);
   }
 
-  // Resolve the absolute path and delete the physical file (best-effort)
-  try {
-    const absolutePath = await resolveAnalyticsDocumentPath(storedPath, {
-      id: record._id?.toString(),
-      docType,
-    });
-    if (absolutePath) {
-      await fs.promises.unlink(absolutePath);
-    } else {
-      console.warn(`[deleteAnalyticsDocument] File not found on disk — clearing DB record only`, {
-        id,
-        docType,
-        storedPath,
-      });
+  // Delete from GridFS if present
+  if (gridfsId) {
+    try { await deleteFromGridFS(gridfsId); } catch (e) {
+      console.warn(`[deleteAnalyticsDocument] GridFS delete failed:`, e.message);
     }
-  } catch (unlinkErr) {
-    // Log but do not block DB cleanup — avoids leaving orphan DB references
-    console.warn(`[deleteAnalyticsDocument] File unlink failed (${unlinkErr.code}), clearing DB record anyway`, {
-      id,
-      docType,
-      storedPath,
-      error: unlinkErr.message,
-    });
+  }
+
+  // Also try to delete legacy local file (best-effort)
+  if (storedPath) {
+    try {
+      const absolutePath = await resolveAnalyticsDocumentPath(storedPath, { id: record._id?.toString(), docType });
+      if (absolutePath) await fs.promises.unlink(absolutePath);
+    } catch (unlinkErr) {
+      console.warn(`[deleteAnalyticsDocument] File unlink failed (${unlinkErr.code}), clearing DB record anyway`);
+    }
   }
 
   // Clear the sub-document fields in MongoDB
   if (fieldKey === 'companyProfile') {
     record.companyProfile = {
-      fileName: '',
-      originalName: '',
-      name: '',
-      fileType: '',
-      fileUrl: '',
-      path: '',
-      fileSize: 0,
-      size: 0,
-      uploadedAt: null,
-      uploadedBy: '',
-      recordId: null,
+      fileName: '', originalName: '', name: '', fileType: '',
+      fileUrl: '', path: '', gridfsId: null, contentType: '',
+      fileSize: 0, size: 0, uploadedAt: null, uploadedBy: '', recordId: null,
     };
   } else {
     record[fieldKey] = {
-      fileName: '',
-      name: '',
-      fileUrl: '',
-      path: '',
-      fileSize: 0,
-      size: 0,
-      uploadedAt: null,
-      uploadedBy: '',
+      fileName: '', name: '', fileUrl: '', path: '',
+      gridfsId: null, contentType: '',
+      fileSize: 0, size: 0, uploadedAt: null, uploadedBy: '',
     };
   }
 
