@@ -483,7 +483,7 @@ const Analytics = () => {
         <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 items-end">
           {/* Search Box */}
           <div className="space-y-1.5 col-span-1 sm:col-span-2">
-            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Search Keyword</label>
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Search</label>
             <div className="relative">
               <input
                 type="text"
