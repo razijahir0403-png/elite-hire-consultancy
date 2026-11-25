@@ -15,29 +15,29 @@ export const RECRUITMENT_STATUS = {
   MESSAGE_FORWARDED: 5,
   EMAIL_SENT: 6,
   CALL_RECEIVED: 7,
-  PLACED_CALL: 8,
+  CONTACT: 8,
   APPLIED_BY_PORTAL: 9,
   ISSUE_WITH_APPLYING: 10,
   CALL_BACK: 11,
   INVALID_OR_WRONG_NUMBER: 12,
-  PROCESS_COMPLETED: 13,
-  CANCELLED_SLA: 14,
-  DUPLICATE: 15,
-  REOPEN: 16,
-  CANCELLED: 17,
-  INTERNAL_NOTE: 18,
-  INFO_UPDATED: 19,
-  MESSAGE_RECEIVED: 20,
-  NEED_AN_HELP: 21,
-  SENT_FOLLOW_UP: 22,
-  ON_HOLD: 23,
-  DOCUMENTS_UPLOAD_NEEDED: 24,
-  DOCUMENTS_UPLOADED: 25,
-  UPDATE_REQUIRED: 26,
-  ATTENTION_REQUIRED: 27,
-  URGENT_NOTE: 28,
-  NEW_INFO: 29,
-  UPDATE_COMPLETED: 30,
+  SELECTED: 13,
+  REJECTED: 14,
+  CANCELLED_SLA: 15,
+  DUPLICATE: 16,
+  REOPEN: 17,
+  CANCELLED: 18,
+  INTERNAL_NOTE: 19,
+  INFO_UPDATED: 20,
+  RESPONSE_RECEIVED: 21,
+  NEED_AN_HELP: 22,
+  SENT_FOLLOW_UP: 23,
+  ON_HOLD: 24,
+  DOCUMENTS_UPLOAD_NEEDED: 25,
+  DOCUMENTS_UPLOADED: 26,
+  UPDATE_REQUIRED: 27,
+  ATTENTION_REQUIRED: 28,
+  URGENT_NOTE: 29,
+  NEW_INFO: 30,
 };
 
 export const RECRUITMENT_STATUS_MAX = 30;
@@ -56,18 +56,14 @@ export const RECEIVED_INFO_STATUS_MAP = {
   6: 'Received Call',
   7: 'Issue with Management',
   8: 'Internal Note',
-  9: 'Message Received',
+  9: 'Received a Message',
   10: 'Re-Open',
   11: 'Contract Cancelled',
-  12: 'Process Completed',
-  13: 'Follow up Meet',
-  14: 'Issue with Call',
-  15: 'On-Hold',
-  16: 'Required Document Needed',
-  17: 'Placed Call',
-  18: 'Attention Required',
-  19: 'Update Needed',
-  20: 'Update Completed',
+  12: 'Contract Rejected',
+  13: 'Contract Signed',
+  14: 'Follow up Meet',
+  15: 'Issue with Call',
+  16: 'On-Hold',
 };
 
 // Reverse mapping for validation
@@ -94,15 +90,11 @@ export const RECEIVED_INFO_STATUS_COLORS = {
   9: 'bg-violet-50 text-violet-700 border-violet-200',
   10: 'bg-violet-50 text-violet-700 border-violet-200',
   11: 'bg-slate-100 text-slate-700 border-slate-300',
-  12: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  13: 'bg-amber-50 text-amber-700 border-amber-200',
-  14: 'bg-orange-50 text-orange-700 border-orange-200',
-  15: 'bg-amber-50 text-amber-700 border-amber-200',
-  16: 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]/50', // Required Document Needed
-  17: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Placed Call
-  18: 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]/50', // Attention Required
-  19: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#93C5FD]/40', // Update Needed
-  20: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/50 font-bold', // Update Completed
+  12: 'bg-red-50 text-red-700 border-red-200',
+  13: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  14: 'bg-amber-50 text-amber-700 border-amber-200',
+  15: 'bg-orange-50 text-orange-700 border-orange-200',
+  16: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 export const CommonStatus = { 0: 'Inactive', 1: 'Active' };
@@ -122,29 +114,29 @@ export const RecruitmentStatus = {
   5: 'Message Forwarded',
   6: 'E Mail Sent',
   7: 'Call Received',
-  8: 'Placed Call',
+  8: 'Contact',
   9: 'Applied by Portal',
   10: 'Issue with Applying',
   11: 'Call Back',
   12: 'Invalid or Wrong Number',
-  13: 'Process Completed',
-  14: 'Cancelled as per SLA',
-  15: 'Duplicate',
-  16: 'Reopen',
-  17: 'Cancelled',
-  18: 'Internal Note',
-  19: 'Info Updated',
-  20: 'Message Received',
-  21: 'Need an Help',
-  22: 'Sent Follow up Message',
-  23: 'On-Hold',
-  24: 'Documents Upload Needed',
-  25: 'Documents Uploaded',
-  26: 'Update Required',
-  27: 'Attention Required',
-  28: 'Urgent Note',
-  29: 'New Info',
-  30: 'Update Completed',
+  13: 'Selected',
+  14: 'Rejected',
+  15: 'Cancelled as per SLA',
+  16: 'Duplicate',
+  17: 'Reopen',
+  18: 'Cancelled',
+  19: 'Internal Note',
+  20: 'Info Updated',
+  21: 'Response Received',
+  22: 'Need an Help',
+  23: 'Sent Follow up Message',
+  24: 'On-Hold',
+  25: 'Documents Upload Needed',
+  26: 'Documents Uploaded',
+  27: 'Update Required',
+  28: 'Attention Required',
+  29: 'Urgent Note',
+  30: 'New Info',
 };
 
 /** Tailwind badge classes per status type */
@@ -158,29 +150,29 @@ export const StatusColors = {
     5: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Message Forwarded
     6: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // E Mail Sent
     7: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Call Received
-    8: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Placed Call
+    8: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Contact
     9: 'bg-[#F5F3FF] text-[#6D28D9] border-[#8B5CF6]/40', // Applied by Portal
     10: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Issue with Applying
     11: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Call Back
     12: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Invalid or Wrong Number
-    13: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B] font-extrabold', // Process Completed
-    14: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Cancelled as per SLA
-    15: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Duplicate
-    16: 'bg-[#F5F3FF] text-[#6D28D9] border-[#8B5CF6]/40', // Reopen
-    17: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Cancelled
-    18: 'bg-[#EEF2FF] text-[#4338CA] border-[#A5B4FC]/40', // Internal Note
-    19: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Info Updated
-    20: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Message Received
-    21: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Need an Help
-    22: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Sent Follow up Message
-    23: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // On-Hold
-    24: 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]/50', // Documents Upload Needed
-    25: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Documents Uploaded
-    26: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#93C5FD]/40', // Update Required
-    27: 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]/50', // Attention Required
-    28: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Urgent Note
-    29: 'bg-[#F0F9FF] text-[#0369A1] border-[#38BDF8]/40', // New Info
-    30: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/50 font-bold', // Update Completed
+    13: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B] font-extrabold', // Selected
+    14: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FCA5A5]', // Rejected
+    15: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Cancelled as per SLA
+    16: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Duplicate
+    17: 'bg-[#F5F3FF] text-[#6D28D9] border-[#8B5CF6]/40', // Reopen
+    18: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]', // Cancelled
+    19: 'bg-[#EEF2FF] text-[#4338CA] border-[#A5B4FC]/40', // Internal Note
+    20: 'bg-[#EFF4F6] text-[#07566A] border-[#CBD7DA]',     // Info Updated
+    21: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Response Received
+    22: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Need an Help
+    23: 'bg-[#F0F9FF] text-[#0284C7] border-[#38BDF8]/40', // Sent Follow up Message
+    24: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // On-Hold
+    25: 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]/50', // Documents Upload Needed
+    26: 'bg-[#D9FFF0] text-[#047857] border-[#00D98B]/40', // Documents Uploaded
+    27: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#93C5FD]/40', // Update Required
+    28: 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]/50', // Attention Required
+    29: 'bg-[#FFF1F2] text-[#BE123C] border-[#FB7185]/40', // Urgent Note
+    30: 'bg-[#F0F9FF] text-[#0369A1] border-[#38BDF8]/40', // New Info
   },
   approval: {
     0: 'bg-[#FFFBEB] text-[#B45309] border-[#FBBF24]/40', // Pending

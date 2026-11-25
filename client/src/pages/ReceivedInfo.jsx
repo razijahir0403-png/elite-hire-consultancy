@@ -42,7 +42,7 @@ const getReceivedStatusBadge = (status) => {
   if (status !== undefined && status !== null && status !== '') {
     if (typeof status === 'number' || (typeof status === 'string' && !isNaN(Number(status)))) {
       statusInt = Number(status);
-      if (Number.isInteger(statusInt) && statusInt >= 1 && statusInt <= 20) {
+      if (Number.isInteger(statusInt) && statusInt >= 1 && statusInt <= 16) {
         // Find label from centralized mapping
         const opt = RECEIVED_INFO_STATUS_OPTIONS.find((o) => o.value === statusInt);
         label = opt ? opt.label : String(statusInt);
