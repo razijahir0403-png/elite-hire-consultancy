@@ -15,7 +15,7 @@ const CLIENT_STATUS = {
   SENT_FOLLOW_UP: 9,
   URGENT_NOTES: 10,
   SELECTED: 11,
-  REJECTED: 12,
+
   CANCELLED: 13,
   REOPEN: 14,
   INTERNAL_NOTE: 15,
@@ -25,6 +25,11 @@ const CLIENT_STATUS = {
   RESPONSE_RECEIVED: 19,
   NEW_DATA: 20,
   ON_HOLD: 21,
+  REQUIRED_DOCUMENT_NEEDED: 22,
+  PLACED_CALL: 23,
+  ATTENTION_REQUIRED: 24,
+  UPDATE_NEEDED: 25,
+  UPDATE_COMPLETED: 26,
 };
 
 const CLIENT_STATUS_MAX = 21;
@@ -41,17 +46,22 @@ const ClientStatusLabel = {
   8: 'Wrong Number',
   9: 'Sent Follow Up Message',
   10: 'Urgent Notes',
-  11: 'Selected',
-  12: 'Rejected',
+  11: 'Process Completed',
+
   13: 'Cancelled',
   14: 'Re-Open',
   15: 'Internal Note',
   16: 'Need an Help',
   17: 'Payment Completed',
   18: 'Payment Pending',
-  19: 'Response Received',
+  19: 'Message Received',
   20: 'New Data',
   21: 'On-Hold',
+  22: 'Required Document Needed',
+  23: 'Placed Call',
+  24: 'Attention Required',
+  25: 'Update Needed',
+  26: 'Update Completed',
 };
 
 const CLIENT_TEXT_TO_CODE = Object.entries(ClientStatusLabel).reduce((acc, [code, label]) => {

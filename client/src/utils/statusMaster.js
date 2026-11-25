@@ -21,7 +21,7 @@ export const RECRUITMENT_STATUS = {
   CALL_BACK: 11,
   INVALID_OR_WRONG_NUMBER: 12,
   SELECTED: 13,
-  REJECTED: 14,
+
   CANCELLED_SLA: 15,
   DUPLICATE: 16,
   REOPEN: 17,
@@ -38,9 +38,10 @@ export const RECRUITMENT_STATUS = {
   ATTENTION_REQUIRED: 28,
   URGENT_NOTE: 29,
   NEW_INFO: 30,
+  UPDATE_COMPLETED: 31,
 };
 
-export const RECRUITMENT_STATUS_MAX = 30;
+export const RECRUITMENT_STATUS_MAX = 31;
 
 // ============================================================
 // RECEIVED INFO WORKFLOW STATUS - INTEGER MAPPING (1-based)
@@ -114,20 +115,20 @@ export const RecruitmentStatus = {
   5: 'Message Forwarded',
   6: 'E Mail Sent',
   7: 'Call Received',
-  8: 'Contact',
+  8: 'Placed Call',
   9: 'Applied by Portal',
   10: 'Issue with Applying',
   11: 'Call Back',
   12: 'Invalid or Wrong Number',
-  13: 'Selected',
-  14: 'Rejected',
+  13: 'Process Completed',
+
   15: 'Cancelled as per SLA',
   16: 'Duplicate',
   17: 'Reopen',
   18: 'Cancelled',
   19: 'Internal Note',
   20: 'Info Updated',
-  21: 'Response Received',
+  21: 'Message Received',
   22: 'Need an Help',
   23: 'Sent Follow up Message',
   24: 'On-Hold',
@@ -137,6 +138,7 @@ export const RecruitmentStatus = {
   28: 'Attention Required',
   29: 'Urgent Note',
   30: 'New Info',
+  31: 'Update Completed',
 };
 
 /** Tailwind badge classes per status type */
