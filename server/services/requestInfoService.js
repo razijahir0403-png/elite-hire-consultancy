@@ -212,11 +212,11 @@ const getRequestInfos = async (queryParams) => {
 };
 
 const ANALYTICS_QUEUE_MAP = {
-  Novation: [30, 1],
-  'In Progress': [0, 2, 3, 5, 6, 7, 8, 12, 14, 16, 19, 20, 21, 28, 29],
-  Cancellation: [15, 18],
-  'Need Help': [22],
-  Documentation: [25, 26, 27],
+  Novation: [29, 0],
+  'In Progress': [1, 2, 3, 5, 6, 7, 8, 12, 14, 16, 18, 19, 20, 27, 28],
+  Cancellation: [14, 17],
+  'Need Help': [21],
+  Documentation: [24, 25, 26],
   Completed: [13],
 };
 

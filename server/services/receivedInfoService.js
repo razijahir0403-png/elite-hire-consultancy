@@ -355,8 +355,8 @@ const updateReceivedStatus = async (id, body, editorName) => {
 
   // Convert to integer using centralized helper (handles both integer and legacy string)
   const statusInt = toReceivedInfoStatusCode(status);
-  if (!Number.isInteger(statusInt) || statusInt < 1 || statusInt > 16) {
-    throw new AppError('Invalid status. Must be an integer between 1 and 16.', 400);
+  if (!Number.isInteger(statusInt) || statusInt < 1 || statusInt > 20) {
+    throw new AppError('Invalid status. Must be an integer between 1 and 20.', 400);
   }
 
   const oldStatus = record.status || record.currentStatus;

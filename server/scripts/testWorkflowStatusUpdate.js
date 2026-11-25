@@ -99,8 +99,8 @@ const run = async () => {
     console.log(`Initial statusHistory count: ${record.statusHistory?.length || 0}\n`);
 
     console.log('=== Step 6: Testing Workflow Status Update via API ===');
-    // Test transitioning to a different workflow status (e.g. 24: On-Hold or 13: Selected or 21: Response Received)
-    const targetStatus = 26; // Test new status: Documents Uploaded
+    // Test transitioning to a different workflow status (e.g. 23: On-Hold or 13: Process Completed or 20: Message Received)
+    const targetStatus = 26; // Test new status: Update Required
     const testRemarks = `Automated verification test - workflow transition to ${RecruitmentStatusLabel[targetStatus]} at ${new Date().toISOString()}`;
 
     const updateRes = await makeRequest(
